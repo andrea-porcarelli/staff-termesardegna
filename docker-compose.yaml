@@ -1,0 +1,38 @@
+services:
+  rapportini_panel:
+    restart: unless-stopped
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    ports:
+      - '802:8000'
+    volumes:
+      - ./:/app
+    #      - ./app:/app
+    command: 'php artisan serve --host=0.0.0.0'
+    stdin_open: true
+    tty: true
+    environment:
+      - HOME=/tmp
+    depends_on:
+      - rapportini_db
+      - rapportini_db
+    networks:
+      - rapportini
+
+  rapportini_db:
+    restart: unless-stopped
+    image: mysql:8
+    container_name: rapportini_db
+    ports:
+      - "0.0.0.0:3309:3306"
+    environment:
+      MYSQL_DATABASE: rapportini
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_PASSWORD: root
+    volumes:
+      - ./storage/dbdata:/var/lib/mysql
+    networks:
+      - rapportini
+networks:
+  rapportini:

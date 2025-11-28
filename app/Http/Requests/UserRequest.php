@@ -1,0 +1,46 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
+
+class UserRequest extends FormRequest
+{
+    /**
+     * Determine if the user is authorized to make this request.
+     */
+    public function authorize(): bool
+    {
+        return Auth::check() && Auth::user()->role == 'admin';
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     */
+    public function rules(): array
+    {
+        return [
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users,email',
+            'password' => 'required|string|min:6|confirmed',
+            'role' => 'required|in:admin,supervisor,operator',
+        ];
+    }
+
+    public function messages(): array {
+        return [
+            'name.required' => 'Il nome è obbligatorio',
+            'email.required' => 'L\'email è obbligatoria',
+            'email.email' => 'L\'email non è valida',
+            'email.unique' => 'Questa email è già in uso',
+            'password.required' => 'La password è obbligatoria',
+            'password.min' => 'La password deve essere di almeno 6 caratteri',
+            'password.confirmed' => 'Le password non corrispondono',
+            'role.required' => 'Il ruolo è obbligatorio',
+            'role.in' => 'Il ruolo selezionato non è valido',
+        ];
+    }
+}
