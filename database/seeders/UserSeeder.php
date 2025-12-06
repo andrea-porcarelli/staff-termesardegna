@@ -15,24 +15,24 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         User::create([
-            'name' => 'Admin User',
-            'email' => 'admin@rapportini.local',
-            'password' => Hash::make('password'),
+            'name' => 'Andrea Porcarelli',
+            'email' => 'poandrea86@gmail.com',
+            'password' => Hash::make('StaffTerme1'),
             'role' => 'admin',
         ]);
 
-        User::create([
-            'name' => 'Supervisor User',
-            'email' => 'supervisor@rapportini.local',
-            'password' => Hash::make('password'),
-            'role' => 'supervisor',
-        ]);
-
-        User::create([
-            'name' => 'Operator User',
-            'email' => 'operator@rapportini.local',
-            'password' => Hash::make('password'),
-            'role' => 'operator',
-        ]);
+//        User::create([
+//            'name' => 'Supervisor User',
+//            'email' => 'supervisor@rapportini.local',
+//            'password' => Hash::make('password'),
+//            'role' => 'supervisor',
+//        ]);
+//
+//        User::create([
+//            'name' => 'Operator User',
+//            'email' => 'operator@rapportini.local',
+//            'password' => Hash::make('password'),
+//            'role' => 'operator',
+//        ]);
     }
 }
