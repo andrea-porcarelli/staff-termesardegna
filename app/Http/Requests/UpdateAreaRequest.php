@@ -25,7 +25,7 @@ class UpdateAreaRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'active' => 'nullable|boolean',
+            'active' => 'nullable',
         ];
     }
 

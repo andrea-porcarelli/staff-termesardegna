@@ -41,7 +41,7 @@ class UpdateEquipmentRequest extends FormRequest
             'installation_date' => 'nullable|date',
             'maintenance_frequency_days' => 'required|integer|min:1',
             'last_maintenance_date' => 'nullable|date',
-            'active' => 'nullable|boolean',
+            'active' => 'nullable',
         ];
     }
 

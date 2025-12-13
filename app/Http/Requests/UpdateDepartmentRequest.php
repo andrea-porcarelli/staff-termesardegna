@@ -26,7 +26,7 @@ class UpdateDepartmentRequest extends FormRequest
             'area_id' => 'required|exists:areas,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'active' => 'nullable|boolean',
+            'active' => 'nullable',
         ];
     }
 
