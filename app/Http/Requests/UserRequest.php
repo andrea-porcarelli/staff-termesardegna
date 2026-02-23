@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class UserRequest extends FormRequest
 {
@@ -24,9 +25,12 @@ class UserRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'email' => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
             'password' => 'required|string|min:6|confirmed',
-            'role' => 'required|in:admin,supervisor,operator',
+            'role' => 'required|in:admin,operator,manutentore',
+            'maintenance_role_id' => 'nullable|exists:maintenance_roles,id',
+            'teams' => 'nullable|array',
+            'teams.*' => 'exists:teams,id',
         ];
     }
 

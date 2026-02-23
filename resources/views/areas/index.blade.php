@@ -8,21 +8,48 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <h4><i class="bi bi-building me-2"></i>Lista Aree</h4>
-        <a href="{{ route('areas.create') }}" class="btn btn-light">
-            <i class="bi bi-plus-circle me-2"></i>Nuova Area
-        </a>
+        <div class="d-flex gap-2 align-items-center">
+            <form method="GET" class="d-flex gap-2">
+                <input type="text" name="search" class="form-control form-control-sm"
+                       placeholder="Cerca..." value="{{ $search ?? '' }}" style="width:200px">
+                <button type="submit" class="btn btn-light btn-sm"><i class="bi bi-search"></i></button>
+                @if($search ?? '')
+                    <a href="{{ route('areas.index') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x"></i>
+                    </a>
+                @endif
+            </form>
+            <a href="{{ route('areas.create') }}" class="btn btn-light">
+                <i class="bi bi-plus-circle me-2"></i>Nuova Area
+            </a>
+        </div>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Nome</th>
+                        <th>
+                            @php $nextDir = ($sort==='id' && $dir==='asc') ? 'desc' : 'asc'; @endphp
+                            <a href="{{ route('areas.index', ['search'=>$search,'sort'=>'id','direction'=>$nextDir]) }}" class="text-decoration-none text-dark">
+                                ID {!! ($sort==='id') ? ($dir==='asc' ? '▲' : '▼') : '⇅' !!}
+                            </a>
+                        </th>
+                        <th>
+                            @php $nextDir = ($sort==='name' && $dir==='asc') ? 'desc' : 'asc'; @endphp
+                            <a href="{{ route('areas.index', ['search'=>$search,'sort'=>'name','direction'=>$nextDir]) }}" class="text-decoration-none text-dark">
+                                Nome {!! ($sort==='name') ? ($dir==='asc' ? '▲' : '▼') : '⇅' !!}
+                            </a>
+                        </th>
                         <th>Descrizione</th>
-                        <th>N° Reparti</th>
+                        <th>N° Zone</th>
                         <th>Stato</th>
-                        <th>Data Creazione</th>
+                        <th>
+                            @php $nextDir = ($sort==='created_at' && $dir==='asc') ? 'desc' : 'asc'; @endphp
+                            <a href="{{ route('areas.index', ['search'=>$search,'sort'=>'created_at','direction'=>$nextDir]) }}" class="text-decoration-none text-dark">
+                                Data Creazione {!! ($sort==='created_at') ? ($dir==='asc' ? '▲' : '▼') : '⇅' !!}
+                            </a>
+                        </th>
                         <th class="text-center">Azioni</th>
                     </tr>
                 </thead>
@@ -34,7 +61,7 @@
                             <td>{{ Str::limit($area->description ?? 'N/A', 50) }}</td>
                             <td>
                                 <span class="badge bg-secondary">
-                                    {{ $area->departments_count }} reparti
+                                    {{ $area->departments_count }} zone
                                 </span>
                             </td>
                             <td>
@@ -55,7 +82,7 @@
                                 <form action="{{ route('areas.destroy', $area) }}"
                                       method="POST"
                                       class="d-inline"
-                                      onsubmit="return confirm('Sei sicuro di voler eliminare quest\'area? Verranno eliminati anche tutti i reparti e gli apparati associati!');">
+                                      onsubmit="return confirm('Sei sicuro di voler eliminare quest\'area? Verranno eliminate anche tutte le zone e gli impianti associati!');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm" title="Elimina">

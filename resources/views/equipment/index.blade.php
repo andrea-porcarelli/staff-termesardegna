@@ -1,25 +1,47 @@
 @extends('layouts.app')
 
-@section('title', 'Gestione Apparati - Rapportini')
+@section('title', 'Gestione Impianti/Macchine - Rapportini')
 
-@section('page-title', 'Gestione Apparati')
+@section('page-title', 'Gestione Impianti/Macchine')
 
 @section('content')
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h4><i class="bi bi-gear me-2"></i>Lista Apparati</h4>
-        <a href="{{ route('equipments.create') }}" class="btn btn-light">
-            <i class="bi bi-plus-circle me-2"></i>Nuovo Apparato
-        </a>
+        <h4><i class="bi bi-gear me-2"></i>Lista Impianti/Macchine</h4>
+        <div class="d-flex gap-2 align-items-center">
+            <form method="GET" class="d-flex gap-2">
+                <input type="text" name="search" class="form-control form-control-sm"
+                       placeholder="Cerca..." value="{{ $search ?? '' }}" style="width:200px">
+                <button type="submit" class="btn btn-light btn-sm"><i class="bi bi-search"></i></button>
+                @if($search ?? '')
+                    <a href="{{ route('equipments.index') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-x"></i>
+                    </a>
+                @endif
+            </form>
+            <a href="{{ route('equipments.create') }}" class="btn btn-light">
+                <i class="bi bi-plus-circle me-2"></i>Nuovo Impianto/Macchina
+            </a>
+        </div>
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
                     <tr>
-                        <th>Codice</th>
-                        <th>Nome</th>
-                        <th>Area / Reparto</th>
+                        <th>
+                            @php $nextDir = ($sort==='code' && $dir==='asc') ? 'desc' : 'asc'; @endphp
+                            <a href="{{ route('equipments.index', ['search'=>$search,'sort'=>'code','direction'=>$nextDir]) }}" class="text-decoration-none text-dark">
+                                Codice {!! ($sort==='code') ? ($dir==='asc' ? '▲' : '▼') : '⇅' !!}
+                            </a>
+                        </th>
+                        <th>
+                            @php $nextDir = ($sort==='name' && $dir==='asc') ? 'desc' : 'asc'; @endphp
+                            <a href="{{ route('equipments.index', ['search'=>$search,'sort'=>'name','direction'=>$nextDir]) }}" class="text-decoration-none text-dark">
+                                Nome {!! ($sort==='name') ? ($dir==='asc' ? '▲' : '▼') : '⇅' !!}
+                            </a>
+                        </th>
+                        <th>Area / Zona</th>
                         <th>Produttore</th>
                         <th>Prossima Manutenzione</th>
                         <th>Stato</th>
@@ -72,7 +94,7 @@
                                 <form action="{{ route('equipments.destroy', $item) }}"
                                       method="POST"
                                       class="d-inline"
-                                      onsubmit="return confirm('Sei sicuro di voler eliminare questo apparato?');">
+                                      onsubmit="return confirm('Sei sicuro di voler eliminare questo impianto/macchina?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm" title="Elimina">
@@ -85,7 +107,7 @@
                         <tr>
                             <td colspan="7" class="text-center py-4">
                                 <i class="bi bi-inbox" style="font-size: 48px; color: #ccc;"></i>
-                                <p class="text-muted mt-2">Nessun apparato trovato</p>
+                                <p class="text-muted mt-2">Nessun impianto/macchina trovato</p>
                             </td>
                         </tr>
                     @endforelse

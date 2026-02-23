@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Modifica Reparto - Rapportini')
+@section('title', 'Modifica Zona - Rapportini')
 
-@section('page-title', 'Modifica Reparto')
+@section('page-title', 'Modifica Zona')
 
 @section('content')
 <div class="card">
@@ -34,7 +34,7 @@
 
             <div class="mb-3">
                 <label for="name" class="form-label">
-                    <i class="bi bi-tag me-1"></i>Nome Reparto *
+                    <i class="bi bi-tag me-1"></i>Nome Zona *
                 </label>
                 <input type="text"
                        class="form-control @error('name') is-invalid @enderror"
@@ -68,11 +68,11 @@
                            name="active"
                            {{ old('active', $department->active) ? 'checked' : '' }}>
                     <label class="form-check-label" for="active">
-                        <i class="bi bi-check-circle me-1"></i>Reparto Attivo
+                        <i class="bi bi-check-circle me-1"></i>Zona Attiva
                     </label>
                 </div>
                 <small class="text-muted">
-                    I reparti disattivati non saranno disponibili per la creazione di nuovi rapportini
+                    Le zone disattivate non saranno disponibili per la creazione di nuovi rapportini
                 </small>
             </div>
 

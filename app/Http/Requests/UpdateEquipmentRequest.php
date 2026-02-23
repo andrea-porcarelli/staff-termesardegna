@@ -42,6 +42,12 @@ class UpdateEquipmentRequest extends FormRequest
             'maintenance_frequency_days' => 'required|integer|min:1',
             'last_maintenance_date' => 'nullable|date',
             'active' => 'nullable',
+            'components' => 'nullable|array',
+            'components.*.name' => 'required_with:components.*|string|max:255',
+            'components.*.maintenance_type' => 'required_with:components.*|in:frequency,fixed_date',
+            'components.*.frequency_days' => 'nullable|integer|min:1',
+            'components.*.next_maintenance_date' => 'nullable|date',
+            'components.*.description' => 'nullable|string',
         ];
     }
 
@@ -50,7 +56,7 @@ class UpdateEquipmentRequest extends FormRequest
         return [
             'department_id.required' => 'Il reparto è obbligatorio',
             'department_id.exists' => 'Il reparto selezionato non esiste',
-            'name.required' => 'Il nome dell\'apparato è obbligatorio',
+            'name.required' => 'Il nome dell\'impianto/macchina è obbligatorio',
             'code.unique' => 'Questo codice è già in uso',
             'maintenance_frequency_days.required' => 'La frequenza di manutenzione è obbligatoria',
             'maintenance_frequency_days.min' => 'La frequenza deve essere almeno 1 giorno',

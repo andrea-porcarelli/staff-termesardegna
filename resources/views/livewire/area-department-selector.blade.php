@@ -19,12 +19,12 @@
         </div>
 
         <div class="col-md-6 mb-3">
-            <label for="department_id" class="form-label">Reparto <span class="text-danger">*</span></label>
+            <label for="department_id" class="form-label">Zona <span class="text-danger">*</span></label>
             <div class="input-group">
                 <select wire:model.live="selectedDepartmentId" class="form-select @error('selectedDepartmentId') is-invalid @enderror" id="department_id" name="department_id" required>
                     <option value="">
                         @if($selectedAreaId)
-                            Seleziona un reparto
+                            Seleziona una zona
                         @else
                             Prima seleziona un'area
                         @endif
@@ -33,7 +33,7 @@
                         <option value="{{ $dept->id }}">{{ $dept->name }}</option>
                     @endforeach
                 </select>
-                <button type="button" class="btn btn-outline-secondary" wire:click="toggleNewDepartmentForm" title="Aggiungi nuovo reparto" @disabled(!$selectedAreaId)>
+                <button type="button" class="btn btn-outline-secondary" wire:click="toggleNewDepartmentForm" title="Aggiungi nuova zona" @disabled(!$selectedAreaId)>
                     <i class="bi bi-plus-circle"></i>
                 </button>
             </div>
@@ -63,7 +63,7 @@
     @if($showNewDepartmentForm)
         <div class="mb-3 p-2 bg-light border rounded">
             <div class="input-group input-group-sm">
-                <input type="text" wire:model="newDepartmentName" class="form-control @error('newDepartmentName') is-invalid @enderror" id="newDepartmentName" placeholder="Nome nuovo reparto...">
+                <input type="text" wire:model="newDepartmentName" class="form-control @error('newDepartmentName') is-invalid @enderror" id="newDepartmentName" placeholder="Nome nuova zona...">
                 <button type="button" wire:click="saveNewDepartment" class="btn btn-success" title="Salva">
                     <i class="bi bi-check-lg"></i>
                 </button>

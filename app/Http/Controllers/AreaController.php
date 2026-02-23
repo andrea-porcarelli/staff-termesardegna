@@ -12,10 +12,21 @@ use Illuminate\View\View;
 
 class AreaController extends Controller
 {
-    public function index() : View
+    public function index(Request $request) : View
     {
-        $areas = Area::withCount('departments')->orderBy('created_at', 'desc')->get();
-        return view('areas.index', compact('areas'));
+        $search = $request->get('search', '');
+        $sort = $request->get('sort', 'created_at');
+        $dir = $request->get('direction', 'desc');
+        $allowedSorts = ['id', 'name', 'created_at'];
+        if (!in_array($sort, $allowedSorts)) { $sort = 'created_at'; }
+        if (!in_array($dir, ['asc', 'desc'])) { $dir = 'desc'; }
+
+        $areas = Area::withCount('departments')
+            ->when($search, fn($q) => $q->where('name', 'LIKE', "%{$search}%"))
+            ->orderBy($sort, $dir)
+            ->get();
+
+        return view('areas.index', compact('areas', 'search', 'sort', 'dir'));
     }
 
     public function create() : View

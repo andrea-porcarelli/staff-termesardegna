@@ -9,6 +9,8 @@ use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\InterventionController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\MaintenanceRoleController;
+use App\Http\Controllers\TeamController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -43,5 +45,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('areas', AreaController::class);
         Route::resource('departments', DepartmentController::class);
         Route::resource('equipments', EquipmentController::class);
+        Route::resource('maintenance_roles', MaintenanceRoleController::class);
+        Route::resource('teams', TeamController::class);
     });
 });

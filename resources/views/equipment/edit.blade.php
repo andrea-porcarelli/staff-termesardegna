@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Modifica Apparato - Rapportini')
+@section('title', 'Modifica Impianto/Macchina - Rapportini')
 
-@section('page-title', 'Modifica Apparato')
+@section('page-title', 'Modifica Impianto/Macchina')
 
 @section('content')
 <div class="card">
     <div class="card-header">
-        <h4><i class="bi bi-pencil me-2"></i>Modifica Apparato: {{ $equipment->name }}</h4>
+        <h4><i class="bi bi-pencil me-2"></i>Modifica Impianto/Macchina: {{ $equipment->name }}</h4>
     </div>
     <div class="card-body">
         <form action="{{ route('equipments.update', $equipment) }}" method="POST">
@@ -21,7 +21,7 @@
 
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="name" class="form-label">Nome Apparato <span class="text-danger">*</span></label>
+                    <label for="name" class="form-label">Nome Impianto/Macchina <span class="text-danger">*</span></label>
                     <input type="text" class="form-control @error('name') is-invalid @enderror"
                            id="name" name="name" value="{{ old('name', $equipment->name) }}" required>
                     @error('name')
@@ -120,9 +120,81 @@
                 </div>
             </div>
 
+            {{-- Componenti dell'impianto --}}
+            <hr class="my-4">
+            @php
+                $existingComponents = old('components', $equipment->components->map(fn($c) => [
+                    'name' => $c->name,
+                    'description' => $c->description ?? '',
+                    'maintenance_type' => $c->maintenance_type,
+                    'frequency_days' => $c->frequency_days,
+                    'next_maintenance_date' => $c->next_maintenance_date?->format('Y-m-d') ?? '',
+                ])->toArray());
+            @endphp
+            <div x-data="componentsManager({{ json_encode($existingComponents) }})">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5><i class="bi bi-list-task me-2"></i>Componenti dell'Impianto</h5>
+                    <button type="button" class="btn btn-outline-primary btn-sm" @click="addComponent">
+                        <i class="bi bi-plus-circle me-1"></i>Aggiungi Componente
+                    </button>
+                </div>
+
+                <template x-if="components.length === 0">
+                    <p class="text-muted">Nessun componente aggiunto. Clicca "Aggiungi Componente" per iniziare.</p>
+                </template>
+
+                <template x-for="(comp, index) in components" :key="index">
+                    <div class="card mb-3 border-secondary">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <strong x-text="'Componente ' + (index + 1)"></strong>
+                                <button type="button" class="btn btn-outline-danger btn-sm" @click="removeComponent(index)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-4 mb-2">
+                                    <label class="form-label">Nome <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control form-control-sm"
+                                           :name="'components[' + index + '][name]'"
+                                           x-model="comp.name" required>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <label class="form-label">Tipo Manutenzione</label>
+                                    <select class="form-select form-select-sm"
+                                            :name="'components[' + index + '][maintenance_type]'"
+                                            x-model="comp.maintenance_type">
+                                        <option value="frequency">Frequenza (giorni)</option>
+                                        <option value="fixed_date">Data Fissa</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 mb-2" x-show="comp.maintenance_type === 'frequency'">
+                                    <label class="form-label">Frequenza (giorni)</label>
+                                    <input type="number" class="form-control form-control-sm"
+                                           :name="'components[' + index + '][frequency_days]'"
+                                           x-model="comp.frequency_days" min="1">
+                                </div>
+                                <div class="col-md-4 mb-2" x-show="comp.maintenance_type === 'fixed_date'">
+                                    <label class="form-label">Prossima Data Manutenzione</label>
+                                    <input type="date" class="form-control form-control-sm"
+                                           :name="'components[' + index + '][next_maintenance_date]'"
+                                           x-model="comp.next_maintenance_date">
+                                </div>
+                            </div>
+                            <div class="mb-0">
+                                <label class="form-label">Descrizione</label>
+                                <textarea class="form-control form-control-sm"
+                                          :name="'components[' + index + '][description]'"
+                                          x-model="comp.description" rows="2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-light">
-                    <i class="bi bi-check-circle me-2"></i>Aggiorna Apparato
+                    <i class="bi bi-check-circle me-2"></i>Aggiorna Impianto/Macchina
                 </button>
                 <a href="{{ route('equipments.index') }}" class="btn btn-secondary">
                     <i class="bi bi-x-circle me-2"></i>Annulla
@@ -131,4 +203,28 @@
         </form>
     </div>
 </div>
+
+@push('scripts')
+<script>
+function componentsManager(initialComponents) {
+    return {
+        components: initialComponents && initialComponents.length > 0
+            ? initialComponents
+            : [],
+        addComponent() {
+            this.components.push({
+                name: '',
+                description: '',
+                maintenance_type: 'frequency',
+                frequency_days: 30,
+                next_maintenance_date: '',
+            });
+        },
+        removeComponent(index) {
+            this.components.splice(index, 1);
+        }
+    };
+}
+</script>
+@endpush
 @endsection

@@ -118,7 +118,7 @@ class AreaDepartmentSelector extends Component
         $this->showNewDepartmentForm = false;
         $this->resetNewDepartmentForm();
 
-        session()->flash('success', 'Reparto creato con successo!');
+        session()->flash('success', 'Zona creata con successo!');
         $this->dispatch('departmentChanged', $this->selectedDepartmentId);
     }
 

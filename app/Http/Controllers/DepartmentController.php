@@ -14,10 +14,21 @@ use Illuminate\View\View;
 
 class DepartmentController extends Controller
 {
-    public function index() : View
+    public function index(Request $request) : View
     {
-        $departments = Department::with('area')->orderBy('created_at', 'desc')->get();
-        return view('departments.index', compact('departments'));
+        $search = $request->get('search', '');
+        $sort = $request->get('sort', 'created_at');
+        $dir = $request->get('direction', 'desc');
+        $allowedSorts = ['id', 'name', 'created_at'];
+        if (!in_array($sort, $allowedSorts)) { $sort = 'created_at'; }
+        if (!in_array($dir, ['asc', 'desc'])) { $dir = 'desc'; }
+
+        $departments = Department::with('area')
+            ->when($search, fn($q) => $q->where('name', 'LIKE', "%{$search}%"))
+            ->orderBy($sort, $dir)
+            ->get();
+
+        return view('departments.index', compact('departments', 'search', 'sort', 'dir'));
     }
 
     public function create() : View
@@ -36,7 +47,7 @@ class DepartmentController extends Controller
         ]);
 
         return redirect()->route('departments.index')
-            ->with('success', 'Reparto creato con successo!');
+            ->with('success', 'Zona creata con successo!');
     }
 
     public function show(Department $department) : View
@@ -61,7 +72,7 @@ class DepartmentController extends Controller
         ]);
 
         return redirect()->route('departments.index')
-            ->with('success', 'Reparto aggiornato con successo!');
+            ->with('success', 'Zona aggiornata con successo!');
     }
 
     public function destroy(Department $department) : RedirectResponse
@@ -69,6 +80,6 @@ class DepartmentController extends Controller
         $department->delete();
 
         return redirect()->route('departments.index')
-            ->with('success', 'Reparto eliminato con successo!');
+            ->with('success', 'Zona eliminata con successo!');
     }
 }

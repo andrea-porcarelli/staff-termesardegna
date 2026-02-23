@@ -9,22 +9,36 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Area;
 use App\Models\Department;
+use App\Models\MaintenanceRole;
+use App\Models\Team;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
 class UserController extends Controller
 {
-    public function index() : View
+    public function index(Request $request) : View
     {
-        $users = User::orderBy('created_at', 'desc')->get();
-        return view('users.index', compact('users'));
+        $search = $request->get('search', '');
+        $sort = $request->get('sort', 'created_at');
+        $dir = $request->get('direction', 'desc');
+        $allowedSorts = ['id', 'name', 'email', 'created_at'];
+        if (!in_array($sort, $allowedSorts)) { $sort = 'created_at'; }
+        if (!in_array($dir, ['asc', 'desc'])) { $dir = 'desc'; }
+
+        $users = User::when($search, fn($q) => $q->where('name', 'LIKE', "%{$search}%")->orWhere('email', 'LIKE', "%{$search}%"))
+            ->orderBy($sort, $dir)
+            ->get();
+
+        return view('users.index', compact('users', 'search', 'sort', 'dir'));
     }
 
     public function create() : View
     {
         $areas = Area::with('departments')->where('active', true)->get();
-        return view('users.create', compact('areas'));
+        $maintenanceRoles = MaintenanceRole::orderBy('name')->get();
+        $teams = Team::orderBy('name')->get();
+        return view('users.create', compact('areas', 'maintenanceRoles', 'teams'));
     }
 
     public function store(UserRequest $request) : RedirectResponse
@@ -34,10 +48,16 @@ class UserController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role,
+            'maintenance_role_id' => $request->role === 'manutentore' ? $request->maintenance_role_id : null,
         ]);
 
-        // Se il ruolo è supervisor, associa i reparti selezionati
-        if ($request->role === 'supervisor' && $request->has('departments')) {
+        // Se il ruolo è manutentore, associa i team selezionati
+        if ($request->role === 'manutentore' && $request->has('teams')) {
+            $user->teams()->sync($request->teams);
+        }
+
+        // Se il ruolo è operator o manutentore, associa le zone selezionate
+        if ($request->has('departments')) {
             $user->departments()->sync($request->departments);
         }
 
@@ -48,7 +68,9 @@ class UserController extends Controller
     public function edit(User $user) : View
     {
         $areas = Area::with('departments')->where('active', true)->get();
-        return view('users.edit', compact('user', 'areas'));
+        $maintenanceRoles = MaintenanceRole::orderBy('name')->get();
+        $teams = Team::orderBy('name')->get();
+        return view('users.edit', compact('user', 'areas', 'maintenanceRoles', 'teams'));
     }
 
     public function update(UpdateUserRequest $request, User $user) : RedirectResponse
@@ -57,6 +79,7 @@ class UserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'role' => $request->role,
+            'maintenance_role_id' => $request->role === 'manutentore' ? $request->maintenance_role_id : null,
         ];
 
         if ($request->filled('password')) {
@@ -65,13 +88,14 @@ class UserController extends Controller
 
         $user->update($data);
 
-        // Gestisci associazione reparti per supervisor
-        if ($request->role === 'supervisor') {
-            // Sincronizza i reparti selezionati (o svuota se nessuno selezionato)
-            $user->departments()->sync($request->departments ?? []);
+        // Sincronizza zone assegnate
+        $user->departments()->sync($request->departments ?? []);
+
+        // Sincronizza team per manutentore
+        if ($request->role === 'manutentore') {
+            $user->teams()->sync($request->teams ?? []);
         } else {
-            // Se il ruolo non è supervisor, rimuovi tutte le associazioni
-            $user->departments()->detach();
+            $user->teams()->detach();
         }
 
         return redirect()->route('users.index')

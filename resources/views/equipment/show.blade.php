@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Dettagli Apparato - Rapportini')
+@section('title', 'Dettagli Impianto/Macchina - Rapportini')
 
-@section('page-title', 'Dettagli Apparato')
+@section('page-title', 'Dettagli Impianto/Macchina')
 
 @section('content')
 <div class="card">
@@ -40,7 +40,7 @@
                             <td>{{ $equipment->department->area->name }}</td>
                         </tr>
                         <tr>
-                            <th>Reparto:</th>
+                            <th>Zona:</th>
                             <td><span class="badge bg-secondary">{{ $equipment->department->name }}</span></td>
                         </tr>
                         <tr>
@@ -146,6 +146,50 @@
                 </div>
             </div>
         </div>
+
+        {{-- Componenti --}}
+        @if($equipment->components->count() > 0)
+        <hr class="my-4">
+        <div class="row">
+            <div class="col-12">
+                <h5 class="mb-3"><i class="bi bi-list-task me-2"></i>Componenti ({{ $equipment->components->count() }})</h5>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nome</th>
+                                <th>Tipo Manutenzione</th>
+                                <th>Frequenza / Data</th>
+                                <th>Descrizione</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($equipment->components as $component)
+                                <tr>
+                                    <td><strong>{{ $component->name }}</strong></td>
+                                    <td>
+                                        @if($component->maintenance_type === 'frequency')
+                                            <span class="badge bg-primary">Frequenza</span>
+                                        @else
+                                            <span class="badge bg-info">Data Fissa</span>
+                                        @endif
+                                    </td>
+                                    <td>
+                                        @if($component->maintenance_type === 'frequency')
+                                            {{ $component->frequency_days ?? 'N/A' }} giorni
+                                        @else
+                                            {{ $component->next_maintenance_date?->format('d/m/Y') ?? 'N/A' }}
+                                        @endif
+                                    </td>
+                                    <td>{{ $component->description ?? 'N/A' }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        @endif
 
         <hr class="my-4">
 

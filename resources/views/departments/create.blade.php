@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Nuovo Reparto - Rapportini')
+@section('title', 'Nuova Zona - Rapportini')
 
-@section('page-title', 'Nuovo Reparto')
+@section('page-title', 'Nuova Zona')
 
 @section('content')
 <div class="card">
@@ -33,14 +33,14 @@
 
             <div class="mb-3">
                 <label for="name" class="form-label">
-                    <i class="bi bi-tag me-1"></i>Nome Reparto *
+                    <i class="bi bi-tag me-1"></i>Nome Zona *
                 </label>
                 <input type="text"
                        class="form-control @error('name') is-invalid @enderror"
                        id="name"
                        name="name"
                        value="{{ old('name') }}"
-                       placeholder="Es: Reparto Produzione A"
+                       placeholder="Es: Zona Produzione A"
                        required>
                 @error('name')
                     <div class="invalid-feedback">{{ $message }}</div>
@@ -55,15 +55,26 @@
                           id="description"
                           name="description"
                           rows="4"
-                          placeholder="Inserisci una descrizione del reparto (opzionale)">{{ old('description') }}</textarea>
+                          placeholder="Inserisci una descrizione della zona (opzionale)">{{ old('description') }}</textarea>
                 @error('description')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
             </div>
 
+            <div class="mb-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="active" name="active"
+                           {{ old('active', true) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="active">
+                        <i class="bi bi-check-circle me-1"></i>Zona Attiva
+                    </label>
+                </div>
+                <small class="text-muted">Le zone disattivate non saranno disponibili per la creazione di nuovi rapportini</small>
+            </div>
+
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-primary">
-                    <i class="bi bi-check-circle me-2"></i>Crea Reparto
+                    <i class="bi bi-check-circle me-2"></i>Crea Zona
                 </button>
                 <a href="{{ route('departments.index') }}" class="btn btn-secondary">
                     <i class="bi bi-x-circle me-2"></i>Annulla

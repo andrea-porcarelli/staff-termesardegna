@@ -1,15 +1,15 @@
 @extends('layouts.app')
 
-@section('title', 'Dettagli Reparto - Rapportini')
+@section('title', 'Dettagli Zona - Rapportini')
 
-@section('page-title', 'Dettagli Reparto')
+@section('page-title', 'Dettagli Zona')
 
 @section('content')
 <div class="row">
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header">
-                <h4><i class="bi bi-diagram-3 me-2"></i>Informazioni Reparto</h4>
+                <h4><i class="bi bi-diagram-3 me-2"></i>Informazioni Zona</h4>
             </div>
             <div class="card-body">
                 <div class="mb-3">
@@ -59,7 +59,7 @@
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h4><i class="bi bi-gear me-2"></i>Apparati ({{ $department->equipment->count() }})</h4>
+                <h4><i class="bi bi-gear me-2"></i>Impianti/Macchine ({{ $department->equipment->count() }})</h4>
             </div>
             <div class="card-body">
                 @if($department->equipment->count() > 0)
@@ -88,7 +88,7 @@
                 @else
                     <div class="text-center py-4">
                         <i class="bi bi-inbox" style="font-size: 48px; color: #ccc;"></i>
-                        <p class="text-muted mt-2">Nessun apparato associato a questo reparto</p>
+                        <p class="text-muted mt-2">Nessun impianto associato a questa zona</p>
                     </div>
                 @endif
             </div>

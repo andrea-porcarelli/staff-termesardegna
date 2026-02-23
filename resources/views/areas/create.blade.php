@@ -41,6 +41,17 @@
                 @enderror
             </div>
 
+            <div class="mb-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="active" name="active"
+                           {{ old('active', true) ? 'checked' : '' }}>
+                    <label class="form-check-label" for="active">
+                        <i class="bi bi-check-circle me-1"></i>Area Attiva
+                    </label>
+                </div>
+                <small class="text-muted">Le aree disattivate non saranno disponibili per la creazione di nuovi rapportini</small>
+            </div>
+
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-circle me-2"></i>Crea Area

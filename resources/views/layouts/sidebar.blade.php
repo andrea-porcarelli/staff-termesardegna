@@ -20,11 +20,11 @@
             </a>
             <a href="{{ route('departments.index') }}" class="menu-item {{ request()->routeIs('departments.*') ? 'active' : '' }}">
                 <i class="bi bi-diagram-3"></i>
-                <span>Reparti</span>
+                <span>Zone</span>
             </a>
             <a href="{{ route('equipments.index') }}" class="menu-item {{ request()->routeIs('equipments.*') ? 'active' : '' }}">
                 <i class="bi bi-gear"></i>
-                <span>Apparati</span>
+                <span>Impianti/Macchine</span>
             </a>
             <a href="{{ route('interventions.index') }}" class="menu-item {{ request()->routeIs('interventions.index') || request()->routeIs('interventions.create') || request()->routeIs('interventions.edit') || request()->routeIs('interventions.show') ? 'active' : '' }}">
                 <i class="bi bi-calendar-check"></i>
@@ -36,7 +36,7 @@
             <span>Calendario</span>
         </a>
 
-        @if(auth()->user()->role === 'admin' || auth()->user()->role === 'supervisor')
+        @if(auth()->user()->role === 'admin')
         <div style="padding: 10px 25px; opacity: 0.5; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-top: 15px;">
             Amministrazione
         </div>
@@ -46,6 +46,14 @@
         <a href="{{ route('users.index') }}" class="menu-item {{ request()->routeIs('users.*') ? 'active' : '' }}">
             <i class="bi bi-people"></i>
             <span>Utenti</span>
+        </a>
+        <a href="{{ route('maintenance_roles.index') }}" class="menu-item {{ request()->routeIs('maintenance_roles.*') ? 'active' : '' }}">
+            <i class="bi bi-award"></i>
+            <span>Specializzazioni</span>
+        </a>
+        <a href="{{ route('teams.index') }}" class="menu-item {{ request()->routeIs('teams.*') ? 'active' : '' }}">
+            <i class="bi bi-people-fill"></i>
+            <span>Team</span>
         </a>
         @endif
     </div>

@@ -53,7 +53,7 @@
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h4><i class="bi bi-diagram-3 me-2"></i>Reparti ({{ $area->departments->count() }})</h4>
+                <h4><i class="bi bi-diagram-3 me-2"></i>Zone ({{ $area->departments->count() }})</h4>
             </div>
             <div class="card-body">
                 @if($area->departments->count() > 0)
@@ -64,7 +64,7 @@
                                     <div>
                                         <h6 class="mb-1">{{ $department->name }}</h6>
                                         <small class="text-muted">
-                                            {{ $department->equipment->count() }} apparati
+                                            {{ $department->equipment->count() }} impianti
                                         </small>
                                     </div>
                                     <div>
@@ -81,7 +81,7 @@
                 @else
                     <div class="text-center py-4">
                         <i class="bi bi-inbox" style="font-size: 48px; color: #ccc;"></i>
-                        <p class="text-muted mt-2">Nessun reparto associato a questa area</p>
+                        <p class="text-muted mt-2">Nessuna zona associata a questa area</p>
                     </div>
                 @endif
             </div>

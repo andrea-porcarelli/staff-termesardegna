@@ -16,7 +16,6 @@ services:
       - HOME=/tmp
     depends_on:
       - rapportini_db
-      - rapportini_db
     networks:
       - rapportini
 

@@ -21,7 +21,7 @@ class MediaManager extends Component
     public function mount($mediableType, $mediableId)
     {
         $this->mediableType = $mediableType;
-        $this->mediableId = $mediableId;
+        $this->mediableId = (int) $mediableId;
     }
 
     public function updatedFiles()
