@@ -38,6 +38,9 @@
             transition: transform 0.3s ease;
             z-index: 1000;
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         .sidebar-header {
@@ -60,6 +63,13 @@
 
         .sidebar-menu {
             padding: 20px 0;
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: none;
+        }
+
+        .sidebar-menu::-webkit-scrollbar {
+            display: none;
         }
 
         .menu-item {
@@ -330,11 +340,8 @@
         }
 
         .logout-btn {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            right: 0;
-            margin: 0 25px;
+            display: block;
+            width: 100%;
             padding: 12px;
             background-color: rgba(220, 53, 69, 0.2);
             color: #ff6b6b;
@@ -363,6 +370,49 @@
 
         .sidebar-overlay.active {
             display: block;
+        }
+
+        @media (max-height: 760px) {
+            .sidebar-header {
+                padding: 12px 20px;
+            }
+            .sidebar-header i {
+                font-size: 28px !important;
+            }
+            .sidebar-header h3 {
+                font-size: 20px;
+                margin: 6px 0 3px;
+            }
+            .menu-item {
+                padding: 10px 25px;
+            }
+        }
+
+        @media (max-height: 620px) {
+            .sidebar-header {
+                padding: 8px 20px;
+            }
+            .sidebar-header i {
+                font-size: 20px !important;
+            }
+            .sidebar-header h3 {
+                font-size: 16px;
+                margin: 4px 0 2px;
+            }
+            .sidebar-header p {
+                display: none;
+            }
+            .sidebar-menu {
+                padding: 8px 0;
+            }
+            .menu-item {
+                padding: 7px 25px;
+                font-size: 14px;
+            }
+            .menu-item i {
+                font-size: 16px;
+                margin-right: 10px;
+            }
         }
 
         @media (max-width: 768px) {

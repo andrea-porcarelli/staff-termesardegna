@@ -57,7 +57,7 @@
         </a>
         @endif
     </div>
-    <form method="POST" action="{{ route('logout') }}" style="position: relative; height: 80px;">
+    <form method="POST" action="{{ route('logout') }}" style="padding: 15px 25px 20px; flex-shrink: 0;">
         @csrf
         <button type="submit" class="logout-btn">
             <i class="bi bi-box-arrow-right me-2"></i>Esci

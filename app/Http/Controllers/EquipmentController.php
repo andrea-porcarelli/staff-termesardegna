@@ -56,9 +56,9 @@ class EquipmentController extends Controller
             'active' => $request->boolean('active'),
         ];
 
-        if ($request->filled('last_maintenance_date')) {
+        if ($request->filled('last_maintenance_date') && $request->filled('maintenance_frequency_days')) {
             $data['next_maintenance_date'] = Carbon::parse($request->last_maintenance_date)
-                ->addDays($request->maintenance_frequency_days);
+                ->addDays((int) $request->maintenance_frequency_days);
         }
 
         $equipment = Equipment::create($data);
@@ -110,9 +110,9 @@ class EquipmentController extends Controller
             'active' => $request->boolean('active'),
         ];
 
-        if ($request->filled('last_maintenance_date')) {
+        if ($request->filled('last_maintenance_date') && $request->filled('maintenance_frequency_days')) {
             $data['next_maintenance_date'] = Carbon::parse($request->last_maintenance_date)
-                ->addDays($request->maintenance_frequency_days);
+                ->addDays((int) $request->maintenance_frequency_days);
         }
 
         $equipment->update($data);
