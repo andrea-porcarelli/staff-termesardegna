@@ -25,7 +25,7 @@ class InterventionController extends Controller
     public function create(): View
     {
         $equipments = Equipment::where('active', true)->orderBy('name')->get();
-        $operators = User::where('role', 'operator')->orderBy('name')->get();
+        $operators = User::whereIn('role', ['operator', 'manutentore'])->orderBy('name')->get();
         return view('interventions.create', compact('equipments', 'operators'));
     }
 
@@ -59,7 +59,7 @@ class InterventionController extends Controller
     public function edit(Intervention $intervention): View
     {
         $equipments = Equipment::where('active', true)->orderBy('name')->get();
-        $operators = User::where('role', 'operator')->orderBy('name')->get();
+        $operators = User::whereIn('role', ['operator', 'manutentore'])->orderBy('name')->get();
         return view('interventions.edit', compact('intervention', 'equipments', 'operators'));
     }
 
@@ -102,8 +102,8 @@ class InterventionController extends Controller
             ->orderBy('scheduled_date', 'asc')
             ->orderBy('scheduled_start_time', 'asc');
 
-        // Gli operatori vedono solo i loro interventi
-        if ($user->role === 'operator') {
+        // Operatori e manutentori vedono solo i loro interventi
+        if (in_array($user->role, ['operator', 'manutentore'])) {
             $query->where('assigned_user_id', $user->id);
         }
 
@@ -142,11 +142,11 @@ class InterventionController extends Controller
     {
         $user = Auth::user();
 
-        // Gli operatori vedono solo i loro interventi
-        // Admin e supervisor vedono tutti gli interventi
+        // Operatori e manutentori vedono solo i loro interventi
+        // Admin vede tutti gli interventi
         $query = Intervention::with(['equipment', 'assignedUser']);
 
-        if ($user->role === 'operator') {
+        if (in_array($user->role, ['operator', 'manutentore'])) {
             $query->where('assigned_user_id', $user->id);
         }
 
@@ -193,7 +193,7 @@ class InterventionController extends Controller
                     'status' => $intervention->status,
                     'priority' => $intervention->priority,
                     'description' => $intervention->description,
-                    'url' => Auth::user()->role === 'operator' ? route('interventions.reports.create', $intervention) : route('interventions.show', $intervention)
+                    'url' => in_array(Auth::user()->role, ['operator', 'manutentore']) ? route('interventions.reports.create', $intervention) : route('interventions.show', $intervention)
                 ]
             ];
         });

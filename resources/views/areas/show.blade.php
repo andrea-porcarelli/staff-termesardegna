@@ -64,7 +64,7 @@
                                     <div>
                                         <h6 class="mb-1">{{ $department->name }}</h6>
                                         <small class="text-muted">
-                                            {{ $department->equipment->count() }} impianti
+                                            {{ $department->equipments->count() }} impianti
                                         </small>
                                     </div>
                                     <div>
