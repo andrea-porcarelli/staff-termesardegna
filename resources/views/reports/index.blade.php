@@ -114,10 +114,10 @@
                                 </span>
                             </td>
                             <td class="text-center text-nowrap">
-                                <a href="{{ route('interventions.show', $report->intervention) }}"
-                                   class="btn btn-info btn-sm" title="Dettagli intervento">
+                                <button class="btn btn-info btn-sm" title="Dettagli rapportino"
+                                        onclick="viewReport({{ $report->id }})">
                                     <i class="bi bi-eye"></i>
-                                </a>
+                                </button>
                                 @if($report->status !== 'chiuso')
                                     <a href="{{ route('interventions.reports.edit', [$report->intervention, $report]) }}"
                                        class="btn btn-warning btn-sm" title="Modifica">
@@ -153,5 +153,155 @@
         </div>
     @endif
 </div>
+
+{{-- Modale dettagli rapportino --}}
+<div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" id="reportModalHeader">
+                <h5 class="modal-title" id="reportModalTitle">Dettagli Rapportino</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="reportModalBody">
+                <div class="text-center py-5">
+                    <div class="spinner-border" role="status"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@push('scripts')
+<script>
+const statusColors = { draft: '#6c757d', completed: '#198754', chiuso: '#212529' };
+const priorityBadge = { low: 'bg-secondary', medium: 'bg-info', high: 'bg-warning', critical: 'bg-danger' };
+
+function viewReport(reportId) {
+    const modal = new bootstrap.Modal(document.getElementById('reportModal'));
+    document.getElementById('reportModalBody').innerHTML = `
+        <div class="text-center py-5"><div class="spinner-border" role="status"></div></div>`;
+    modal.show();
+
+    fetch(`/api/reports/${reportId}`)
+        .then(r => r.json())
+        .then(d => {
+            const iv = d.intervention;
+            const header = document.getElementById('reportModalHeader');
+            const color  = statusColors[d.status] || '#6c757d';
+            header.style.background = color;
+
+            document.getElementById('reportModalTitle').textContent =
+                iv.title + ' — ' + d.report_date;
+
+            let html = `
+            {{-- Richiesta dell'intervento --}}
+            <div class="mb-4 p-3 rounded" style="background:#f8f9fa;border-left:4px solid ${color}">
+                <div class="row g-2">
+                    <div class="col-12">
+                        <div class="text-muted small mb-1"><i class="bi bi-calendar-check me-1"></i><strong>Intervento richiesto</strong></div>
+                        <div class="fw-semibold">${iv.title}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-muted small"><i class="bi bi-gear me-1"></i>Destinazione</div>
+                        <div>${iv.destination}</div>
+                        ${iv.location ? `<div class="text-muted small">${iv.location}</div>` : ''}
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted small"><i class="bi bi-calendar3 me-1"></i>Data pianificata</div>
+                        <div>${iv.scheduled_date}${iv.scheduled_time ? ' alle ' + iv.scheduled_time : ''}</div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-muted small"><i class="bi bi-flag me-1"></i>Priorità</div>
+                        <span class="badge ${priorityBadge[iv.priority] || 'bg-secondary'}">${iv.priority_label}</span>
+                    </div>
+                    ${iv.description ? `
+                    <div class="col-12">
+                        <div class="text-muted small"><i class="bi bi-text-paragraph me-1"></i>Descrizione</div>
+                        <div>${iv.description}</div>
+                    </div>` : ''}
+                    ${iv.notes ? `
+                    <div class="col-12">
+                        <div class="text-muted small"><i class="bi bi-sticky me-1"></i>Note intervento</div>
+                        <div>${iv.notes}</div>
+                    </div>` : ''}
+                </div>
+            </div>
+
+            {{-- Dati rapportino --}}
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="p-3 rounded bg-light h-100">
+                        <div class="text-muted small mb-1"><i class="bi bi-person me-1"></i>Compilato da</div>
+                        <div class="fw-semibold">${d.user_name}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded bg-light h-100">
+                        <div class="text-muted small mb-1"><i class="bi bi-calendar3 me-1"></i>Data rapportino</div>
+                        <div class="fw-semibold">${d.report_date}</div>
+                        ${d.time_range ? `<div class="text-muted small"><i class="bi bi-clock me-1"></i>${d.time_range}</div>` : ''}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="p-3 rounded bg-light h-100">
+                        <div class="text-muted small mb-1"><i class="bi bi-info-circle me-1"></i>Stato</div>
+                        <span class="badge" style="background:${color}">${d.status_label}</span>
+                    </div>
+                </div>
+                ${d.activities ? `
+                <div class="col-12">
+                    <div class="p-3 rounded bg-light">
+                        <div class="text-muted small mb-1"><i class="bi bi-list-check me-1"></i>Attività svolte</div>
+                        <div style="white-space:pre-wrap">${d.activities}</div>
+                    </div>
+                </div>` : ''}
+                ${d.notes ? `
+                <div class="col-12">
+                    <div class="p-3 rounded" style="background:#fff3cd">
+                        <div class="text-muted small mb-1"><i class="bi bi-sticky me-1"></i>Note rapportino</div>
+                        <div style="white-space:pre-wrap">${d.notes}</div>
+                    </div>
+                </div>` : ''}
+            </div>`;
+
+            if (d.media && d.media.length > 0) {
+                const images = d.media.filter(m => m.is_image);
+                const docs   = d.media.filter(m => !m.is_image);
+                html += `<hr class="my-3">`;
+                if (images.length) {
+                    html += `<div class="mb-3"><div class="text-muted small mb-2"><i class="bi bi-images me-1"></i>Foto (${images.length})</div><div class="row g-2">`;
+                    images.forEach(m => {
+                        html += `<div class="col-4 col-md-3">
+                            <a href="${m.url}" target="_blank">
+                                <img src="${m.url}" class="img-fluid rounded" style="height:90px;width:100%;object-fit:cover">
+                            </a>
+                        </div>`;
+                    });
+                    html += `</div></div>`;
+                }
+                if (docs.length) {
+                    html += `<div><div class="text-muted small mb-2"><i class="bi bi-paperclip me-1"></i>Documenti (${docs.length})</div>`;
+                    docs.forEach(m => {
+                        html += `<div class="d-flex justify-content-between align-items-center p-2 border rounded mb-1">
+                            <span class="small">${m.file_name} <span class="text-muted">(${m.file_size})</span></span>
+                            <a href="${m.url}" target="_blank" class="btn btn-sm btn-light"><i class="bi bi-download"></i></a>
+                        </div>`;
+                    });
+                    html += `</div>`;
+                }
+            }
+
+            document.getElementById('reportModalBody').innerHTML = html;
+        })
+        .catch(() => {
+            document.getElementById('reportModalBody').innerHTML =
+                `<div class="alert alert-danger">Errore nel caricamento dei dati.</div>`;
+        });
+}
+</script>
+@endpush
 
 @endsection
