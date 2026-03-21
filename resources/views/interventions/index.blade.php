@@ -31,8 +31,13 @@
                         <tr>
                             <td><strong>{{ $intervention->title }}</strong></td>
                             <td>
-                                <small class="text-muted">{{ $intervention->equipment->department->area->name }} / {{ $intervention->equipment->department->name }}</small><br>
-                                <span class="badge bg-secondary">{{ $intervention->equipment->name }}</span>
+                                @if($intervention->equipment)
+                                    <small class="text-muted">{{ $intervention->equipment->department->area->name }} / {{ $intervention->equipment->department->name }}</small><br>
+                                    <span class="badge bg-secondary">{{ $intervention->equipment->name }}</span>
+                                @else
+                                    <small class="text-muted">{{ $intervention->area->name ?? '-' }} / {{ $intervention->department->name ?? '-' }}</small><br>
+                                    <span class="badge bg-primary">Area/Zona</span>
+                                @endif
                             </td>
                             <td>
                                 <i class="bi bi-person me-1"></i>{{ $intervention->assignedUser->name }}
