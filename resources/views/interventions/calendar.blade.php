@@ -6,8 +6,8 @@
 
 @section('content')
 
-{{-- VISTA MOBILE: Lista per settimane --}}
-<div class="mobile-list-view">
+{{-- VISTA MOBILE: Lista per settimane (nascosta, sostituita da FullCalendar) --}}
+<div class="mobile-list-view" style="display:none!important">
     @if(count($weeklyInterventions) > 0)
         @foreach($weeklyInterventions as $weekKey => $week)
             <div class="card mb-3">
@@ -174,24 +174,8 @@
 @push('styles')
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
 <style>
-    /* Vista mobile: mostra solo su schermi piccoli */
-    .mobile-list-view {
-        display: block;
-    }
-
     .desktop-calendar-view {
-        display: none;
-    }
-
-    /* Vista desktop: mostra su schermi grandi */
-    @media (min-width: 768px) {
-        .mobile-list-view {
-            display: none;
-        }
-
-        .desktop-calendar-view {
-            display: block;
-        }
+        display: block;
     }
 
     /* Stili lista mobile */
@@ -329,31 +313,35 @@ function openEventModal(title, props, startDate, endDate) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    if (window.innerWidth >= 768) {
-        var calendarEl = document.getElementById('calendar');
+    var isMobile = window.innerWidth < 768;
+    var calendarEl = document.getElementById('calendar');
 
-        var calendar = new FullCalendar.Calendar(calendarEl, {
-            locale: 'it',
-            initialView: 'dayGridMonth',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
-            },
-            buttonText: { today: 'Oggi', month: 'Mese', week: 'Settimana', day: 'Giorno', list: 'Lista' },
-            height: 'auto',
-            events: '{{ route('interventions.calendar.data') }}',
-            eventClick: function(info) {
-                info.jsEvent.preventDefault();
-                openEventModal(info.event.title, info.event.extendedProps, info.event.start, info.event.end);
-            },
-            eventDidMount: function(info) {
-                info.el.title = info.event.title + ' — ' + info.event.extendedProps.equipment;
-            }
-        });
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+        locale: 'it',
+        initialView: isMobile ? 'listWeek' : 'dayGridMonth',
+        headerToolbar: isMobile ? {
+            left: 'prev,next',
+            center: 'title',
+            right: 'listWeek,listMonth'
+        } : {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+        },
+        buttonText: { today: 'Oggi', month: 'Mese', week: 'Settimana', day: 'Giorno', list: 'Lista' },
+        height: 'auto',
+        events: '{{ route('interventions.calendar.data') }}',
+        noEventsText: 'Nessun intervento in questo periodo',
+        eventClick: function(info) {
+            info.jsEvent.preventDefault();
+            openEventModal(info.event.title, info.event.extendedProps, info.event.start, info.event.end);
+        },
+        eventDidMount: function(info) {
+            info.el.title = info.event.title + ' — ' + info.event.extendedProps.equipment;
+        }
+    });
 
-        calendar.render();
-    }
+    calendar.render();
 });
 </script>
 @endpush
