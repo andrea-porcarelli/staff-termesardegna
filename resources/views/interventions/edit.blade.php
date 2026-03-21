@@ -13,11 +13,16 @@
         @php
             $currentTargetType = old('target_type', $intervention->equipment_id ? 'equipment' : 'area');
         @endphp
-        <form action="{{ route('interventions.update', $intervention) }}" method="POST" x-data="{
-            targetType: '{{ $currentTargetType }}',
-            selectedAreaId: '{{ old('area_id', $intervention->area_id ?? '') }}',
-            departments: @json($departments->map(fn($d) => ['id' => $d->id, 'name' => $d->name, 'area_id' => $d->area_id]))
-        }">
+        <script>
+            function interventionForm() {
+                return {
+                    targetType: '{{ $currentTargetType }}',
+                    selectedAreaId: '{{ old('area_id', $intervention->area_id ?? '') }}',
+                    departments: @json($departments->map(fn($d) => ['id' => $d->id, 'name' => $d->name, 'area_id' => $d->area_id]))
+                };
+            }
+        </script>
+        <form action="{{ route('interventions.update', $intervention) }}" method="POST" x-data="interventionForm()">
             @csrf
             @method('PUT')
 

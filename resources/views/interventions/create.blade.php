@@ -10,11 +10,16 @@
         <h4><i class="bi bi-plus-circle me-2"></i>Pianifica Nuovo Intervento</h4>
     </div>
     <div class="card-body">
-        <form action="{{ route('interventions.store') }}" method="POST" x-data="{
-            targetType: '{{ old('target_type', 'equipment') }}',
-            selectedAreaId: '{{ old('area_id', '') }}',
-            departments: @json($departments->map(fn($d) => ['id' => $d->id, 'name' => $d->name, 'area_id' => $d->area_id]))
-        }">
+        <script>
+            function interventionForm() {
+                return {
+                    targetType: '{{ old('target_type', 'equipment') }}',
+                    selectedAreaId: '{{ old('area_id', '') }}',
+                    departments: @json($departments->map(fn($d) => ['id' => $d->id, 'name' => $d->name, 'area_id' => $d->area_id]))
+                };
+            }
+        </script>
+        <form action="{{ route('interventions.store') }}" method="POST" x-data="interventionForm()">
             @csrf
 
             {{-- Selezione tipo destinazione --}}
