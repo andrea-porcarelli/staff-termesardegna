@@ -620,7 +620,7 @@
             </div>
         </div>
     </div>
-
+    @if(\Illuminate\Support\Facades\Auth::user()->role !== 'manutentore')
     {{-- Azioni Rapide Operator --}}
     <div class="card border-0 shadow-sm">
         <div class="card-header bg-white">
@@ -643,6 +643,7 @@
             </div>
         </div>
     </div>
+    @endif
 @endif
 
 @endsection

@@ -196,6 +196,15 @@
         border-bottom: none !important;
     }
 
+    @media (max-width: 767px) {
+        .fc-toolbar-title {
+            font-size: 1rem !important;
+        }
+        .fc-toolbar {
+            gap: 0.5rem;
+        }
+    }
+
     /* Stili calendario desktop */
     #calendar {
         max-width: 100%;
