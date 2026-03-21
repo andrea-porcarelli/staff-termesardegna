@@ -18,6 +18,7 @@ class InterventionController extends Controller
 {
     public function index(): View
     {
+        abort_if(Auth::user()->role === 'manutentore', 403);
         $interventions = Intervention::with(['equipment.department.area', 'assignedUser'])
             ->orderBy('scheduled_date', 'desc')
             ->get();
