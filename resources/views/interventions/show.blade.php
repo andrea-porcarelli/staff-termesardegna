@@ -11,7 +11,7 @@
         </a>
     </div>
 
-@if(auth()->user()->role === 'operator')
+@if(in_array(auth()->user()->role, ['operator', 'manutentore']))
     {{-- VISTA OPERATORE: Pulsante crea rapportino prioritario --}}
     <div class="card mb-3 border-primary">
         <div class="card-body text-center py-4">
