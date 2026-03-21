@@ -26,6 +26,7 @@ class InterventionController extends Controller
 
     public function create(): View
     {
+        abort_if(Auth::user()->role === 'manutentore', 403);
         $equipments = Equipment::where('active', true)->orderBy('name')->get();
         $operators = User::whereIn('role', ['operator', 'manutentore'])->orderBy('name')->get();
         $areas = Area::where('active', true)->orderBy('name')->get();
@@ -64,6 +65,7 @@ class InterventionController extends Controller
 
     public function edit(Intervention $intervention): View
     {
+        abort_if(Auth::user()->role === 'manutentore', 403);
         $equipments = Equipment::where('active', true)->orderBy('name')->get();
         $operators = User::whereIn('role', ['operator', 'manutentore'])->orderBy('name')->get();
         $areas = Area::where('active', true)->orderBy('name')->get();

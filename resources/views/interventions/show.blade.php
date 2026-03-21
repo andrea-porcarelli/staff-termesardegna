@@ -11,48 +11,26 @@
         </a>
     </div>
 
-@if(in_array(auth()->user()->role, ['operator', 'manutentore']))
-    {{-- VISTA OPERATORE: Pulsante crea rapportino prioritario --}}
+@if(auth()->user()->role === 'manutentore')
     <div class="card mb-3 border-primary">
-        <div class="card-body text-center py-4">
-            <h4 class="mb-3"><i class="bi bi-file-earmark-text me-2"></i>Crea Nuovo Rapportino</h4>
-            <p class="text-muted mb-4">Compila il rapportino e carica le foto direttamente durante la creazione</p>
+        <div class="card-body text-center py-3">
             <a href="{{ route('interventions.reports.create', $intervention) }}" class="btn btn-light btn-lg">
-                <i class="bi bi-plus-circle me-2"></i>Inizia Rapportino
+                <i class="bi bi-plus-circle me-2"></i>Crea Rapportino per questo intervento
             </a>
         </div>
     </div>
+@endif
 
-    {{-- Info intervento compatte per operatore --}}
-    <div class="card mb-3">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h4 class="mb-0"><i class="bi bi-info-circle me-2"></i>{{ $intervention->title }}</h4>
-        </div>
-        <div class="card-body">
-            @if($intervention->equipment)
-                <p><strong>Impianto:</strong> {{ $intervention->equipment->name }} ({{ $intervention->equipment->code }})</p>
-            @else
-                <p><strong>Area/Zona:</strong> {{ $intervention->area->name ?? '-' }} / {{ $intervention->department->name ?? '-' }}</p>
-            @endif
-            <p><strong>Data:</strong> {{ $intervention->scheduled_date->format('d/m/Y') }}
-               @if($intervention->scheduled_start_time)
-                   alle {{ substr($intervention->scheduled_start_time, 0, 5) }}
-               @endif
-            </p>
-            @if($intervention->description)
-                <p><strong>Descrizione:</strong><br>{{ $intervention->description }}</p>
-            @endif
-        </div>
-    </div>
-@else
-    {{-- VISTA ADMIN/SUPERVISOR: Layout originale --}}
+    {{-- VISTA DETTAGLIO (tutti i ruoli) --}}
     <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h4><i class="bi bi-calendar-check me-2"></i>{{ $intervention->title }}</h4>
             <div>
-                <a href="{{ route('interventions.edit', $intervention) }}" class="btn btn-warning btn-sm">
-                    <i class="bi bi-pencil me-2"></i>Modifica
-                </a>
+                @if(in_array(auth()->user()->role, ['admin', 'operator']))
+                    <a href="{{ route('interventions.edit', $intervention) }}" class="btn btn-warning btn-sm">
+                        <i class="bi bi-pencil me-2"></i>Modifica
+                    </a>
+                @endif
                 <a href="{{ route('interventions.index') }}" class="btn btn-secondary btn-sm">
                     <i class="bi bi-arrow-left me-2"></i>Torna alla Lista
                 </a>
@@ -233,7 +211,6 @@
             </div>
         </div>
     </div>
-@endif
 
 {{-- RAPPORTINI (visibile a tutti) --}}
 <div class="card">
