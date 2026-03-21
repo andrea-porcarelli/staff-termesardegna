@@ -167,7 +167,7 @@
                                         <div>
                                             <h6 class="mb-1">{{ $intervention->title }}</h6>
                                             <small class="text-muted">
-                                                <i class="bi bi-gear me-1"></i>{{ $intervention->equipment->name }}
+                                                <i class="bi bi-gear me-1"></i>{{ $intervention->equipment?->name ?? ($intervention->area?->name . ' / ' . $intervention->department?->name) }}
                                                 <i class="bi bi-person ms-2 me-1"></i>{{ $intervention->assignedUser->name }}
                                             </small>
                                         </div>
@@ -386,7 +386,7 @@
                                         <div>
                                             <h6 class="mb-1">{{ $intervention->title }}</h6>
                                             <small class="text-muted">
-                                                <i class="bi bi-gear me-1"></i>{{ $intervention->equipment->name }}
+                                                <i class="bi bi-gear me-1"></i>{{ $intervention->equipment?->name ?? ($intervention->area?->name . ' / ' . $intervention->department?->name) }}
                                                 <i class="bi bi-person ms-2 me-1"></i>{{ $intervention->assignedUser->name }}
                                             </small>
                                         </div>
@@ -479,7 +479,7 @@
                 <div class="d-flex justify-content-between align-items-center {{ !$loop->last ? 'mb-3' : '' }}">
                     <div>
                         <h6 class="mb-1">{{ $intervention->title }}</h6>
-                        <small><i class="bi bi-gear me-1"></i>{{ $intervention->equipment->name }}</small>
+                        <small><i class="bi bi-gear me-1"></i>{{ $intervention->equipment?->name ?? ($intervention->area?->name . ' / ' . $intervention->department?->name) }}</small>
                     </div>
                     <div class="text-end">
                         @if($intervention->scheduled_start_time)
@@ -581,7 +581,7 @@
                                 <div class="flex-grow-1">
                                     <h6 class="mb-1">{{ $intervention->title }}</h6>
                                     <small class="text-muted">
-                                        <i class="bi bi-gear me-1"></i>{{ $intervention->equipment->name }}
+                                        <i class="bi bi-gear me-1"></i>{{ $intervention->equipment?->name ?? ($intervention->area?->name . ' / ' . $intervention->department?->name) }}
                                     </small>
                                 </div>
                                 <div class="text-end">

@@ -74,6 +74,9 @@
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 @if($user->id !== auth()->id())
+                                    <a href="{{ route('impersonate', $user->id) }}" class="btn btn-info btn-sm" title="Impersona utente">
+                                        <i class="bi bi-person-badge"></i>
+                                    </a>
                                     <form action="{{ route('users.destroy', $user) }}"
                                           method="POST"
                                           class="d-inline"

@@ -469,6 +469,18 @@
             </div>
         </div>
 
+        @if(app('impersonate')->isImpersonating())
+            <div class="alert alert-warning d-flex justify-content-between align-items-center rounded-0 mb-0 px-4 py-2" style="border-radius:0!important;">
+                <span>
+                    <i class="bi bi-person-badge me-2"></i>
+                    Stai impersonando <strong>{{ auth()->user()->name }}</strong>
+                </span>
+                <a href="{{ route('impersonate.leave') }}" class="btn btn-sm btn-dark">
+                    <i class="bi bi-box-arrow-left me-1"></i>Torna al tuo account
+                </a>
+            </div>
+        @endif
+
         <div class="content-wrapper">
             @yield('content')
         </div>
