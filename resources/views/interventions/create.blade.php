@@ -10,15 +10,45 @@
         <h4><i class="bi bi-plus-circle me-2"></i>Pianifica Nuovo Intervento</h4>
     </div>
     <div class="card-body">
-        <form action="{{ route('interventions.store') }}" method="POST">
+        <form action="{{ route('interventions.store') }}" method="POST" x-data="{
+            targetType: '{{ old('target_type', 'equipment') }}',
+            selectedAreaId: '{{ old('area_id', '') }}',
+            departments: @json($departments->map(fn($d) => ['id' => $d->id, 'name' => $d->name, 'area_id' => $d->area_id]))
+        }">
             @csrf
 
+            {{-- Selezione tipo destinazione --}}
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Destinazione intervento <span class="text-danger">*</span></label>
+                <div class="d-flex gap-3">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="target_type" id="target_equipment"
+                               value="equipment" x-model="targetType">
+                        <label class="form-check-label" for="target_equipment">
+                            <i class="bi bi-gear me-1"></i>Impianto/Macchina
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="target_type" id="target_area"
+                               value="area" x-model="targetType">
+                        <label class="form-check-label" for="target_area">
+                            <i class="bi bi-building me-1"></i>Area + Zona
+                        </label>
+                    </div>
+                </div>
+                @error('target_type')
+                    <div class="text-danger small mt-1">{{ $message }}</div>
+                @enderror
+            </div>
+
             <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label for="equipment_id" class="form-label">Apparato <span class="text-danger">*</span></label>
+                {{-- Selezione impianto --}}
+                <div class="col-md-6 mb-3" x-show="targetType === 'equipment'" x-cloak>
+                    <label for="equipment_id" class="form-label">Impianto/Macchina <span class="text-danger">*</span></label>
                     <select class="form-select @error('equipment_id') is-invalid @enderror"
-                            id="equipment_id" name="equipment_id" required>
-                        <option value="">Seleziona un apparato...</option>
+                            id="equipment_id" name="equipment_id"
+                            :required="targetType === 'equipment'">
+                        <option value="">Seleziona un impianto...</option>
                         @foreach($equipments as $equipment)
                             <option value="{{ $equipment->id }}" {{ old('equipment_id') == $equipment->id ? 'selected' : '' }}>
                                 {{ $equipment->name }} - {{ $equipment->code }}
@@ -26,6 +56,45 @@
                         @endforeach
                     </select>
                     @error('equipment_id')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                {{-- Selezione area --}}
+                <div class="col-md-3 mb-3" x-show="targetType === 'area'" x-cloak>
+                    <label for="area_id" class="form-label">Area <span class="text-danger">*</span></label>
+                    <select class="form-select @error('area_id') is-invalid @enderror"
+                            id="area_id" name="area_id"
+                            :required="targetType === 'area'"
+                            x-model="selectedAreaId">
+                        <option value="">Seleziona un'area...</option>
+                        @foreach($areas as $area)
+                            <option value="{{ $area->id }}" {{ old('area_id') == $area->id ? 'selected' : '' }}>
+                                {{ $area->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('area_id')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                {{-- Selezione zona (filtrata per area) --}}
+                <div class="col-md-3 mb-3" x-show="targetType === 'area'" x-cloak>
+                    <label for="department_id" class="form-label">Zona <span class="text-danger">*</span></label>
+                    <select class="form-select @error('department_id') is-invalid @enderror"
+                            id="department_id" name="department_id"
+                            :required="targetType === 'area'">
+                        <option value="">Seleziona una zona...</option>
+                        @foreach($departments as $dept)
+                            <option value="{{ $dept->id }}"
+                                    x-show="!selectedAreaId || selectedAreaId == {{ $dept->area_id }}"
+                                    {{ old('department_id') == $dept->id ? 'selected' : '' }}>
+                                {{ $dept->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('department_id')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>

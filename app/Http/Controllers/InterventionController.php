@@ -6,6 +6,8 @@ use App\Http\Requests\InterventionRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use App\Models\Intervention;
+use App\Models\Area;
+use App\Models\Department;
 use App\Models\Equipment;
 use App\Models\User;
 use Illuminate\View\View;
@@ -26,22 +28,26 @@ class InterventionController extends Controller
     {
         $equipments = Equipment::where('active', true)->orderBy('name')->get();
         $operators = User::whereIn('role', ['operator', 'manutentore'])->orderBy('name')->get();
-        return view('interventions.create', compact('equipments', 'operators'));
+        $areas = Area::where('active', true)->orderBy('name')->get();
+        $departments = Department::where('active', true)->orderBy('name')->get();
+        return view('interventions.create', compact('equipments', 'operators', 'areas', 'departments'));
     }
 
     public function store(InterventionRequest $request): RedirectResponse
     {
         $data = [
-            'equipment_id' => $request->equipment_id,
-            'assigned_user_id' => $request->assigned_user_id,
-            'title' => $request->title,
-            'description' => $request->description,
-            'scheduled_date' => $request->scheduled_date,
-            'scheduled_start_time' => $request->scheduled_start_time,
+            'equipment_id'               => $request->target_type === 'equipment' ? $request->equipment_id : null,
+            'area_id'                    => $request->target_type === 'area' ? $request->area_id : null,
+            'department_id'              => $request->target_type === 'area' ? $request->department_id : null,
+            'assigned_user_id'           => $request->assigned_user_id,
+            'title'                      => $request->title,
+            'description'                => $request->description,
+            'scheduled_date'             => $request->scheduled_date,
+            'scheduled_start_time'       => $request->scheduled_start_time,
             'estimated_duration_minutes' => $request->estimated_duration_minutes,
-            'status' => $request->status ?? 'planned',
-            'priority' => $request->priority ?? 'medium',
-            'notes' => $request->notes,
+            'status'                     => $request->status ?? 'planned',
+            'priority'                   => $request->priority ?? 'medium',
+            'notes'                      => $request->notes,
         ];
 
         Intervention::create($data);
@@ -60,22 +66,26 @@ class InterventionController extends Controller
     {
         $equipments = Equipment::where('active', true)->orderBy('name')->get();
         $operators = User::whereIn('role', ['operator', 'manutentore'])->orderBy('name')->get();
-        return view('interventions.edit', compact('intervention', 'equipments', 'operators'));
+        $areas = Area::where('active', true)->orderBy('name')->get();
+        $departments = Department::where('active', true)->orderBy('name')->get();
+        return view('interventions.edit', compact('intervention', 'equipments', 'operators', 'areas', 'departments'));
     }
 
     public function update(InterventionRequest $request, Intervention $intervention): RedirectResponse
     {
         $data = [
-            'equipment_id' => $request->equipment_id,
-            'assigned_user_id' => $request->assigned_user_id,
-            'title' => $request->title,
-            'description' => $request->description,
-            'scheduled_date' => $request->scheduled_date,
-            'scheduled_start_time' => $request->scheduled_start_time,
+            'equipment_id'               => $request->target_type === 'equipment' ? $request->equipment_id : null,
+            'area_id'                    => $request->target_type === 'area' ? $request->area_id : null,
+            'department_id'              => $request->target_type === 'area' ? $request->department_id : null,
+            'assigned_user_id'           => $request->assigned_user_id,
+            'title'                      => $request->title,
+            'description'                => $request->description,
+            'scheduled_date'             => $request->scheduled_date,
+            'scheduled_start_time'       => $request->scheduled_start_time,
             'estimated_duration_minutes' => $request->estimated_duration_minutes,
-            'status' => $request->status ?? 'planned',
-            'priority' => $request->priority ?? 'medium',
-            'notes' => $request->notes,
+            'status'                     => $request->status ?? 'planned',
+            'priority'                   => $request->priority ?? 'medium',
+            'notes'                      => $request->notes,
         ];
 
         $intervention->update($data);

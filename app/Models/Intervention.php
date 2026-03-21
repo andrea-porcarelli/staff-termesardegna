@@ -11,6 +11,8 @@ class Intervention extends Model
 {
     protected $fillable = [
         'equipment_id',
+        'area_id',
+        'department_id',
         'assigned_user_id',
         'title',
         'description',
@@ -31,6 +33,16 @@ class Intervention extends Model
     public function equipment(): BelongsTo
     {
         return $this->belongsTo(Equipment::class);
+    }
+
+    public function area(): BelongsTo
+    {
+        return $this->belongsTo(Area::class);
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
     }
 
     public function assignedUser(): BelongsTo
