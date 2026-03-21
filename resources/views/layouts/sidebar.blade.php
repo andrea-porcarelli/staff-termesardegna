@@ -32,6 +32,10 @@
                 <i class="bi bi-calendar-check"></i>
                 <span>Interventi</span>
             </a>
+            <a href="{{ route('reports.index') }}" class="menu-item {{ request()->routeIs('reports.index') ? 'active' : '' }}">
+                <i class="bi bi-journal-text"></i>
+                <span>Rapportini</span>
+            </a>
         @endif
         <a href="{{ route('interventions.calendar') }}" class="menu-item {{ request()->routeIs('interventions.calendar') ? 'active' : '' }}">
             <i class="bi bi-calendar3"></i>

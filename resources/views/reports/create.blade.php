@@ -199,6 +199,9 @@
                 <select class="form-select @error('status') is-invalid @enderror" id="status" name="status">
                     <option value="draft" {{ old('status', 'draft') == 'draft' ? 'selected' : '' }}>Bozza</option>
                     <option value="completed" {{ old('status') == 'completed' ? 'selected' : '' }}>Completato</option>
+                    @if(in_array(auth()->user()->role, ['admin', 'operator']))
+                        <option value="chiuso" {{ old('status') == 'chiuso' ? 'selected' : '' }}>Chiuso</option>
+                    @endif
                 </select>
                 @error('status')
                     <div class="invalid-feedback">{{ $message }}</div>

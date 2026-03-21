@@ -5,15 +5,61 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ReportRequest;
 use App\Http\Requests\UpdateReportRequest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use App\Models\Report;
 use App\Models\Media;
 use App\Models\Intervention;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class ReportController extends Controller
 {
+    public function index(Request $request): View
+    {
+        abort_if(!in_array(Auth::user()->role, ['admin', 'operator']), 403);
+
+        $query = Report::with(['user', 'intervention.equipment', 'intervention.area', 'intervention.department'])
+            ->orderBy('report_date', 'desc');
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('user_id')) {
+            $query->where('user_id', $request->user_id);
+        }
+        if ($request->filled('date_from')) {
+            $query->where('report_date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->where('report_date', '<=', $request->date_to);
+        }
+
+        $reports = $query->paginate(25)->withQueryString();
+        $users = User::whereIn('role', ['operator', 'manutentore'])->orderBy('name')->get();
+
+        return view('reports.index', compact('reports', 'users'));
+    }
+
+    public function close(Intervention $intervention, Report $report): RedirectResponse
+    {
+        abort_if(!in_array(Auth::user()->role, ['admin', 'operator']), 403);
+
+        if ($report->intervention_id !== $intervention->id) {
+            abort(404);
+        }
+
+        $report->update(['status' => 'chiuso']);
+
+        $intervention->update([
+            'status'       => 'completed',
+            'completed_at' => now(),
+        ]);
+
+        return back()->with('success', 'Rapportino chiuso e intervento segnato come completato.');
+    }
+
     public function create(Intervention $intervention): View
     {
         // Verifica che l'utente sia autorizzato
@@ -103,7 +149,19 @@ class ReportController extends Controller
             'status' => $request->status ?? 'draft',
         ];
 
+        // Solo admin/operator possono impostare "chiuso"
+        if (($data['status'] ?? '') === 'chiuso' && !in_array(Auth::user()->role, ['admin', 'operator'])) {
+            $data['status'] = 'completed';
+        }
+
         $report->update($data);
+
+        if (($data['status'] ?? '') === 'chiuso') {
+            $intervention->update([
+                'status'       => 'completed',
+                'completed_at' => now(),
+            ]);
+        }
 
         return redirect()->route('interventions.show', $intervention)
             ->with('success', 'Rapportino aggiornato con successo!');
@@ -139,7 +197,7 @@ class ReportController extends Controller
             'time_range' => null,
             'user_name' => $report->user->name,
             'status' => $report->status,
-            'status_label' => $report->status === 'completed' ? 'Completato' : 'Bozza',
+            'status_label' => ['draft' => 'Bozza', 'completed' => 'Completato', 'chiuso' => 'Chiuso'][$report->status] ?? $report->status,
             'activities' => $report->activities,
             'notes' => $report->notes,
             'media' => []

@@ -22,7 +22,11 @@
 <div class="alert alert-primary mb-4">
     <h6 class="mb-2"><strong>{{ $intervention->title }}</strong></h6>
     <small>
-        <i class="bi bi-gear me-1"></i>{{ $intervention->equipment->name }} ({{ $intervention->equipment->code }})<br>
+        @if($intervention->equipment)
+            <i class="bi bi-gear me-1"></i>{{ $intervention->equipment->name }} ({{ $intervention->equipment->code }})<br>
+        @else
+            <i class="bi bi-building me-1"></i>{{ $intervention->area?->name }} / {{ $intervention->department?->name }}<br>
+        @endif
         <i class="bi bi-calendar3 me-1"></i>{{ $intervention->scheduled_date->format('d/m/Y') }}
         @if($intervention->scheduled_start_time)
             alle {{ substr($intervention->scheduled_start_time, 0, 5) }}
@@ -92,6 +96,9 @@
                 <select class="form-select @error('status') is-invalid @enderror" id="status" name="status">
                     <option value="draft" {{ old('status', $report->status) == 'draft' ? 'selected' : '' }}>Bozza</option>
                     <option value="completed" {{ old('status', $report->status) == 'completed' ? 'selected' : '' }}>Completato</option>
+                    @if(in_array(auth()->user()->role, ['admin', 'operator']))
+                        <option value="chiuso" {{ old('status', $report->status) == 'chiuso' ? 'selected' : '' }}>Chiuso</option>
+                    @endif
                 </select>
                 @error('status')
                     <div class="invalid-feedback">{{ $message }}</div>

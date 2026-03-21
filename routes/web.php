@@ -39,6 +39,12 @@ Route::middleware('auth')->group(function () {
     Route::put('/interventions/{intervention}/reports/{report}', [ReportController::class, 'update'])->name('interventions.reports.update');
     Route::delete('/interventions/{intervention}/reports/{report}', [ReportController::class, 'destroy'])->name('interventions.reports.destroy');
 
+    // Lista rapportini (admin/operator)
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+
+    // Chiusura rapportino (admin/operator)
+    Route::patch('/interventions/{intervention}/reports/{report}/close', [ReportController::class, 'close'])->name('interventions.reports.close');
+
     // API endpoint per dettagli rapportino (per modale)
     Route::get('/api/reports/{report}', [ReportController::class, 'show'])->name('api.reports.show');
 
