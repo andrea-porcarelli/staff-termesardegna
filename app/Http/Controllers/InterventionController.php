@@ -198,7 +198,9 @@ class InterventionController extends Controller
                 'backgroundColor' => $statusColors[$intervention->status] ?? '#0dcaf0',
                 'borderColor' => $priorityColors[$intervention->priority] ?? '#6c757d',
                 'extendedProps' => [
-                    'equipment' => $intervention->equipment->name,
+                    'equipment' => $intervention->equipment
+                        ? $intervention->equipment->name
+                        : (($intervention->area->name ?? '') . ' / ' . ($intervention->department->name ?? '')),
                     'operator' => $intervention->assignedUser->name,
                     'status' => $intervention->status,
                     'priority' => $intervention->priority,

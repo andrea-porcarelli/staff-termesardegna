@@ -29,7 +29,11 @@
             <h4 class="mb-0"><i class="bi bi-info-circle me-2"></i>{{ $intervention->title }}</h4>
         </div>
         <div class="card-body">
-            <p><strong>Apparato:</strong> {{ $intervention->equipment->name }} ({{ $intervention->equipment->code }})</p>
+            @if($intervention->equipment)
+                <p><strong>Impianto:</strong> {{ $intervention->equipment->name }} ({{ $intervention->equipment->code }})</p>
+            @else
+                <p><strong>Area/Zona:</strong> {{ $intervention->area->name ?? '-' }} / {{ $intervention->department->name ?? '-' }}</p>
+            @endif
             <p><strong>Data:</strong> {{ $intervention->scheduled_date->format('d/m/Y') }}
                @if($intervention->scheduled_start_time)
                    alle {{ substr($intervention->scheduled_start_time, 0, 5) }}
@@ -69,13 +73,19 @@
                                 <td>{{ $intervention->description ?? 'N/A' }}</td>
                             </tr>
                             <tr>
-                                <th>Apparato:</th>
+                                <th>Destinazione:</th>
                                 <td>
-                                    <strong>{{ $intervention->equipment->name }}</strong> ({{ $intervention->equipment->code }})<br>
-                                    <small class="text-muted">
-                                        {{ $intervention->equipment->department->area->name }} /
-                                        {{ $intervention->equipment->department->name }}
-                                    </small>
+                                    @if($intervention->equipment)
+                                        <strong>{{ $intervention->equipment->name }}</strong> ({{ $intervention->equipment->code }})<br>
+                                        <small class="text-muted">
+                                            {{ $intervention->equipment->department->area->name }} /
+                                            {{ $intervention->equipment->department->name }}
+                                        </small>
+                                    @else
+                                        <span class="badge bg-primary me-1">Area/Zona</span>
+                                        <strong>{{ $intervention->area->name ?? '-' }}</strong> /
+                                        {{ $intervention->department->name ?? '-' }}
+                                    @endif
                                 </td>
                             </tr>
                             <tr>
