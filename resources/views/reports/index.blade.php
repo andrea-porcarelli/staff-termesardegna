@@ -119,10 +119,6 @@
                                     <i class="bi bi-eye"></i>
                                 </button>
                                 @if($report->status !== 'chiuso')
-                                    <a href="{{ route('interventions.reports.edit', [$report->intervention, $report]) }}"
-                                       class="btn btn-warning btn-sm" title="Modifica">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
                                     <form action="{{ route('interventions.reports.close', [$report->intervention, $report]) }}"
                                           method="POST" class="d-inline"
                                           onsubmit="return confirm('Chiudere il rapportino? L\'intervento verrà marcato come completato.')">
