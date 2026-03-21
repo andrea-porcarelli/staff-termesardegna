@@ -12,7 +12,7 @@ class InterventionRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return Auth::check() && in_array(Auth::user()->role, ['admin', 'supervisor']);
+        return Auth::check() && in_array(Auth::user()->role, ['admin', 'operator']);
     }
 
     /**

@@ -26,6 +26,8 @@
                 <i class="bi bi-gear"></i>
                 <span>Impianti/Macchine</span>
             </a>
+        @endif
+        @if(in_array(Auth::user()->role, ['admin', 'operator', 'manutentore']))
             <a href="{{ route('interventions.index') }}" class="menu-item {{ request()->routeIs('interventions.index') || request()->routeIs('interventions.create') || request()->routeIs('interventions.edit') || request()->routeIs('interventions.show') ? 'active' : '' }}">
                 <i class="bi bi-calendar-check"></i>
                 <span>Interventi</span>
