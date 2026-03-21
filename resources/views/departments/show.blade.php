@@ -62,9 +62,9 @@
                 <h4><i class="bi bi-gear me-2"></i>Impianti/Macchine ({{ $department->equipments->count() }})</h4>
             </div>
             <div class="card-body">
-                @if($department->equipment->count() > 0)
+                @if($department->equipments->count() > 0)
                     <div class="list-group">
-                        @foreach($department->equipment as $item)
+                        @foreach($department->equipments as $item)
                             <div class="list-group-item">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
