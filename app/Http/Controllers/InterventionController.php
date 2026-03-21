@@ -201,14 +201,17 @@ class InterventionController extends Controller
                 'backgroundColor' => $statusColors[$intervention->status] ?? '#0dcaf0',
                 'borderColor' => $priorityColors[$intervention->priority] ?? '#6c757d',
                 'extendedProps' => [
-                    'equipment' => $intervention->equipment
+                    'equipment'   => $intervention->equipment
                         ? $intervention->equipment->name
                         : (($intervention->area->name ?? '') . ' / ' . ($intervention->department->name ?? '')),
-                    'operator' => $intervention->assignedUser->name,
-                    'status' => $intervention->status,
-                    'priority' => $intervention->priority,
+                    'operator'    => $intervention->assignedUser->name,
+                    'status'      => $intervention->status,
+                    'priority'    => $intervention->priority,
                     'description' => $intervention->description,
-                    'url' => in_array(Auth::user()->role, ['operator', 'manutentore']) ? route('interventions.reports.create', $intervention) : route('interventions.show', $intervention)
+                    'notes'       => $intervention->notes,
+                    'duration'    => $intervention->estimated_duration_minutes,
+                    'showUrl'     => route('interventions.show', $intervention),
+                    'reportUrl'   => route('interventions.reports.create', $intervention),
                 ]
             ];
         });

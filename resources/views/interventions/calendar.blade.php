@@ -50,7 +50,7 @@
                                                     {{ $intervention->title }}
                                                 </h6>
                                                 <small class="text-muted d-block">
-                                                    <i class="bi bi-gear me-1"></i>{{ $intervention->equipment->name }}
+                                                    <i class="bi bi-gear me-1"></i>{{ $intervention->equipment?->name ?? ($intervention->area?->name . ' / ' . $intervention->department?->name) }}
                                                 </small>
                                             </div>
                                             <div class="text-end ms-2">
@@ -118,7 +118,7 @@
         <div class="card-header d-flex justify-content-between align-items-center">
             <h4><i class="bi bi-calendar3 me-2"></i>Calendario Pianificazione</h4>
             <div>
-                @if(auth()->user()->role === 'admin' || auth()->user()->role === 'supervisor')
+                @if(in_array(auth()->user()->role, ['admin', 'operator']))
                     <a href="{{ route('interventions.create') }}" class="btn btn-light btn-sm">
                         <i class="bi bi-plus-circle me-2"></i>Nuovo Intervento
                     </a>
@@ -153,20 +153,17 @@
 
     <!-- Modal per dettagli evento -->
     <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header" id="eventModalHeader">
                     <h5 class="modal-title" id="eventModalLabel">Dettagli Intervento</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="eventModalBody">
                     <!-- Contenuto dinamico -->
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer" id="eventModalFooter">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
-                    <a href="#" id="viewInterventionBtn" class="btn btn-light">
-                        <i class="bi bi-eye me-2"></i>Visualizza Dettaglio
-                    </a>
                 </div>
             </div>
         </div>
@@ -236,11 +233,104 @@
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/locales/it.global.min.js"></script>
 <script>
+const userRole = '{{ auth()->user()->role }}';
+
+const statusLabels = { planned: 'Pianificato', in_progress: 'In corso', completed: 'Completato', cancelled: 'Annullato' };
+const statusColors = { planned: '#0dcaf0', in_progress: '#ffc107', completed: '#198754', cancelled: '#6c757d' };
+const priorityLabels = { low: 'Bassa', medium: 'Media', high: 'Alta', critical: 'Critica' };
+const priorityColors = { low: '#6c757d', medium: '#0dcaf0', high: '#ffc107', critical: '#dc3545' };
+const priorityBgClasses = { low: 'bg-secondary', medium: 'bg-info', high: 'bg-warning', critical: 'bg-danger' };
+
+function openEventModal(title, props, startDate, endDate) {
+    const header = document.getElementById('eventModalHeader');
+    const body   = document.getElementById('eventModalBody');
+    const footer = document.getElementById('eventModalFooter');
+
+    const statusColor = statusColors[props.status] || '#6c757d';
+    header.style.background = statusColor;
+    header.style.color = (props.status === 'in_progress') ? '#000' : '#fff';
+    document.querySelector('#eventModalHeader .btn-close').className =
+        (props.status === 'in_progress') ? 'btn-close' : 'btn-close btn-close-white';
+    document.getElementById('eventModalLabel').textContent = title;
+
+    const dateStr = startDate.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const timeStr = startDate.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    const endTimeStr = endDate ? endDate.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : null;
+
+    body.innerHTML = `
+        <div class="row g-3">
+            <div class="col-12">
+                <div class="d-flex gap-2 flex-wrap">
+                    <span class="badge" style="background-color:${statusColor}; color:${props.status==='in_progress'?'#000':'#fff'}">
+                        <i class="bi bi-circle-fill me-1" style="font-size:8px"></i>${statusLabels[props.status] || props.status}
+                    </span>
+                    <span class="badge ${priorityBgClasses[props.priority] || 'bg-secondary'}">
+                        <i class="bi bi-flag-fill me-1"></i>Priorità: ${priorityLabels[props.priority] || props.priority}
+                    </span>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-3 rounded bg-light h-100">
+                    <div class="text-muted small mb-1"><i class="bi bi-calendar3 me-1"></i>Data</div>
+                    <div class="fw-semibold">${dateStr}</div>
+                    ${endTimeStr
+                        ? `<div class="text-muted small mt-1"><i class="bi bi-clock me-1"></i>${timeStr} → ${endTimeStr}</div>`
+                        : (timeStr !== '00:00' ? `<div class="text-muted small mt-1"><i class="bi bi-clock me-1"></i>${timeStr}</div>` : '')
+                    }
+                    ${props.duration ? `<div class="text-muted small mt-1"><i class="bi bi-hourglass-split me-1"></i>Durata: ${props.duration} min</div>` : ''}
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-3 rounded bg-light h-100">
+                    <div class="text-muted small mb-1"><i class="bi bi-gear me-1"></i>Destinazione</div>
+                    <div class="fw-semibold">${props.equipment}</div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="p-3 rounded bg-light h-100">
+                    <div class="text-muted small mb-1"><i class="bi bi-person me-1"></i>Assegnato a</div>
+                    <div class="fw-semibold">${props.operator}</div>
+                </div>
+            </div>
+
+            ${props.description ? `
+            <div class="col-12">
+                <div class="p-3 rounded bg-light">
+                    <div class="text-muted small mb-1"><i class="bi bi-text-paragraph me-1"></i>Descrizione</div>
+                    <div>${props.description}</div>
+                </div>
+            </div>` : ''}
+
+            ${props.notes ? `
+            <div class="col-12">
+                <div class="p-3 rounded bg-light">
+                    <div class="text-muted small mb-1"><i class="bi bi-sticky me-1"></i>Note</div>
+                    <div>${props.notes}</div>
+                </div>
+            </div>` : ''}
+        </div>
+    `;
+
+    footer.innerHTML = `
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Chiudi</button>
+        ${userRole !== 'manutentore' ? `
+            <a href="${props.showUrl}" class="btn btn-light">
+                <i class="bi bi-eye me-2"></i>Dettagli
+            </a>` : ''}
+        <a href="${props.reportUrl}" class="btn btn-primary">
+            <i class="bi bi-file-earmark-plus me-2"></i>Crea Rapportino
+        </a>
+    `;
+
+    new bootstrap.Modal(document.getElementById('eventModal')).show();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    // Inizializza FullCalendar solo su desktop
     if (window.innerWidth >= 768) {
         var calendarEl = document.getElementById('calendar');
-        var eventModal = new bootstrap.Modal(document.getElementById('eventModal'));
 
         var calendar = new FullCalendar.Calendar(calendarEl, {
             locale: 'it',
@@ -250,98 +340,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 center: 'title',
                 right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
             },
-            buttonText: {
-                today: 'Oggi',
-                month: 'Mese',
-                week: 'Settimana',
-                day: 'Giorno',
-                list: 'Lista'
-            },
+            buttonText: { today: 'Oggi', month: 'Mese', week: 'Settimana', day: 'Giorno', list: 'Lista' },
             height: 'auto',
             events: '{{ route('interventions.calendar.data') }}',
             eventClick: function(info) {
                 info.jsEvent.preventDefault();
-
-                var props = info.event.extendedProps;
-
-                // Traduzioni
-                var statusLabels = {
-                    'planned': 'Pianificato',
-                    'in_progress': 'In corso',
-                    'completed': 'Completato',
-                    'cancelled': 'Annullato'
-                };
-
-                var priorityLabels = {
-                    'low': 'Bassa',
-                    'medium': 'Media',
-                    'high': 'Alta',
-                    'critical': 'Critica'
-                };
-
-                var statusColors = {
-                    'planned': '#0dcaf0',
-                    'in_progress': '#ffc107',
-                    'completed': '#198754',
-                    'cancelled': '#6c757d'
-                };
-
-                var priorityColors = {
-                    'low': '#6c757d',
-                    'medium': '#0dcaf0',
-                    'high': '#ffc107',
-                    'critical': '#dc3545'
-                };
-
-                var modalBody = `
-                    <div class="mb-3">
-                        <strong>Titolo:</strong><br>
-                        ${info.event.title}
-                    </div>
-                    <div class="mb-3">
-                        <strong>Apparato:</strong><br>
-                        ${props.equipment}
-                    </div>
-                    <div class="mb-3">
-                        <strong>Operatore:</strong><br>
-                        <i class="bi bi-person me-1"></i>${props.operator}
-                    </div>
-                    <div class="mb-3">
-                        <strong>Data e Ora:</strong><br>
-                        ${info.event.start.toLocaleString('it-IT', {
-                            dateStyle: 'full',
-                            timeStyle: 'short'
-                        })}
-                        ${info.event.end ? ' - ' + info.event.end.toLocaleTimeString('it-IT', { timeStyle: 'short' }) : ''}
-                    </div>
-                    ${props.description ? `
-                    <div class="mb-3">
-                        <strong>Descrizione:</strong><br>
-                        ${props.description}
-                    </div>
-                    ` : ''}
-                    <div class="mb-3">
-                        <strong>Stato:</strong><br>
-                        <span class="badge" style="background-color: ${statusColors[props.status]}">
-                            ${statusLabels[props.status]}
-                        </span>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Priorità:</strong><br>
-                        <span class="badge" style="background-color: ${priorityColors[props.priority]}">
-                            ${priorityLabels[props.priority]}
-                        </span>
-                    </div>
-                `;
-
-                document.getElementById('eventModalBody').innerHTML = modalBody;
-                document.getElementById('viewInterventionBtn').href = props.url;
-
-                eventModal.show();
+                openEventModal(info.event.title, info.event.extendedProps, info.event.start, info.event.end);
             },
             eventDidMount: function(info) {
-                // Aggiungi tooltip
-                info.el.title = info.event.title + ' - ' + info.event.extendedProps.equipment;
+                info.el.title = info.event.title + ' — ' + info.event.extendedProps.equipment;
             }
         });
 
