@@ -59,7 +59,7 @@
     <div class="col-md-6 mb-4">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h4><i class="bi bi-gear me-2"></i>Impianti/Macchine ({{ $department->equipment->count() }})</h4>
+                <h4><i class="bi bi-gear me-2"></i>Impianti/Macchine ({{ $department->equipments->count() }})</h4>
             </div>
             <div class="card-body">
                 @if($department->equipment->count() > 0)
