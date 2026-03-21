@@ -25,6 +25,8 @@ class ReportController extends Controller
         $tempMediaId = 'temp_' . uniqid() . '_' . Auth::id();
         session(['temp_media_id' => $tempMediaId]);
 
+        $intervention->load(['equipment.components', 'equipment.department.area', 'area', 'department', 'assignedUser']);
+
         return view('reports.create', compact('intervention', 'tempMediaId'));
     }
 

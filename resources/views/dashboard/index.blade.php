@@ -486,7 +486,13 @@
                             <div class="badge bg-dark mb-1">{{ substr($intervention->scheduled_start_time, 0, 5) }}</div>
                         @endif
                         <div>
-                            <a href="{{ route('interventions.show', $intervention) }}" class="btn btn-sm btn-light">Dettagli</a>
+                            @if(auth()->user()->role === 'manutentore')
+                                <a href="{{ route('interventions.reports.create', $intervention) }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-file-earmark-plus me-1"></i>Crea Rapportino
+                                </a>
+                            @else
+                                <a href="{{ route('interventions.show', $intervention) }}" class="btn btn-sm btn-light">Dettagli</a>
+                            @endif
                         </div>
                     </div>
                 </div>
