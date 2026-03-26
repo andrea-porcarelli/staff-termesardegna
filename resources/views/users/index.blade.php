@@ -63,11 +63,7 @@
                             <td>{{ $user->id }}</td>
                             <td><strong>{{ $user->name }}</strong></td>
                             <td>{{ $user->email }}</td>
-                            <td>
-                                <span class="badge badge-{{ $user->role }}">
-                                    {{ $user->role }}
-                                </span>
-                            </td>
+                            <td>{{ $user->role }}</td>
                             <td>{{ $user->created_at->format('d/m/Y H:i') }}</td>
                             <td class="text-center">
                                 <a href="{{ route('users.edit', $user) }}" class="btn btn-warning btn-sm">
