@@ -9,6 +9,7 @@ use App\Models\Report;
 use App\Models\User;
 use App\Models\Equipment;
 use App\Models\Area;
+use App\Models\Department;
 
 class DashboardController extends Controller
 {
@@ -47,7 +48,7 @@ class DashboardController extends Controller
                 ->limit(5)
                 ->get();
 
-        } elseif ($role === 'supervisor') {
+        } elseif ($role === 'operator') {
             // Supervisor: statistiche filtrate per reparti associati
             // Ottiene gli IDs dei reparti associati al supervisor
             $departmentIds = $user->departments()->pluck('departments.id');
@@ -124,6 +125,10 @@ class DashboardController extends Controller
             }
 
         } else {
+            // Operator / Manutentore: dati per apertura rapida intervento ordinario
+            $data['quickAreas']       = Area::where('active', true)->orderBy('name')->get();
+            $data['quickDepartments'] = Department::where('active', true)->orderBy('name')->get();
+
             // Operator: solo le sue statistiche
             $data['myInterventions'] = Intervention::where('assigned_user_id', $user->id)->count();
             $data['myReports'] = Report::where('user_id', $user->id)->count();
@@ -155,7 +160,10 @@ class DashboardController extends Controller
 
             // Interventi di oggi
             $data['todayInterventions'] = Intervention::with(['equipment'])
-                ->where('assigned_user_id', $user->id)
+                ->where(function ($q) use($user) {
+                    $q->where('assigned_user_id', $user->id)
+                        ->orWhere('assigned_user_id', 0);
+                })
                 ->whereDate('scheduled_date', today())
                 ->orderBy('scheduled_start_time', 'asc')
                 ->get();

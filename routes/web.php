@@ -48,6 +48,12 @@ Route::middleware('auth')->group(function () {
     // API endpoint per dettagli rapportino (per modale)
     Route::get('/api/reports/{report}', [ReportController::class, 'show'])->name('api.reports.show');
 
+    // Apertura rapida intervento ordinario (operator/manutentore)
+    Route::post('/interventions/quick-open', [InterventionController::class, 'quickStore'])->name('interventions.quick-open');
+
+    // API endpoint per dati pianificazione impianto (per form intervento)
+    Route::get('/api/equipments/{equipment}/planning', [InterventionController::class, 'equipmentPlanning'])->name('api.equipments.planning');
+
     Route::middleware('admin')->group(function () {
         Route::resource('users', UserController::class);
         Route::resource('areas', AreaController::class);

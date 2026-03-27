@@ -24,7 +24,14 @@
     {{-- VISTA DETTAGLIO (tutti i ruoli) --}}
     <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h4><i class="bi bi-calendar-check me-2"></i>{{ $intervention->title }}</h4>
+            <h4>
+                <i class="bi bi-calendar-check me-2"></i>{{ $intervention->title }}
+                @if($intervention->tipo === 'pianificazione')
+                    <span class="badge bg-primary ms-2"><i class="bi bi-gear me-1"></i>Pianificazione</span>
+                @else
+                    <span class="badge bg-warning text-dark ms-2"><i class="bi bi-wrench me-1"></i>Ordinario</span>
+                @endif
+            </h4>
             <div>
                 @if(in_array(auth()->user()->role, ['admin', 'operator']))
                     <a href="{{ route('interventions.edit', $intervention) }}" class="btn btn-warning btn-sm">
@@ -82,12 +89,17 @@
                     <table class="table table-sm">
                         <tbody>
                             <tr>
-                                <th style="width: 40%;">Data Pianificata:</th>
+                                <th style="width: 40%;">Data:</th>
                                 <td>
-                                    <strong>{{ $intervention->scheduled_date->format('d/m/Y') }}</strong>
-                                    <small class="text-muted">({{ $intervention->scheduled_date->diffForHumans() }})</small>
+                                    @if($intervention->scheduled_date)
+                                        <strong>{{ $intervention->scheduled_date->format('d/m/Y') }}</strong>
+                                        <small class="text-muted">({{ $intervention->scheduled_date->diffForHumans() }})</small>
+                                    @else
+                                        <span class="text-muted">N/A</span>
+                                    @endif
                                 </td>
                             </tr>
+                            @if($intervention->tipo === 'pianificazione')
                             <tr>
                                 <th>Ora Inizio:</th>
                                 <td>{{ $intervention->scheduled_start_time ? substr($intervention->scheduled_start_time, 0, 5) : 'N/A' }}</td>
@@ -105,6 +117,7 @@
                                     @endif
                                 </td>
                             </tr>
+                            @endif
                             <tr>
                                 <th>Stato:</th>
                                 <td>

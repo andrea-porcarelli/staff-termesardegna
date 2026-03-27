@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class Intervention extends Model
 {
     protected $fillable = [
+        'tipo',
         'equipment_id',
         'area_id',
         'department_id',

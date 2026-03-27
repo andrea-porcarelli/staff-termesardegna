@@ -16,12 +16,17 @@ use Illuminate\Support\Facades\Auth;
 
 class InterventionController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         abort_if(Auth::user()->role === 'manutentore', 403);
-        $interventions = Intervention::with(['equipment.department.area', 'assignedUser'])
-            ->orderBy('scheduled_date', 'desc')
-            ->get();
+        $query = Intervention::with(['equipment.department.area', 'area', 'department', 'assignedUser'])
+            ->orderBy('scheduled_date', 'desc');
+
+        if ($request->filled('tipo')) {
+            $query->where('tipo', $request->tipo);
+        }
+
+        $interventions = $query->get();
         return view('interventions.index', compact('interventions'));
     }
 
@@ -37,16 +42,19 @@ class InterventionController extends Controller
 
     public function store(InterventionRequest $request): RedirectResponse
     {
+        $isPianificazione = $request->tipo === 'pianificazione';
+
         $data = [
-            'equipment_id'               => $request->target_type === 'equipment' ? $request->equipment_id : null,
-            'area_id'                    => $request->target_type === 'area' ? $request->area_id : null,
-            'department_id'              => $request->target_type === 'area' ? $request->department_id : null,
+            'tipo'                       => $request->tipo,
+            'equipment_id'               => $isPianificazione ? $request->equipment_id : null,
+            'area_id'                    => !$isPianificazione ? $request->area_id : null,
+            'department_id'              => !$isPianificazione ? $request->department_id : null,
             'assigned_user_id'           => $request->assigned_user_id,
             'title'                      => $request->title,
             'description'                => $request->description,
-            'scheduled_date'             => $request->scheduled_date,
-            'scheduled_start_time'       => $request->scheduled_start_time,
-            'estimated_duration_minutes' => $request->estimated_duration_minutes,
+            'scheduled_date'             => $request->scheduled_date ?: null,
+            'scheduled_start_time'       => $isPianificazione ? $request->scheduled_start_time : null,
+            'estimated_duration_minutes' => $isPianificazione ? $request->estimated_duration_minutes : null,
             'status'                     => $request->status ?? 'planned',
             'priority'                   => $request->priority ?? 'medium',
             'notes'                      => $request->notes,
@@ -76,16 +84,19 @@ class InterventionController extends Controller
 
     public function update(InterventionRequest $request, Intervention $intervention): RedirectResponse
     {
+        $isPianificazione = $request->tipo === 'pianificazione';
+
         $data = [
-            'equipment_id'               => $request->target_type === 'equipment' ? $request->equipment_id : null,
-            'area_id'                    => $request->target_type === 'area' ? $request->area_id : null,
-            'department_id'              => $request->target_type === 'area' ? $request->department_id : null,
+            'tipo'                       => $request->tipo,
+            'equipment_id'               => $isPianificazione ? $request->equipment_id : null,
+            'area_id'                    => !$isPianificazione ? $request->area_id : null,
+            'department_id'              => !$isPianificazione ? $request->department_id : null,
             'assigned_user_id'           => $request->assigned_user_id,
             'title'                      => $request->title,
             'description'                => $request->description,
-            'scheduled_date'             => $request->scheduled_date,
-            'scheduled_start_time'       => $request->scheduled_start_time,
-            'estimated_duration_minutes' => $request->estimated_duration_minutes,
+            'scheduled_date'             => $request->scheduled_date ?: null,
+            'scheduled_start_time'       => $isPianificazione ? $request->scheduled_start_time : null,
+            'estimated_duration_minutes' => $isPianificazione ? $request->estimated_duration_minutes : null,
             'status'                     => $request->status ?? 'planned',
             'priority'                   => $request->priority ?? 'medium',
             'notes'                      => $request->notes,
@@ -103,6 +114,46 @@ class InterventionController extends Controller
 
         return redirect()->route('interventions.index')
             ->with('success', 'Intervento eliminato con successo!');
+    }
+
+    public function quickStore(Request $request): RedirectResponse
+    {
+        abort_if(!in_array(Auth::user()->role, ['operator', 'manutentore']), 403);
+
+        $request->validate([
+            'area_id'       => 'required|exists:areas,id',
+            'department_id' => 'required|exists:departments,id',
+            'description'   => 'nullable|string',
+        ], [
+            'area_id.required'       => 'Seleziona un\'area.',
+            'department_id.required' => 'Seleziona una zona.',
+        ]);
+
+        $area       = \App\Models\Area::find($request->area_id);
+        $department = \App\Models\Department::find($request->department_id);
+
+        Intervention::create([
+            'tipo'             => 'ordinario',
+            'area_id'          => $request->area_id,
+            'department_id'    => $request->department_id,
+            'assigned_user_id' => Auth::id(),
+            'title'            => 'Intervento - ' . $area->name . ' / ' . $department->name,
+            'description'      => $request->description,
+            'scheduled_date'   => today(),
+            'status'           => 'in_progress',
+            'priority'         => 'medium',
+        ]);
+
+        return redirect()->route('dashboard')
+            ->with('success', 'Intervento ordinario aperto con successo!');
+    }
+
+    public function equipmentPlanning(Equipment $equipment): JsonResponse
+    {
+        return response()->json([
+            'next_maintenance_date'       => $equipment->next_maintenance_date?->format('Y-m-d'),
+            'maintenance_frequency_days'  => $equipment->maintenance_frequency_days,
+        ]);
     }
 
     public function calendar(): View
@@ -163,7 +214,7 @@ class InterventionController extends Controller
             $query->where('assigned_user_id', $user->id);
         }
 
-        $interventions = $query->get();
+        $interventions = $query->whereNotNull('scheduled_date')->get();
 
         $events = $interventions->map(function ($intervention) {
             // Definizione colori per priorità

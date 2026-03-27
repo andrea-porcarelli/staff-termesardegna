@@ -12,15 +12,39 @@
             <i class="bi bi-plus-circle me-2"></i>Nuovo Intervento
         </a>
     </div>
+
+    {{-- Filtro per tipo --}}
+    <div class="card-body border-bottom pb-3">
+        <form method="GET" action="{{ route('interventions.index') }}" class="d-flex align-items-end gap-3">
+            <div>
+                <label for="filter_tipo" class="form-label form-label-sm mb-1">Tipo</label>
+                <select id="filter_tipo" name="tipo" class="form-select form-select-sm" style="min-width: 180px;">
+                    <option value="">Tutti i tipi</option>
+                    <option value="pianificazione" {{ request('tipo') === 'pianificazione' ? 'selected' : '' }}>Pianificazione</option>
+                    <option value="ordinario" {{ request('tipo') === 'ordinario' ? 'selected' : '' }}>Intervento Ordinario</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-sm btn-secondary">
+                <i class="bi bi-funnel me-1"></i>Filtra
+            </button>
+            @if(request('tipo'))
+                <a href="{{ route('interventions.index') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-x me-1"></i>Reset
+                </a>
+            @endif
+        </form>
+    </div>
+
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-hover">
                 <thead>
                     <tr>
                         <th>Titolo</th>
-                        <th>Apparato</th>
+                        <th>Tipo</th>
+                        <th>Destinazione</th>
                         <th>Operatore</th>
-                        <th>Data Pianificata</th>
+                        <th>Data</th>
                         <th>Stato</th>
                         <th>Priorità</th>
                         <th class="text-center">Azioni</th>
@@ -31,21 +55,31 @@
                         <tr>
                             <td><strong>{{ $intervention->title }}</strong></td>
                             <td>
+                                @if($intervention->tipo === 'pianificazione')
+                                    <span class="badge bg-primary"><i class="bi bi-gear me-1"></i>Pianificazione</span>
+                                @else
+                                    <span class="badge bg-warning text-dark"><i class="bi bi-wrench me-1"></i>Ordinario</span>
+                                @endif
+                            </td>
+                            <td>
                                 @if($intervention->equipment)
-                                    <small class="text-muted">{{ $intervention->equipment->department->area->name }} / {{ $intervention->equipment->department->name }}</small><br>
+                                    <small class="text-muted">{{ $intervention->equipment->department->area->name ?? '-' }} / {{ $intervention->equipment->department->name ?? '-' }}</small><br>
                                     <span class="badge bg-secondary">{{ $intervention->equipment->name }}</span>
                                 @else
-                                    <small class="text-muted">{{ $intervention->area->name ?? '-' }} / {{ $intervention->department->name ?? '-' }}</small><br>
-                                    <span class="badge bg-primary">Area/Zona</span>
+                                    <small class="text-muted">{{ $intervention->area->name ?? '-' }} / {{ $intervention->department->name ?? '-' }}</small>
                                 @endif
                             </td>
                             <td>
                                 <i class="bi bi-person me-1"></i>{{ $intervention->assignedUser->name }}
                             </td>
                             <td>
-                                {{ $intervention->scheduled_date->format('d/m/Y') }}
-                                @if($intervention->scheduled_start_time)
-                                    <br><small class="text-muted">{{ substr($intervention->scheduled_start_time, 0, 5) }}</small>
+                                @if($intervention->scheduled_date)
+                                    {{ $intervention->scheduled_date->format('d/m/Y') }}
+                                    @if($intervention->scheduled_start_time)
+                                        <br><small class="text-muted">{{ substr($intervention->scheduled_start_time, 0, 5) }}</small>
+                                    @endif
+                                @else
+                                    <span class="text-muted">-</span>
                                 @endif
                             </td>
                             <td>
@@ -107,7 +141,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center py-4">
+                            <td colspan="8" class="text-center py-4">
                                 <i class="bi bi-inbox" style="font-size: 48px; color: #ccc;"></i>
                                 <p class="text-muted mt-2">Nessun intervento trovato</p>
                             </td>

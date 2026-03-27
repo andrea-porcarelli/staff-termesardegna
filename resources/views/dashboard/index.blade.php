@@ -12,7 +12,7 @@
     <p class="mb-0 text-muted">
         @if($user->role === 'admin')
             Gestisci l'intero sistema di rapportini e interventi.
-        @elseif($user->role === 'supervisor')
+        @elseif($user->role === 'operatore')
             Monitora gli interventi e supervisiona i rapportini degli operatori.
         @else
             Visualizza i tuoi interventi e crea rapportini operativi.
@@ -256,7 +256,7 @@
         </div>
     </div>
 
-@elseif($user->role === 'supervisor')
+@elseif($user->role === 'operator')
     {{-- SUPERVISOR DASHBOARD --}}
 
     {{-- Statistiche Principali --}}
@@ -468,7 +468,15 @@
     </div>
 
 @else
-    {{-- OPERATOR DASHBOARD --}}
+    {{-- OPERATOR / MANUTENTORE DASHBOARD --}}
+
+    {{-- Tasto apertura rapida intervento ordinario --}}
+    <div class="mb-4">
+        <button type="button" class="btn btn-warning btn-lg w-100 py-3" data-bs-toggle="modal" data-bs-target="#modalInterventoOrdinario">
+            <i class="bi bi-wrench d-block mb-1" style="font-size: 28px;"></i>
+            <strong>Apri Intervento Ordinario</strong>
+        </button>
+    </div>
 
     {{-- Interventi di Oggi --}}
     @if($todayInterventions->count() > 0)
@@ -644,6 +652,88 @@
         </div>
     </div>
     @endif
+@endif
+
+@if(in_array($user->role, ['operator', 'manutentore']) && $errors->any())
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var modal = new bootstrap.Modal(document.getElementById('modalInterventoOrdinario'));
+        modal.show();
+    });
+</script>
+@endif
+
+@if(in_array($user->role, ['operator', 'manutentore']))
+{{-- Modal Apertura Rapida Intervento Ordinario --}}
+<div class="modal fade" id="modalInterventoOrdinario" tabindex="-1" aria-labelledby="modalInterventoOrdinarioLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content"
+             x-data="{
+                 selectedAreaId: '',
+                 departments: {{ Js::from($quickDepartments->map(fn($d) => ['id' => $d->id, 'name' => $d->name, 'area_id' => $d->area_id])) }}
+             }">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalInterventoOrdinarioLabel">
+                    <i class="bi bi-wrench me-2"></i>Apri Intervento Ordinario
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
+            </div>
+            <form action="{{ route('interventions.quick-open') }}" method="POST">
+                @csrf
+                <div class="modal-body">
+                    @if($errors->any())
+                        <div class="alert alert-danger">
+                            <ul class="mb-0">
+                                @foreach($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
+
+                    <div class="mb-3">
+                        <label for="quick_area_id" class="form-label">Area <span class="text-danger">*</span></label>
+                        <select class="form-select" id="quick_area_id" name="area_id" required
+                                x-model="selectedAreaId">
+                            <option value="">Seleziona un'area...</option>
+                            @foreach($quickAreas as $area)
+                                <option value="{{ $area->id }}" {{ old('area_id') == $area->id ? 'selected' : '' }}>
+                                    {{ $area->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="quick_department_id" class="form-label">Zona <span class="text-danger">*</span></label>
+                        <select class="form-select" id="quick_department_id" name="department_id" required>
+                            <option value="">Seleziona una zona...</option>
+                            @foreach($quickDepartments as $dept)
+                                <option value="{{ $dept->id }}"
+                                        x-show="!selectedAreaId || selectedAreaId == {{ $dept->area_id }}"
+                                        {{ old('department_id') == $dept->id ? 'selected' : '' }}>
+                                    {{ $dept->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="quick_description" class="form-label">Descrizione</label>
+                        <textarea class="form-control" id="quick_description" name="description"
+                                  rows="3" placeholder="Descrivi brevemente l'intervento...">{{ old('description') }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-wrench me-2"></i>Apri Intervento
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 @endif
 
 @endsection

@@ -11,14 +11,26 @@
     </div>
     <div class="card-body">
         @php
-            $currentTargetType = old('target_type', $intervention->equipment_id ? 'equipment' : 'area');
+            $currentTipo = old('tipo', $intervention->tipo ?? ($intervention->equipment_id ? 'pianificazione' : 'ordinario'));
         @endphp
         <script>
             function interventionForm() {
                 return {
-                    targetType: '{{ $currentTargetType }}',
+                    tipo: '{{ $currentTipo }}',
                     selectedAreaId: '{{ old('area_id', $intervention->area_id ?? '') }}',
-                    departments: @json($departments->map(fn($d) => ['id' => $d->id, 'name' => $d->name, 'area_id' => $d->area_id]))
+                    departments: @json($departments->map(fn($d) => ['id' => $d->id, 'name' => $d->name, 'area_id' => $d->area_id])),
+
+                    fetchEquipmentPlanning(equipmentId) {
+                        if (!equipmentId) return;
+                        var dateField = document.getElementById('scheduled_date');
+                        fetch(`/api/equipments/${equipmentId}/planning`)
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.next_maintenance_date && !dateField.value) {
+                                    dateField.value = data.next_maintenance_date;
+                                }
+                            });
+                    }
                 };
             }
         </script>
@@ -26,37 +38,38 @@
             @csrf
             @method('PUT')
 
-            {{-- Selezione tipo destinazione --}}
+            {{-- Tipo intervento --}}
             <div class="mb-4">
-                <label class="form-label fw-semibold">Destinazione intervento <span class="text-danger">*</span></label>
+                <label class="form-label fw-semibold">Tipo intervento <span class="text-danger">*</span></label>
                 <div class="d-flex gap-3">
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="target_type" id="target_equipment"
-                               value="equipment" x-model="targetType">
-                        <label class="form-check-label" for="target_equipment">
-                            <i class="bi bi-gear me-1"></i>Impianto/Macchina
+                        <input class="form-check-input" type="radio" name="tipo" id="tipo_pianificazione"
+                               value="pianificazione" x-model="tipo">
+                        <label class="form-check-label" for="tipo_pianificazione">
+                            <i class="bi bi-gear me-1"></i>Pianificazione
                         </label>
                     </div>
                     <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="target_type" id="target_area"
-                               value="area" x-model="targetType">
-                        <label class="form-check-label" for="target_area">
-                            <i class="bi bi-building me-1"></i>Area + Zona
+                        <input class="form-check-input" type="radio" name="tipo" id="tipo_ordinario"
+                               value="ordinario" x-model="tipo">
+                        <label class="form-check-label" for="tipo_ordinario">
+                            <i class="bi bi-wrench me-1"></i>Intervento Ordinario
                         </label>
                     </div>
                 </div>
-                @error('target_type')
+                @error('tipo')
                     <div class="text-danger small mt-1">{{ $message }}</div>
                 @enderror
             </div>
 
             <div class="row">
-                {{-- Selezione impianto --}}
-                <div class="col-md-6 mb-3" x-show="targetType === 'equipment'" x-cloak>
+                {{-- Selezione impianto (solo Pianificazione) --}}
+                <div class="col-md-6 mb-3" x-show="tipo === 'pianificazione'" x-cloak>
                     <label for="equipment_id" class="form-label">Impianto/Macchina <span class="text-danger">*</span></label>
                     <select class="form-select @error('equipment_id') is-invalid @enderror"
                             id="equipment_id" name="equipment_id"
-                            :required="targetType === 'equipment'">
+                            :required="tipo === 'pianificazione'"
+                            @change="fetchEquipmentPlanning($event.target.value)">
                         <option value="">Seleziona un impianto...</option>
                         @foreach($equipments as $equipment)
                             <option value="{{ $equipment->id }}" {{ old('equipment_id', $intervention->equipment_id) == $equipment->id ? 'selected' : '' }}>
@@ -69,12 +82,12 @@
                     @enderror
                 </div>
 
-                {{-- Selezione area --}}
-                <div class="col-md-3 mb-3" x-show="targetType === 'area'" x-cloak>
+                {{-- Selezione area (solo Ordinario) --}}
+                <div class="col-md-3 mb-3" x-show="tipo === 'ordinario'" x-cloak>
                     <label for="area_id" class="form-label">Area <span class="text-danger">*</span></label>
                     <select class="form-select @error('area_id') is-invalid @enderror"
                             id="area_id" name="area_id"
-                            :required="targetType === 'area'"
+                            :required="tipo === 'ordinario'"
                             x-model="selectedAreaId">
                         <option value="">Seleziona un'area...</option>
                         @foreach($areas as $area)
@@ -88,12 +101,12 @@
                     @enderror
                 </div>
 
-                {{-- Selezione zona (filtrata per area) --}}
-                <div class="col-md-3 mb-3" x-show="targetType === 'area'" x-cloak>
+                {{-- Selezione zona filtrata (solo Ordinario) --}}
+                <div class="col-md-3 mb-3" x-show="tipo === 'ordinario'" x-cloak>
                     <label for="department_id" class="form-label">Zona <span class="text-danger">*</span></label>
                     <select class="form-select @error('department_id') is-invalid @enderror"
                             id="department_id" name="department_id"
-                            :required="targetType === 'area'">
+                            :required="tipo === 'ordinario'">
                         <option value="">Seleziona una zona...</option>
                         @foreach($departments as $dept)
                             <option value="{{ $dept->id }}"
@@ -143,26 +156,34 @@
                 @enderror
             </div>
 
+            {{-- Campi pianificazione --}}
             <div class="row">
                 <div class="col-md-4 mb-3">
-                    <label for="scheduled_date" class="form-label">Data Pianificata <span class="text-danger">*</span></label>
+                    <label for="scheduled_date" class="form-label">
+                        Data Pianificata
+                        <span x-show="tipo === 'pianificazione'" class="text-danger">*</span>
+                        <small x-show="tipo === 'ordinario'" class="text-muted">(opzionale)</small>
+                    </label>
                     <input type="date" class="form-control @error('scheduled_date') is-invalid @enderror"
-                           id="scheduled_date" name="scheduled_date" value="{{ old('scheduled_date', $intervention->scheduled_date?->format('Y-m-d')) }}" required>
+                           id="scheduled_date" name="scheduled_date"
+                           value="{{ old('scheduled_date', $intervention->scheduled_date?->format('Y-m-d')) }}"
+                           :required="tipo === 'pianificazione'">
                     @error('scheduled_date')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
 
-                <div class="col-md-4 mb-3">
+                <div class="col-md-4 mb-3" x-show="tipo === 'pianificazione'" x-cloak>
                     <label for="scheduled_start_time" class="form-label">Ora Inizio</label>
                     <input type="time" class="form-control @error('scheduled_start_time') is-invalid @enderror"
-                           id="scheduled_start_time" name="scheduled_start_time" value="{{ old('scheduled_start_time', $intervention->scheduled_start_time ? substr($intervention->scheduled_start_time, 0, 5) : '') }}">
+                           id="scheduled_start_time" name="scheduled_start_time"
+                           value="{{ old('scheduled_start_time', $intervention->scheduled_start_time ? substr($intervention->scheduled_start_time, 0, 5) : '') }}">
                     @error('scheduled_start_time')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
 
-                <div class="col-md-4 mb-3">
+                <div class="col-md-4 mb-3" x-show="tipo === 'pianificazione'" x-cloak>
                     <label for="estimated_duration_minutes" class="form-label">Durata Stimata (minuti)</label>
                     <input type="number" class="form-control @error('estimated_duration_minutes') is-invalid @enderror"
                            id="estimated_duration_minutes" name="estimated_duration_minutes"
