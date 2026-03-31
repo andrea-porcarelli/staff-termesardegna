@@ -49,6 +49,9 @@ class DashboardController extends Controller
                 ->get();
 
         } elseif ($role === 'operator') {
+            $data['quickAreas']       = Area::where('active', true)->orderBy('name')->get();
+            $data['quickDepartments'] = Department::where('active', true)->orderBy('name')->get();
+
             // Supervisor: statistiche filtrate per reparti associati
             // Ottiene gli IDs dei reparti associati al supervisor
             $departmentIds = $user->departments()->pluck('departments.id');
