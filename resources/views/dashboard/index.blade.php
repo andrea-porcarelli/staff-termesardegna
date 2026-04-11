@@ -478,6 +478,111 @@
         </button>
     </div>
 
+    {{-- Interventi da Eseguire (solo manutentore) --}}
+    @if($user->role === 'manutentore' && isset($availableInterventions))
+        @php
+            $priClasses = ['low' => 'bg-secondary', 'medium' => 'bg-info', 'high' => 'bg-warning text-dark', 'urgent' => 'bg-danger', 'fixed_date' => 'bg-purple'];
+            $priLabels  = ['low' => 'Bassa', 'medium' => 'Media', 'high' => 'Alta', 'urgent' => 'Urgente', 'fixed_date' => 'Data fissa'];
+            $statusClasses = ['open' => 'bg-primary', 'planned' => 'bg-info'];
+            $statusLabels  = ['open' => 'Aperto', 'planned' => 'Pianificato'];
+        @endphp
+        <div class="card border-primary shadow mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Interventi da Eseguire</h5>
+                <span class="badge bg-white text-primary fs-6">{{ $availableInterventions->count() }}</span>
+            </div>
+            <div class="card-body p-0">
+                @if($availableInterventions->isEmpty())
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-check-circle" style="font-size: 48px;"></i>
+                        <p class="mt-3 mb-0 fs-5">Nessun intervento disponibile al momento</p>
+                    </div>
+                @else
+                    @foreach($availableInterventions as $intervention)
+                        @php
+                            $deadline = $intervention->deadline;
+                            $isOverdue = $intervention->is_overdue;
+                            $hoursLeft = $deadline ? now()->diffInHours($deadline, false) : null;
+                            $isMine = $intervention->assigned_user_id === auth()->id();
+                        @endphp
+                        <div class="border-bottom px-3 py-3 {{ $isOverdue ? 'bg-danger bg-opacity-10' : ($intervention->priority === 'urgent' ? 'bg-danger bg-opacity-10' : ($intervention->priority === 'high' ? 'bg-warning bg-opacity-10' : '')) }}">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-0 fw-bold">
+                                        {{ $intervention->title }}
+                                        @if($isMine)
+                                            <span class="badge bg-success ms-2"><i class="bi bi-person-check me-1"></i>Assegnato a te</span>
+                                        @endif
+                                    </h6>
+                                </div>
+                                <div class="d-flex gap-1 flex-shrink-0 ms-2">
+                                    <span class="badge {{ $statusClasses[$intervention->status] ?? 'bg-secondary' }}">
+                                        {{ $statusLabels[$intervention->status] ?? $intervention->status }}
+                                    </span>
+                                    <span class="badge {{ $priClasses[$intervention->priority] ?? 'bg-secondary' }}">
+                                        {{ $priLabels[$intervention->priority] ?? $intervention->priority }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {{-- Scadenza --}}
+                            @if($deadline)
+                                <div class="mb-2">
+                                    @if($isOverdue)
+                                        <span class="badge bg-danger px-3 py-2">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i>SCADUTO — entro il {{ $deadline->format('d/m/Y H:i') }}
+                                            <span class="ms-1">({{ $deadline->diffForHumans() }})</span>
+                                        </span>
+                                    @elseif($hoursLeft !== null && $hoursLeft <= 24)
+                                        <span class="badge bg-warning text-dark px-3 py-2">
+                                            <i class="bi bi-clock-fill me-1"></i>Scadenza: {{ $deadline->format('d/m/Y H:i') }}
+                                            <span class="ms-1">({{ $deadline->diffForHumans() }})</span>
+                                        </span>
+                                    @else
+                                        <span class="badge bg-light text-dark border px-3 py-2">
+                                            <i class="bi bi-clock me-1"></i>Scadenza: {{ $deadline->format('d/m/Y H:i') }}
+                                            <span class="ms-1 text-muted">({{ $deadline->diffForHumans() }})</span>
+                                        </span>
+                                    @endif
+                                </div>
+                            @endif
+
+                            <div class="row g-2 small text-muted mb-2">
+                                <div class="col-sm-6">
+                                    @if($intervention->equipment)
+                                        <i class="bi bi-gear me-1"></i><strong>{{ $intervention->equipment->name }}</strong>
+                                        <br><i class="bi bi-geo-alt ms-3 me-1"></i>{{ $intervention->equipment->department->area->name ?? '' }} / {{ $intervention->equipment->department->name ?? '' }}
+                                    @else
+                                        <i class="bi bi-geo-alt me-1"></i><strong>{{ $intervention->area->name ?? '' }}</strong> / {{ $intervention->department->name ?? '' }}
+                                    @endif
+                                </div>
+                                <div class="col-sm-6">
+                                    @if($intervention->scheduled_date)
+                                        <i class="bi bi-calendar-event me-1"></i>{{ $intervention->scheduled_date->format('d/m/Y') }}
+                                        @if($intervention->scheduled_start_time)
+                                            <span class="ms-1">ore {{ substr($intervention->scheduled_start_time, 0, 5) }}</span>
+                                        @endif
+                                    @endif
+                                    @if($intervention->maintenanceRole)
+                                        <br><i class="bi bi-person-badge me-1"></i>{{ $intervention->maintenanceRole->name }}
+                                    @endif
+                                </div>
+                            </div>
+
+                            @if($intervention->description)
+                                <p class="mb-2 small text-muted">{{ Str::limit($intervention->description, 120) }}</p>
+                            @endif
+
+                            <a href="{{ route('interventions.show', $intervention) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye me-1"></i>Dettagli
+                            </a>
+                        </div>
+                    @endforeach
+                @endif
+            </div>
+        </div>
+    @endif
+
     {{-- Interventi di Oggi --}}
     @if($todayInterventions->count() > 0)
         <div class="alert alert-info border-0 mb-4">
@@ -543,72 +648,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    {{-- Stato Interventi Personali --}}
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-white">
-            <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Stato dei Miei Interventi</h5>
-        </div>
-        <div class="card-body">
-            <div class="row text-center">
-                <div class="col-4">
-                    <div class="p-2">
-                        <h3 class="mb-1 text-info">{{ $myInterventionsPlanned }}</h3>
-                        <small class="text-muted">Pianificati</small>
-                    </div>
-                </div>
-                <div class="col-4 border-start border-end">
-                    <div class="p-2">
-                        <h3 class="mb-1 text-warning">{{ $myInterventionsInProgress }}</h3>
-                        <small class="text-muted">In Corso</small>
-                    </div>
-                </div>
-                <div class="col-4">
-                    <div class="p-2">
-                        <h3 class="mb-1 text-success">{{ $myInterventionsCompleted }}</h3>
-                        <small class="text-muted">Completati</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Prossimi Interventi Personali --}}
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Prossimi Interventi (7 gg)</h5>
-            <a href="{{ route('interventions.calendar') }}" class="btn btn-sm btn-light">Calendario</a>
-        </div>
-        <div class="card-body p-0">
-            @if($myUpcomingInterventions->isEmpty())
-                <div class="text-center py-4 text-muted">
-                    <i class="bi bi-calendar-x" style="font-size: 32px;"></i>
-                    <p class="mt-2 mb-0">Nessun intervento programmato</p>
-                </div>
-            @else
-                <div class="list-group list-group-flush">
-                    @foreach($myUpcomingInterventions as $intervention)
-                        <a href="{{ route('interventions.show', $intervention) }}" class="list-group-item list-group-item-action">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1">{{ $intervention->title }}</h6>
-                                    <small class="text-muted">
-                                        <i class="bi bi-gear me-1"></i>{{ $intervention->equipment?->name ?? ($intervention->area?->name . ' / ' . $intervention->department?->name) }}
-                                    </small>
-                                </div>
-                                <div class="text-end">
-                                    <small class="d-block">{{ $intervention->scheduled_date->format('d/m/Y') }}</small>
-                                    @if($intervention->scheduled_start_time)
-                                        <small class="text-muted">{{ substr($intervention->scheduled_start_time, 0, 5) }}</small>
-                                    @endif
-                                </div>
-                            </div>
-                        </a>
-                    @endforeach
-                </div>
-            @endif
         </div>
     </div>
 

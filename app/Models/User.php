@@ -4,7 +4,6 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -27,7 +26,6 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
-        'maintenance_role_id',
     ];
 
     /**
@@ -66,13 +64,27 @@ class User extends Authenticatable
         return $this->belongsToMany(Department::class)->withTimestamps();
     }
 
-    public function maintenanceRole(): BelongsTo
+    public function areas(): BelongsToMany
     {
-        return $this->belongsTo(MaintenanceRole::class, 'maintenance_role_id');
+        return $this->belongsToMany(Area::class)->withTimestamps();
+    }
+
+    public function maintenanceRoles(): BelongsToMany
+    {
+        return $this->belongsToMany(MaintenanceRole::class)->withPivot('level')->withTimestamps();
     }
 
     public function teams(): BelongsToMany
     {
         return $this->belongsToMany(Team::class)->withTimestamps();
+    }
+
+    public function workScheduleSlots(): HasMany
+    {
+        return $this->hasMany(WorkScheduleSlot::class)
+            ->orderBy('is_recurring', 'desc')
+            ->orderBy('day_of_week')
+            ->orderBy('date')
+            ->orderBy('start_time');
     }
 }

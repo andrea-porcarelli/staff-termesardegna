@@ -3,14 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class MaintenanceRole extends Model
 {
     protected $fillable = ['name', 'description'];
 
-    public function users(): HasMany
+    public function users(): BelongsToMany
     {
-        return $this->hasMany(User::class, 'maintenance_role_id');
+        return $this->belongsToMany(User::class)->withTimestamps();
     }
 }

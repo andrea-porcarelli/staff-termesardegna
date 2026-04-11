@@ -91,25 +91,56 @@
 
                     <!-- Sezione Manutentore (visibile solo per Manutentore) -->
                     <div id="manutentore-section" class="mb-4" style="display: none;">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="maintenance_role_id" class="form-label">
-                                    <i class="bi bi-award me-1"></i>Specializzazione
-                                </label>
-                                <select class="form-select @error('maintenance_role_id') is-invalid @enderror"
-                                        id="maintenance_role_id"
-                                        name="maintenance_role_id">
-                                    <option value="">Nessuna specializzazione</option>
-                                    @foreach($maintenanceRoles as $mRole)
-                                        <option value="{{ $mRole->id }}" {{ old('maintenance_role_id') == $mRole->id ? 'selected' : '' }}>
-                                            {{ $mRole->name }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('maintenance_role_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <i class="bi bi-award me-1"></i>Specializzazioni e Livello di Competenza
+                            </label>
+                            @php $oldRoles = old('maintenance_roles', []); $oldLevels = old('maintenance_role_levels', []); @endphp
+                            <div class="card">
+                                <div class="card-body py-2">
+                                    @forelse($maintenanceRoles as $mRole)
+                                        @php
+                                            $isChecked = in_array($mRole->id, $oldRoles);
+                                            $currentLevel = $oldLevels[$mRole->id] ?? 1;
+                                        @endphp
+                                        <div class="d-flex align-items-center gap-3 py-1">
+                                            <div class="form-check mb-0" style="min-width: 180px;">
+                                                <input class="form-check-input" type="checkbox"
+                                                       name="maintenance_roles[]"
+                                                       value="{{ $mRole->id }}"
+                                                       id="mrole_{{ $mRole->id }}"
+                                                       {{ $isChecked ? 'checked' : '' }}
+                                                       onchange="document.getElementById('mlevel_{{ $mRole->id }}').disabled = !this.checked">
+                                                <label class="form-check-label" for="mrole_{{ $mRole->id }}">
+                                                    {{ $mRole->name }}
+                                                </label>
+                                            </div>
+                                            <div class="d-flex align-items-center gap-1">
+                                                @for($lvl = 1; $lvl <= 5; $lvl++)
+                                                    <i class="bi bi-star{{ $lvl <= $currentLevel ? '-fill text-warning' : ' text-muted' }}"
+                                                       style="cursor: pointer; font-size: 1.1rem;"
+                                                       onclick="setLevel({{ $mRole->id }}, {{ $lvl }})"></i>
+                                                @endfor
+                                                <select class="form-select form-select-sm ms-2"
+                                                        name="maintenance_role_levels[{{ $mRole->id }}]"
+                                                        id="mlevel_{{ $mRole->id }}"
+                                                        style="width: 60px;"
+                                                        {{ !$isChecked ? 'disabled' : '' }}
+                                                        onchange="updateStars({{ $mRole->id }}, this.value)">
+                                                    @for($lvl = 1; $lvl <= 5; $lvl++)
+                                                        <option value="{{ $lvl }}" {{ $currentLevel == $lvl ? 'selected' : '' }}>{{ $lvl }}</option>
+                                                    @endfor
+                                                </select>
+                                            </div>
+                                        </div>
+                                    @empty
+                                        <p class="text-muted mb-0 small">Nessuna specializzazione disponibile.</p>
+                                    @endforelse
+                                </div>
                             </div>
+                            @error('maintenance_roles')
+                                <div class="text-danger small mt-1">{{ $message }}</div>
+                            @enderror
                         </div>
 
                         <label class="form-label">
@@ -191,6 +222,25 @@
 
 @push('scripts')
 <script>
+function setLevel(roleId, level) {
+    const select = document.getElementById('mlevel_' + roleId);
+    const checkbox = document.getElementById('mrole_' + roleId);
+    if (!checkbox.checked) { checkbox.checked = true; select.disabled = false; }
+    select.value = level;
+    updateStars(roleId, level);
+}
+
+function updateStars(roleId, level) {
+    const row = document.getElementById('mrole_' + roleId).closest('.d-flex');
+    row.querySelectorAll('.bi-star-fill, .bi-star').forEach((star, i) => {
+        star.className = (i < level)
+            ? 'bi bi-star-fill text-warning'
+            : 'bi bi-star text-muted';
+        star.style.cursor = 'pointer';
+        star.style.fontSize = '1.1rem';
+    });
+}
+
 function toggleRoleSections() {
     const role = document.getElementById('role').value;
     const manutentoreSection = document.getElementById('manutentore-section');

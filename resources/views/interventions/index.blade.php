@@ -70,7 +70,13 @@
                                 @endif
                             </td>
                             <td>
-                                <i class="bi bi-person me-1"></i>{{ $intervention->assignedUser->name }}
+                                @if($intervention->assignedUser)
+                                    <i class="bi bi-person me-1"></i>{{ $intervention->assignedUser->name }}
+                                @elseif($intervention->maintenanceRole)
+                                    <i class="bi bi-person-badge me-1"></i><small class="text-muted">{{ $intervention->maintenanceRole->name }}</small>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
                             </td>
                             <td>
                                 @if($intervention->scheduled_date)
@@ -85,12 +91,14 @@
                             <td>
                                 @php
                                     $statusClasses = [
+                                        'open' => 'bg-primary',
                                         'planned' => 'bg-info',
                                         'in_progress' => 'bg-warning',
                                         'completed' => 'bg-success',
                                         'cancelled' => 'bg-danger'
                                     ];
                                     $statusLabels = [
+                                        'open' => 'Aperto',
                                         'planned' => 'Pianificato',
                                         'in_progress' => 'In corso',
                                         'completed' => 'Completato',
@@ -104,16 +112,18 @@
                             <td>
                                 @php
                                     $priorityClasses = [
-                                        'low' => 'bg-secondary',
-                                        'medium' => 'bg-info',
-                                        'high' => 'bg-warning',
-                                        'critical' => 'bg-danger'
+                                        'low'        => 'bg-secondary',
+                                        'medium'     => 'bg-info',
+                                        'high'       => 'bg-warning',
+                                        'urgent'     => 'bg-danger',
+                                        'fixed_date' => 'bg-purple',
                                     ];
                                     $priorityLabels = [
-                                        'low' => 'Bassa',
-                                        'medium' => 'Media',
-                                        'high' => 'Alta',
-                                        'critical' => 'Critica'
+                                        'low'        => 'Bassa',
+                                        'medium'     => 'Media',
+                                        'high'       => 'Alta',
+                                        'urgent'     => 'Urgente',
+                                        'fixed_date' => 'Data fissa',
                                     ];
                                 @endphp
                                 <span class="badge {{ $priorityClasses[$intervention->priority] ?? 'bg-secondary' }}">

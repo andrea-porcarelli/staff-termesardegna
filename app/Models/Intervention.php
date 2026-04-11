@@ -12,6 +12,8 @@ class Intervention extends Model
     protected $fillable = [
         'tipo',
         'equipment_id',
+        'component_id',
+        'maintenance_role_id',
         'area_id',
         'department_id',
         'assigned_user_id',
@@ -31,9 +33,53 @@ class Intervention extends Model
         'completed_at' => 'datetime',
     ];
 
+    /**
+     * Calcola la data di scadenza in base alla priorità.
+     * low = +7gg, medium = +3gg, high = +24h, urgent = stessa data, fixed_date = scheduled_date
+     */
+    public function getDeadlineAttribute(): ?\Carbon\Carbon
+    {
+        if ($this->priority === 'fixed_date') {
+            return $this->scheduled_date;
+        }
+
+        $base = $this->created_at;
+        if (!$base) return null;
+
+        return match ($this->priority) {
+            'urgent' => $base->copy(),
+            'high'   => $base->copy()->addHours(24),
+            'medium' => $base->copy()->addDays(3),
+            'low'    => $base->copy()->addDays(7),
+            default  => null,
+        };
+    }
+
+    /**
+     * Verifica se l'intervento è scaduto.
+     */
+    public function getIsOverdueAttribute(): bool
+    {
+        $deadline = $this->deadline;
+        if (!$deadline) return false;
+        if (in_array($this->status, ['completed', 'cancelled'])) return false;
+
+        return now()->greaterThan($deadline);
+    }
+
     public function equipment(): BelongsTo
     {
         return $this->belongsTo(Equipment::class);
+    }
+
+    public function component(): BelongsTo
+    {
+        return $this->belongsTo(EquipmentComponent::class, 'component_id');
+    }
+
+    public function maintenanceRole(): BelongsTo
+    {
+        return $this->belongsTo(MaintenanceRole::class, 'maintenance_role_id');
     }
 
     public function area(): BelongsTo

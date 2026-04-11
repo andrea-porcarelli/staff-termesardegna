@@ -34,16 +34,18 @@
                                                 <h6 class="mb-1">
                                                     @php
                                                         $priorityIcons = [
-                                                            'low' => 'circle',
-                                                            'medium' => 'circle-fill',
-                                                            'high' => 'exclamation-circle',
-                                                            'critical' => 'exclamation-triangle-fill'
+                                                            'low'        => 'circle',
+                                                            'medium'     => 'circle-fill',
+                                                            'high'       => 'exclamation-circle',
+                                                            'urgent'     => 'exclamation-triangle-fill',
+                                                            'fixed_date' => 'calendar-event',
                                                         ];
                                                         $priorityColors = [
-                                                            'low' => 'text-secondary',
-                                                            'medium' => 'text-info',
-                                                            'high' => 'text-warning',
-                                                            'critical' => 'text-danger'
+                                                            'low'        => 'text-secondary',
+                                                            'medium'     => 'text-info',
+                                                            'high'       => 'text-warning',
+                                                            'urgent'     => 'text-danger',
+                                                            'fixed_date' => 'text-purple',
                                                         ];
                                                     @endphp
                                                     <i class="bi bi-{{ $priorityIcons[$intervention->priority] ?? 'circle' }} {{ $priorityColors[$intervention->priority] ?? 'text-secondary' }} me-2"></i>
@@ -65,12 +67,14 @@
                                         <div class="d-flex gap-2 align-items-center">
                                             @php
                                                 $statusClasses = [
+                                                    'open' => 'bg-primary',
                                                     'planned' => 'bg-info',
                                                     'in_progress' => 'bg-warning text-dark',
                                                     'completed' => 'bg-success',
                                                     'cancelled' => 'bg-secondary'
                                                 ];
                                                 $statusLabels = [
+                                                    'open' => 'Aperto',
                                                     'planned' => 'Pianificato',
                                                     'in_progress' => 'In corso',
                                                     'completed' => 'Completato',
@@ -131,6 +135,7 @@
                 <div class="row">
                     <div class="col-md-6">
                         <small class="text-muted d-block mb-2"><strong>Stato:</strong></small>
+                        <span class="badge me-2" style="background-color: #0d6efd;">Aperto</span>
                         <span class="badge me-2" style="background-color: #0dcaf0;">Pianificato</span>
                         <span class="badge me-2" style="background-color: #ffc107;">In corso</span>
                         <span class="badge me-2" style="background-color: #198754;">Completato</span>
@@ -228,11 +233,11 @@
 <script>
 const userRole = '{{ auth()->user()->role }}';
 
-const statusLabels = { planned: 'Pianificato', in_progress: 'In corso', completed: 'Completato', cancelled: 'Annullato' };
-const statusColors = { planned: '#0dcaf0', in_progress: '#ffc107', completed: '#198754', cancelled: '#6c757d' };
-const priorityLabels = { low: 'Bassa', medium: 'Media', high: 'Alta', critical: 'Critica' };
-const priorityColors = { low: '#6c757d', medium: '#0dcaf0', high: '#ffc107', critical: '#dc3545' };
-const priorityBgClasses = { low: 'bg-secondary', medium: 'bg-info', high: 'bg-warning', critical: 'bg-danger' };
+const statusLabels = { open: 'Aperto', planned: 'Pianificato', in_progress: 'In corso', completed: 'Completato', cancelled: 'Annullato' };
+const statusColors = { open: '#0d6efd', planned: '#0dcaf0', in_progress: '#ffc107', completed: '#198754', cancelled: '#6c757d' };
+const priorityLabels = { low: 'Bassa', medium: 'Media', high: 'Alta', urgent: 'Urgente', fixed_date: 'Data fissa' };
+const priorityColors = { low: '#6c757d', medium: '#0dcaf0', high: '#ffc107', urgent: '#dc3545', fixed_date: '#6f42c1' };
+const priorityBgClasses = { low: 'bg-secondary', medium: 'bg-info', high: 'bg-warning', urgent: 'bg-danger', fixed_date: 'bg-purple' };
 
 function openEventModal(title, props, startDate, endDate) {
     const header = document.getElementById('eventModalHeader');

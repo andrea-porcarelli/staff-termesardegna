@@ -11,6 +11,8 @@ use App\Models\Area;
 use App\Models\Department;
 use App\Models\MaintenanceRole;
 use App\Models\Team;
+use App\Models\WorkScheduleSlot;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
@@ -44,21 +46,28 @@ class UserController extends Controller
     public function store(UserRequest $request) : RedirectResponse
     {
         $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
+            'name'     => $request->name,
+            'email'    => $request->email,
             'password' => Hash::make($request->password),
-            'role' => $request->role,
-            'maintenance_role_id' => $request->role === 'manutentore' ? $request->maintenance_role_id : null,
+            'role'     => $request->role,
         ]);
 
-        // Se il ruolo è manutentore, associa i team selezionati
-        if ($request->role === 'manutentore' && $request->has('teams')) {
-            $user->teams()->sync($request->teams);
+        // Se il ruolo è manutentore, associa specializzazioni (con livello) e team
+        if ($request->role === 'manutentore') {
+            $syncData = [];
+            $levels = $request->maintenance_role_levels ?? [];
+            foreach ($request->maintenance_roles ?? [] as $roleId) {
+                $syncData[$roleId] = ['level' => max(1, min(5, (int)($levels[$roleId] ?? 1)))];
+            }
+            $user->maintenanceRoles()->sync($syncData);
+            $user->teams()->sync($request->teams ?? []);
         }
 
-        // Se il ruolo è operator o manutentore, associa le zone selezionate
-        if ($request->has('departments')) {
-            $user->departments()->sync($request->departments);
+        // Aree: solo per operator
+        $user->areas()->sync($request->role === 'operator' ? ($request->areas ?? []) : []);
+        // Zone: per operator e manutentore
+        if (in_array($request->role, ['operator', 'manutentore'])) {
+            $user->departments()->sync($request->departments ?? []);
         }
 
         return redirect()->route('users.index')
@@ -70,16 +79,27 @@ class UserController extends Controller
         $areas = Area::with('departments')->where('active', true)->get();
         $maintenanceRoles = MaintenanceRole::orderBy('name')->get();
         $teams = Team::orderBy('name')->get();
-        return view('users.edit', compact('user', 'areas', 'maintenanceRoles', 'teams'));
+
+        $existingSlots = old('schedule_slots',
+            $user->workScheduleSlots->map(fn($s) => [
+                'date'         => $s->date?->format('Y-m-d') ?? '',
+                'day_of_week'  => $s->day_of_week !== null ? (string) $s->day_of_week : '',
+                'start_time'   => $s->start_time ? substr($s->start_time, 0, 5) : '',
+                'end_time'     => $s->end_time ? substr($s->end_time, 0, 5) : '',
+                'type'         => $s->type,
+                'is_recurring' => $s->is_recurring ? '1' : '0',
+            ])->toArray()
+        );
+
+        return view('users.edit', compact('user', 'areas', 'maintenanceRoles', 'teams', 'existingSlots'));
     }
 
     public function update(UpdateUserRequest $request, User $user) : RedirectResponse
     {
         $data = [
-            'name' => $request->name,
+            'name'  => $request->name,
             'email' => $request->email,
-            'role' => $request->role,
-            'maintenance_role_id' => $request->role === 'manutentore' ? $request->maintenance_role_id : null,
+            'role'  => $request->role,
         ];
 
         if ($request->filled('password')) {
@@ -88,18 +108,72 @@ class UserController extends Controller
 
         $user->update($data);
 
-        // Sincronizza zone assegnate
-        $user->departments()->sync($request->departments ?? []);
+        // Aree: solo per operator
+        $user->areas()->sync($request->role === 'operator' ? ($request->areas ?? []) : []);
+        // Zone: per operator e manutentore
+        if (in_array($request->role, ['operator', 'manutentore'])) {
+            $user->departments()->sync($request->departments ?? []);
+        } else {
+            $user->departments()->detach();
+        }
 
-        // Sincronizza team per manutentore
+        // Sincronizza specializzazioni (con livello) e team per manutentore
         if ($request->role === 'manutentore') {
+            $syncData = [];
+            $levels = $request->maintenance_role_levels ?? [];
+            foreach ($request->maintenance_roles ?? [] as $roleId) {
+                $syncData[$roleId] = ['level' => max(1, min(5, (int)($levels[$roleId] ?? 1)))];
+            }
+            $user->maintenanceRoles()->sync($syncData);
             $user->teams()->sync($request->teams ?? []);
         } else {
+            $user->maintenanceRoles()->detach();
             $user->teams()->detach();
+        }
+
+        // Se il ruolo cambia da manutentore, pulisci il piano orario
+        if ($request->role !== 'manutentore') {
+            $user->workScheduleSlots()->delete();
         }
 
         return redirect()->route('users.index')
             ->with('success', 'Utente aggiornato con successo!');
+    }
+
+    public function updateSchedule(Request $request, User $user): JsonResponse
+    {
+        $request->validate([
+            'slots'                => 'nullable|array',
+            'slots.*.start_time'   => 'nullable|date_format:H:i',
+            'slots.*.end_time'     => 'nullable|date_format:H:i',
+            'slots.*.type'         => 'nullable|in:lavorativo,ferie,riposi,pausa_pranzo',
+            'slots.*.is_recurring' => 'nullable|in:0,1',
+            'slots.*.day_of_week'  => 'nullable|integer|between:0,6',
+            'slots.*.date'         => 'nullable|date',
+        ]);
+
+        $user->workScheduleSlots()->delete();
+
+        foreach ($request->get('slots', []) as $slot) {
+            $type = in_array($slot['type'] ?? '', ['lavorativo', 'ferie', 'riposi', 'pausa_pranzo'])
+                ? $slot['type']
+                : 'lavorativo';
+            $isAllDay = in_array($type, ['ferie', 'riposi']) && empty($slot['start_time']);
+            if (!$isAllDay && (empty($slot['start_time']) || empty($slot['end_time']))) {
+                continue;
+            }
+            $isRecurring = (bool)(int)($slot['is_recurring'] ?? 0);
+            $user->workScheduleSlots()->create([
+                'date'         => !$isRecurring ? ($slot['date'] ?: null) : null,
+                'day_of_week'  => $isRecurring  ? (int)($slot['day_of_week'] ?? 0) : null,
+                'start_time'   => $slot['start_time'] ?: null,
+                'end_time'     => $slot['end_time'] ?: null,
+                'type'         => $type,
+                'is_recurring' => $isRecurring,
+            ]);
+        }
+
+        return response()->json(['message' => 'Piano orario salvato con successo.']);
     }
 
     public function destroy(User $user) : RedirectResponse

@@ -41,6 +41,12 @@
             <i class="bi bi-calendar3"></i>
             <span>Calendario</span>
         </a>
+        @if(auth()->user()->role === 'manutentore')
+        <a href="{{ route('schedule.index') }}" class="menu-item {{ request()->routeIs('schedule.*') ? 'active' : '' }}">
+            <i class="bi bi-calendar-week"></i>
+            <span>Piano Orario</span>
+        </a>
+        @endif
 
         @if(auth()->user()->role === 'admin')
         <div style="padding: 10px 25px; opacity: 0.5; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-top: 15px;">

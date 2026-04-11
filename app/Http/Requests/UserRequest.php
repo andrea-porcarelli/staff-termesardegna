@@ -28,9 +28,12 @@ class UserRequest extends FormRequest
             'email' => ['required', 'email', Rule::unique('users', 'email')->whereNull('deleted_at')],
             'password' => 'required|string|min:6|confirmed',
             'role' => 'required|in:admin,operator,manutentore',
-            'maintenance_role_id' => 'nullable|exists:maintenance_roles,id',
-            'teams' => 'nullable|array',
-            'teams.*' => 'exists:teams,id',
+            'maintenance_roles'   => 'nullable|array',
+            'maintenance_roles.*' => 'exists:maintenance_roles,id',
+            'teams'                      => 'nullable|array',
+            'teams.*'                    => 'exists:teams,id',
+            'maintenance_role_levels'    => 'nullable|array',
+            'maintenance_role_levels.*'  => 'integer|between:1,5',
         ];
     }
 

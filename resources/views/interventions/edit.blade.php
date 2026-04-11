@@ -12,24 +12,54 @@
     <div class="card-body">
         @php
             $currentTipo = old('tipo', $intervention->tipo ?? ($intervention->equipment_id ? 'pianificazione' : 'ordinario'));
+            $currentAssignmentType = old('assignment_type', $intervention->maintenance_role_id ? 'specializzazione' : 'diretto');
         @endphp
         <script>
             function interventionForm() {
                 return {
                     tipo: '{{ $currentTipo }}',
                     selectedAreaId: '{{ old('area_id', $intervention->area_id ?? '') }}',
+                    selectedEquipmentId: '{{ old('equipment_id', $intervention->equipment_id ?? '') }}',
+                    assignmentType: '{{ $currentAssignmentType }}',
+                    selectedPriority: '{{ old('priority', $intervention->priority ?? 'medium') }}',
+                    components: @json($components),
                     departments: @json($departments->map(fn($d) => ['id' => $d->id, 'name' => $d->name, 'area_id' => $d->area_id])),
 
-                    fetchEquipmentPlanning(equipmentId) {
+                    init() {
+                        this.$watch('assignmentType', (val) => {
+                            if (val === 'specializzazione' && this.$refs.assignedUser) {
+                                this.$refs.assignedUser.value = '';
+                            } else if (val === 'diretto' && this.$refs.maintenanceRole) {
+                                this.$refs.maintenanceRole.value = '';
+                            }
+                        });
+                    },
+
+                    onEquipmentChange(equipmentId) {
+                        this.selectedEquipmentId = equipmentId;
                         if (!equipmentId) return;
                         var dateField = document.getElementById('scheduled_date');
                         fetch(`/api/equipments/${equipmentId}/planning`)
                             .then(r => r.json())
                             .then(data => {
-                                if (data.next_maintenance_date && !dateField.value) {
+                                if (data.next_maintenance_date && dateField && !dateField.value) {
                                     dateField.value = data.next_maintenance_date;
                                 }
                             });
+                    },
+
+                    showMaintenanceRole() {
+                        return (this.tipo === 'pianificazione' && this.assignmentType === 'specializzazione')
+                            || this.tipo === 'ordinario';
+                    },
+
+                    showAssignedUser() {
+                        return this.tipo === 'pianificazione' && this.assignmentType === 'diretto';
+                    },
+
+                    showDateTime() {
+                        return this.tipo === 'pianificazione'
+                            || (this.tipo === 'ordinario' && this.selectedPriority === 'fixed_date');
                     }
                 };
             }
@@ -62,14 +92,15 @@
                 @enderror
             </div>
 
+            {{-- Riga 1: Impianto + Componente (pianificazione) | Area + Zona + Priorità (ordinario) --}}
             <div class="row">
-                {{-- Selezione impianto (solo Pianificazione) --}}
+                {{-- Impianto (solo pianificazione) --}}
                 <div class="col-md-6 mb-3" x-show="tipo === 'pianificazione'" x-cloak>
                     <label for="equipment_id" class="form-label">Impianto/Macchina <span class="text-danger">*</span></label>
                     <select class="form-select @error('equipment_id') is-invalid @enderror"
                             id="equipment_id" name="equipment_id"
                             :required="tipo === 'pianificazione'"
-                            @change="fetchEquipmentPlanning($event.target.value)">
+                            @change="onEquipmentChange($event.target.value)">
                         <option value="">Seleziona un impianto...</option>
                         @foreach($equipments as $equipment)
                             <option value="{{ $equipment->id }}" {{ old('equipment_id', $intervention->equipment_id) == $equipment->id ? 'selected' : '' }}>
@@ -82,8 +113,30 @@
                     @enderror
                 </div>
 
-                {{-- Selezione area (solo Ordinario) --}}
-                <div class="col-md-3 mb-3" x-show="tipo === 'ordinario'" x-cloak>
+                {{-- Componente in cascata (solo pianificazione + impianto selezionato) --}}
+                <div class="col-md-6 mb-3" x-show="tipo === 'pianificazione' && selectedEquipmentId" x-cloak>
+                    <label for="component_id" class="form-label">
+                        Componente
+                        <small class="text-muted">(opzionale — lascia vuoto per tutto l'impianto)</small>
+                    </label>
+                    <select class="form-select @error('component_id') is-invalid @enderror"
+                            id="component_id" name="component_id">
+                        <option value="">Intero impianto</option>
+                        @foreach($components as $component)
+                            <option value="{{ $component->id }}"
+                                    x-show="selectedEquipmentId == '{{ $component->equipment_id }}'"
+                                    {{ old('component_id', $intervention->component_id) == $component->id ? 'selected' : '' }}>
+                                {{ $component->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('component_id')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                {{-- Area (solo ordinario) --}}
+                <div class="col-md-4 mb-3" x-show="tipo === 'ordinario'" x-cloak>
                     <label for="area_id" class="form-label">Area <span class="text-danger">*</span></label>
                     <select class="form-select @error('area_id') is-invalid @enderror"
                             id="area_id" name="area_id"
@@ -101,8 +154,8 @@
                     @enderror
                 </div>
 
-                {{-- Selezione zona filtrata (solo Ordinario) --}}
-                <div class="col-md-3 mb-3" x-show="tipo === 'ordinario'" x-cloak>
+                {{-- Zona filtrata (solo ordinario) --}}
+                <div class="col-md-4 mb-3" x-show="tipo === 'ordinario'" x-cloak>
                     <label for="department_id" class="form-label">Zona <span class="text-danger">*</span></label>
                     <select class="form-select @error('department_id') is-invalid @enderror"
                             id="department_id" name="department_id"
@@ -121,10 +174,78 @@
                     @enderror
                 </div>
 
-                <div class="col-md-6 mb-3">
-                    <label for="assigned_user_id" class="form-label">Operatore Assegnato <span class="text-danger">*</span></label>
+                {{-- Priorità (solo ordinario) --}}
+                <div class="col-md-4 mb-3" x-show="tipo === 'ordinario'" x-cloak>
+                    <label for="priority" class="form-label">Priorità <span class="text-danger">*</span></label>
+                    <select class="form-select @error('priority') is-invalid @enderror"
+                            id="priority" name="priority"
+                            x-model="selectedPriority"
+                            :required="tipo === 'ordinario'">
+                        <option value="low"        {{ old('priority', $intervention->priority) == 'low'        ? 'selected' : '' }}>Bassa — entro 7 giorni</option>
+                        <option value="medium"     {{ old('priority', $intervention->priority) == 'medium'     ? 'selected' : '' }}>Media — entro 3 giorni</option>
+                        <option value="high"       {{ old('priority', $intervention->priority) == 'high'       ? 'selected' : '' }}>Alta — entro 24 ore</option>
+                        <option value="urgent"     {{ old('priority', $intervention->priority) == 'urgent'     ? 'selected' : '' }}>Urgente — adesso</option>
+                        <option value="fixed_date" {{ old('priority', $intervention->priority) == 'fixed_date' ? 'selected' : '' }}>Data fissa — seleziona data e ora</option>
+                    </select>
+                    @error('priority')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+            </div>
+
+            {{-- Tipo assegnazione (solo pianificazione) --}}
+            <div class="mb-3" x-show="tipo === 'pianificazione'" x-cloak>
+                <label class="form-label fw-semibold">Assegnazione</label>
+                <div class="d-flex gap-3">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="assignment_type"
+                               id="assign_specializzazione" value="specializzazione" x-model="assignmentType">
+                        <label class="form-check-label" for="assign_specializzazione">
+                            <i class="bi bi-person-badge me-1"></i>Per specializzazione
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="assignment_type"
+                               id="assign_diretto" value="diretto" x-model="assignmentType">
+                        <label class="form-check-label" for="assign_diretto">
+                            <i class="bi bi-person-check me-1"></i>Tecnico diretto
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Riga assegnazione --}}
+            <div class="row">
+                {{-- Specializzazione: (pianificazione+spec) OPPURE ordinario --}}
+                <div class="col-md-6 mb-3" x-show="showMaintenanceRole()" x-cloak>
+                    <label for="maintenance_role_id" class="form-label">
+                        Specializzazione <span class="text-danger">*</span>
+                    </label>
+                    <select class="form-select @error('maintenance_role_id') is-invalid @enderror"
+                            id="maintenance_role_id" name="maintenance_role_id"
+                            x-ref="maintenanceRole"
+                            :required="showMaintenanceRole()">
+                        <option value="">Seleziona una specializzazione...</option>
+                        @foreach($maintenanceRoles as $role)
+                            <option value="{{ $role->id }}" {{ old('maintenance_role_id', $intervention->maintenance_role_id) == $role->id ? 'selected' : '' }}>
+                                {{ $role->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                    @error('maintenance_role_id')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                {{-- Operatore diretto: solo pianificazione+diretto --}}
+                <div class="col-md-6 mb-3" x-show="showAssignedUser()" x-cloak>
+                    <label for="assigned_user_id" class="form-label">
+                        Operatore Assegnato <span class="text-danger">*</span>
+                    </label>
                     <select class="form-select @error('assigned_user_id') is-invalid @enderror"
-                            id="assigned_user_id" name="assigned_user_id" required>
+                            id="assigned_user_id" name="assigned_user_id"
+                            x-ref="assignedUser"
+                            :required="showAssignedUser()">
                         <option value="">Seleziona un operatore...</option>
                         @foreach($operators as $operator)
                             <option value="{{ $operator->id }}" {{ old('assigned_user_id', $intervention->assigned_user_id) == $operator->id ? 'selected' : '' }}>
@@ -138,6 +259,41 @@
                 </div>
             </div>
 
+            {{-- Data/Ora: pianificazione (sempre) | ordinario con data fissa --}}
+            <div class="row" x-show="showDateTime()" x-cloak>
+                <div class="col-md-4 mb-3">
+                    <label for="scheduled_date" class="form-label">
+                        Data <span class="text-danger">*</span>
+                    </label>
+                    <input type="date" class="form-control @error('scheduled_date') is-invalid @enderror"
+                           id="scheduled_date" name="scheduled_date"
+                           value="{{ old('scheduled_date', $intervention->scheduled_date?->format('Y-m-d')) }}"
+                           :required="showDateTime()">
+                    @error('scheduled_date')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="scheduled_start_time" class="form-label">Ora</label>
+                    <input type="time" class="form-control @error('scheduled_start_time') is-invalid @enderror"
+                           id="scheduled_start_time" name="scheduled_start_time"
+                           value="{{ old('scheduled_start_time', $intervention->scheduled_start_time ? substr($intervention->scheduled_start_time, 0, 5) : '') }}">
+                    @error('scheduled_start_time')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+                <div class="col-md-4 mb-3" x-show="tipo === 'pianificazione'" x-cloak>
+                    <label for="estimated_duration_minutes" class="form-label">Durata Stimata (minuti)</label>
+                    <input type="number" class="form-control @error('estimated_duration_minutes') is-invalid @enderror"
+                           id="estimated_duration_minutes" name="estimated_duration_minutes"
+                           value="{{ old('estimated_duration_minutes', $intervention->estimated_duration_minutes) }}" min="1">
+                    @error('estimated_duration_minutes')
+                        <div class="invalid-feedback">{{ $message }}</div>
+                    @enderror
+                </div>
+            </div>
+
+            {{-- ===== CAMPI COMUNI ===== --}}
             <div class="mb-3">
                 <label for="title" class="form-label">Titolo Intervento <span class="text-danger">*</span></label>
                 <input type="text" class="form-control @error('title') is-invalid @enderror"
@@ -156,69 +312,18 @@
                 @enderror
             </div>
 
-            {{-- Campi pianificazione --}}
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    <label for="scheduled_date" class="form-label">
-                        Data Pianificata
-                        <span x-show="tipo === 'pianificazione'" class="text-danger">*</span>
-                        <small x-show="tipo === 'ordinario'" class="text-muted">(opzionale)</small>
-                    </label>
-                    <input type="date" class="form-control @error('scheduled_date') is-invalid @enderror"
-                           id="scheduled_date" name="scheduled_date"
-                           value="{{ old('scheduled_date', $intervention->scheduled_date?->format('Y-m-d')) }}"
-                           :required="tipo === 'pianificazione'">
-                    @error('scheduled_date')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <div class="col-md-4 mb-3" x-show="tipo === 'pianificazione'" x-cloak>
-                    <label for="scheduled_start_time" class="form-label">Ora Inizio</label>
-                    <input type="time" class="form-control @error('scheduled_start_time') is-invalid @enderror"
-                           id="scheduled_start_time" name="scheduled_start_time"
-                           value="{{ old('scheduled_start_time', $intervention->scheduled_start_time ? substr($intervention->scheduled_start_time, 0, 5) : '') }}">
-                    @error('scheduled_start_time')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <div class="col-md-4 mb-3" x-show="tipo === 'pianificazione'" x-cloak>
-                    <label for="estimated_duration_minutes" class="form-label">Durata Stimata (minuti)</label>
-                    <input type="number" class="form-control @error('estimated_duration_minutes') is-invalid @enderror"
-                           id="estimated_duration_minutes" name="estimated_duration_minutes"
-                           value="{{ old('estimated_duration_minutes', $intervention->estimated_duration_minutes) }}" min="1">
-                    @error('estimated_duration_minutes')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-            </div>
-
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label for="status" class="form-label">Stato</label>
                     <select class="form-select @error('status') is-invalid @enderror"
                             id="status" name="status">
+                        <option value="open" {{ old('status', $intervention->status) == 'open' ? 'selected' : '' }}>Aperto</option>
                         <option value="planned" {{ old('status', $intervention->status) == 'planned' ? 'selected' : '' }}>Pianificato</option>
                         <option value="in_progress" {{ old('status', $intervention->status) == 'in_progress' ? 'selected' : '' }}>In corso</option>
                         <option value="completed" {{ old('status', $intervention->status) == 'completed' ? 'selected' : '' }}>Completato</option>
                         <option value="cancelled" {{ old('status', $intervention->status) == 'cancelled' ? 'selected' : '' }}>Annullato</option>
                     </select>
                     @error('status')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
-
-                <div class="col-md-6 mb-3">
-                    <label for="priority" class="form-label">Priorità</label>
-                    <select class="form-select @error('priority') is-invalid @enderror"
-                            id="priority" name="priority">
-                        <option value="low" {{ old('priority', $intervention->priority) == 'low' ? 'selected' : '' }}>Bassa</option>
-                        <option value="medium" {{ old('priority', $intervention->priority) == 'medium' ? 'selected' : '' }}>Media</option>
-                        <option value="high" {{ old('priority', $intervention->priority) == 'high' ? 'selected' : '' }}>Alta</option>
-                        <option value="critical" {{ old('priority', $intervention->priority) == 'critical' ? 'selected' : '' }}>Critica</option>
-                    </select>
-                    @error('priority')
                         <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
@@ -231,6 +336,7 @@
                 @error('notes')
                     <div class="invalid-feedback">{{ $message }}</div>
                 @enderror
+
             </div>
 
             <div class="d-flex gap-2">

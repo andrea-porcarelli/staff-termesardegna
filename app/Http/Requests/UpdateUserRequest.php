@@ -34,11 +34,16 @@ class UpdateUserRequest extends FormRequest
             ],
             'password' => 'nullable|string|min:6|confirmed',
             'role' => 'required|in:admin,operator,manutentore',
-            'maintenance_role_id' => 'nullable|exists:maintenance_roles,id',
+            'maintenance_roles'   => 'nullable|array',
+            'maintenance_roles.*' => 'exists:maintenance_roles,id',
             'teams' => 'nullable|array',
             'teams.*' => 'exists:teams,id',
-            'departments' => 'nullable|array',
-            'departments.*' => 'exists:departments,id',
+            'areas'          => 'nullable|array',
+            'areas.*'        => 'exists:areas,id',
+            'departments'                => 'nullable|array',
+            'departments.*'              => 'exists:departments,id',
+            'maintenance_role_levels'    => 'nullable|array',
+            'maintenance_role_levels.*'  => 'integer|between:1,5',
         ];
     }
 

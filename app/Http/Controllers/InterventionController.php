@@ -9,6 +9,8 @@ use App\Models\Intervention;
 use App\Models\Area;
 use App\Models\Department;
 use App\Models\Equipment;
+use App\Models\EquipmentComponent;
+use App\Models\MaintenanceRole;
 use App\Models\User;
 use Illuminate\View\View;
 use Illuminate\Http\JsonResponse;
@@ -32,31 +34,45 @@ class InterventionController extends Controller
 
     public function create(): View
     {
-        abort_if(Auth::user()->role === 'manutentore', 403);
+        $user = Auth::user();
         $equipments = Equipment::where('active', true)->orderBy('name')->get();
         $operators = User::whereIn('role', ['operator', 'manutentore'])->orderBy('name')->get();
         $areas = Area::where('active', true)->orderBy('name')->get();
         $departments = Department::where('active', true)->orderBy('name')->get();
-        return view('interventions.create', compact('equipments', 'operators', 'areas', 'departments'));
+        $maintenanceRoles = MaintenanceRole::orderBy('name')->get();
+        $components = EquipmentComponent::all(['id', 'equipment_id', 'name']);
+
+        $userRole = $user->role;
+        $userDepartmentIds = $user->departments->pluck('id')->toArray();
+        $userAreaId = $user->departments->first()?->area_id;
+
+        return view('interventions.create', compact(
+            'equipments', 'operators', 'areas', 'departments', 'maintenanceRoles', 'components',
+            'userRole', 'userDepartmentIds', 'userAreaId'
+        ));
     }
 
     public function store(InterventionRequest $request): RedirectResponse
     {
         $isPianificazione = $request->tipo === 'pianificazione';
+        $priority = $isPianificazione ? 'medium' : ($request->priority ?? 'medium');
+        $isFixedDate = !$isPianificazione && $priority === 'fixed_date';
 
         $data = [
             'tipo'                       => $request->tipo,
             'equipment_id'               => $isPianificazione ? $request->equipment_id : null,
+            'component_id'               => $isPianificazione ? ($request->component_id ?: null) : null,
+            'maintenance_role_id'        => $request->filled('maintenance_role_id') ? $request->maintenance_role_id : null,
             'area_id'                    => !$isPianificazione ? $request->area_id : null,
             'department_id'              => !$isPianificazione ? $request->department_id : null,
-            'assigned_user_id'           => $request->assigned_user_id,
+            'assigned_user_id'           => $isPianificazione ? ($request->assigned_user_id ?: null) : null,
             'title'                      => $request->title,
             'description'                => $request->description,
-            'scheduled_date'             => $request->scheduled_date ?: null,
-            'scheduled_start_time'       => $isPianificazione ? $request->scheduled_start_time : null,
-            'estimated_duration_minutes' => $isPianificazione ? $request->estimated_duration_minutes : null,
-            'status'                     => $request->status ?? 'planned',
-            'priority'                   => $request->priority ?? 'medium',
+            'scheduled_date'             => ($isPianificazione || $isFixedDate) ? ($request->scheduled_date ?: null) : null,
+            'scheduled_start_time'       => ($isPianificazione || $isFixedDate) ? ($request->scheduled_start_time ?: null) : null,
+            'estimated_duration_minutes' => $isPianificazione ? ($request->estimated_duration_minutes ?: null) : null,
+            'status'                     => in_array(Auth::user()->role, ['operator', 'manutentore']) ? 'open' : ($request->status ?? 'planned'),
+            'priority'                   => $priority,
             'notes'                      => $request->notes,
         ];
 
@@ -68,8 +84,27 @@ class InterventionController extends Controller
 
     public function show(Intervention $intervention): View
     {
-        $intervention->load(['equipment.department.area', 'assignedUser', 'reports.user']);
+        $intervention->load(['equipment.department.area', 'assignedUser', 'maintenanceRole', 'reports.user']);
         return view('interventions.show', compact('intervention'));
+    }
+
+    public function takeCharge(Intervention $intervention): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_if($user->role !== 'manutentore', 403);
+
+        // Verifica che l'intervento sia prendibile in carico
+        if (!in_array($intervention->status, ['open', 'planned'])) {
+            return back()->with('error', 'Questo intervento non può essere preso in carico.');
+        }
+
+        $intervention->update([
+            'assigned_user_id' => $user->id,
+            'status' => 'in_progress',
+        ]);
+
+        return redirect()->route('interventions.show', $intervention)
+            ->with('success', 'Intervento preso in carico con successo!');
     }
 
     public function edit(Intervention $intervention): View
@@ -79,26 +114,32 @@ class InterventionController extends Controller
         $operators = User::whereIn('role', ['operator', 'manutentore'])->orderBy('name')->get();
         $areas = Area::where('active', true)->orderBy('name')->get();
         $departments = Department::where('active', true)->orderBy('name')->get();
-        return view('interventions.edit', compact('intervention', 'equipments', 'operators', 'areas', 'departments'));
+        $maintenanceRoles = MaintenanceRole::orderBy('name')->get();
+        $components = EquipmentComponent::all(['id', 'equipment_id', 'name']);
+        return view('interventions.edit', compact('intervention', 'equipments', 'operators', 'areas', 'departments', 'maintenanceRoles', 'components'));
     }
 
     public function update(InterventionRequest $request, Intervention $intervention): RedirectResponse
     {
         $isPianificazione = $request->tipo === 'pianificazione';
+        $priority = $isPianificazione ? 'medium' : ($request->priority ?? 'medium');
+        $isFixedDate = !$isPianificazione && $priority === 'fixed_date';
 
         $data = [
             'tipo'                       => $request->tipo,
             'equipment_id'               => $isPianificazione ? $request->equipment_id : null,
+            'component_id'               => $isPianificazione ? ($request->component_id ?: null) : null,
+            'maintenance_role_id'        => $request->filled('maintenance_role_id') ? $request->maintenance_role_id : null,
             'area_id'                    => !$isPianificazione ? $request->area_id : null,
             'department_id'              => !$isPianificazione ? $request->department_id : null,
-            'assigned_user_id'           => $request->assigned_user_id,
+            'assigned_user_id'           => $isPianificazione ? ($request->assigned_user_id ?: null) : null,
             'title'                      => $request->title,
             'description'                => $request->description,
-            'scheduled_date'             => $request->scheduled_date ?: null,
-            'scheduled_start_time'       => $isPianificazione ? $request->scheduled_start_time : null,
-            'estimated_duration_minutes' => $isPianificazione ? $request->estimated_duration_minutes : null,
+            'scheduled_date'             => ($isPianificazione || $isFixedDate) ? ($request->scheduled_date ?: null) : null,
+            'scheduled_start_time'       => ($isPianificazione || $isFixedDate) ? ($request->scheduled_start_time ?: null) : null,
+            'estimated_duration_minutes' => $isPianificazione ? ($request->estimated_duration_minutes ?: null) : null,
             'status'                     => $request->status ?? 'planned',
-            'priority'                   => $request->priority ?? 'medium',
+            'priority'                   => $priority,
             'notes'                      => $request->notes,
         ];
 
@@ -219,10 +260,11 @@ class InterventionController extends Controller
         $events = $interventions->map(function ($intervention) {
             // Definizione colori per priorità
             $priorityColors = [
-                'low' => '#6c757d',      // grigio
-                'medium' => '#0dcaf0',   // info
-                'high' => '#ffc107',     // warning
-                'critical' => '#dc3545'  // danger
+                'low'        => '#6c757d',  // grigio
+                'medium'     => '#0dcaf0',  // info
+                'high'       => '#ffc107',  // warning
+                'urgent'     => '#dc3545',  // danger
+                'fixed_date' => '#6f42c1',  // viola
             ];
 
             // Definizione colori per stato

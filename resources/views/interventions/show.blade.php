@@ -12,13 +12,28 @@
     </div>
 
 @if(auth()->user()->role === 'manutentore')
-    <div class="card mb-3 border-primary">
-        <div class="card-body text-center py-3">
-            <a href="{{ route('interventions.reports.create', $intervention) }}" class="btn btn-light btn-lg">
-                <i class="bi bi-plus-circle me-2"></i>Crea Rapportino per questo intervento
-            </a>
+    @if(in_array($intervention->status, ['open', 'planned']) && (!$intervention->assigned_user_id || $intervention->assigned_user_id === 0))
+        <div class="card mb-3 border-warning">
+            <div class="card-body text-center py-3">
+                <form action="{{ route('interventions.take-charge', $intervention) }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="btn btn-warning btn-lg">
+                        <i class="bi bi-hand-index-thumb me-2"></i>Prendi in Carico Attivit&agrave;
+                    </button>
+                </form>
+            </div>
         </div>
-    </div>
+    @else
+        @if($intervention->assigned_user_id === auth()->id())
+        <div class="card mb-3 border-primary">
+            <div class="card-body text-center py-3">
+                <a href="{{ route('interventions.reports.create', $intervention) }}" class="btn btn-light btn-lg">
+                    <i class="bi bi-plus-circle me-2"></i>Crea Rapportino per questo intervento
+                </a>
+            </div>
+        </div>
+        @endif
+    @endif
 @endif
 
     {{-- VISTA DETTAGLIO (tutti i ruoli) --}}
@@ -76,8 +91,15 @@
                             <tr>
                                 <th>Operatore Assegnato:</th>
                                 <td>
-                                    <i class="bi bi-person me-1"></i>{{ $intervention->assignedUser->name }}<br>
-                                    <small class="text-muted">{{ $intervention->assignedUser->email }}</small>
+                                    @if($intervention->assignedUser)
+                                        <i class="bi bi-person me-1"></i>{{ $intervention->assignedUser->name }}<br>
+                                        <small class="text-muted">{{ $intervention->assignedUser->email }}</small>
+                                    @elseif($intervention->maintenanceRole)
+                                        <span class="text-muted"><i class="bi bi-person-badge me-1"></i>{{ $intervention->maintenanceRole->name }}</span>
+                                        <br><small class="text-warning">Non ancora assegnato</small>
+                                    @else
+                                        <span class="text-muted">Non assegnato</span>
+                                    @endif
                                 </td>
                             </tr>
                         </tbody>
@@ -123,12 +145,14 @@
                                 <td>
                                     @php
                                         $statusClasses = [
+                                            'open' => 'bg-primary',
                                             'planned' => 'bg-info',
                                             'in_progress' => 'bg-warning',
                                             'completed' => 'bg-success',
                                             'cancelled' => 'bg-danger'
                                         ];
                                         $statusLabels = [
+                                            'open' => 'Aperto',
                                             'planned' => 'Pianificato',
                                             'in_progress' => 'In corso',
                                             'completed' => 'Completato',
@@ -140,21 +164,46 @@
                                     </span>
                                 </td>
                             </tr>
+                            @if($intervention->deadline)
+                            <tr>
+                                <th>Scadenza:</th>
+                                <td>
+                                    @if($intervention->is_overdue)
+                                        <span class="badge bg-danger px-3 py-2">
+                                            <i class="bi bi-exclamation-triangle-fill me-1"></i>SCADUTO — {{ $intervention->deadline->format('d/m/Y H:i') }}
+                                            ({{ $intervention->deadline->diffForHumans() }})
+                                        </span>
+                                    @elseif(now()->diffInHours($intervention->deadline, false) <= 24)
+                                        <span class="badge bg-warning text-dark px-3 py-2">
+                                            <i class="bi bi-clock-fill me-1"></i>{{ $intervention->deadline->format('d/m/Y H:i') }}
+                                            ({{ $intervention->deadline->diffForHumans() }})
+                                        </span>
+                                    @else
+                                        <span class="badge bg-light text-dark border px-2 py-2">
+                                            <i class="bi bi-clock me-1"></i>{{ $intervention->deadline->format('d/m/Y H:i') }}
+                                            <span class="text-muted">({{ $intervention->deadline->diffForHumans() }})</span>
+                                        </span>
+                                    @endif
+                                </td>
+                            </tr>
+                            @endif
                             <tr>
                                 <th>Priorità:</th>
                                 <td>
                                     @php
                                         $priorityClasses = [
-                                            'low' => 'bg-secondary',
-                                            'medium' => 'bg-info',
-                                            'high' => 'bg-warning',
-                                            'critical' => 'bg-danger'
+                                            'low'        => 'bg-secondary',
+                                            'medium'     => 'bg-info',
+                                            'high'       => 'bg-warning',
+                                            'urgent'     => 'bg-danger',
+                                            'fixed_date' => 'bg-purple',
                                         ];
                                         $priorityLabels = [
-                                            'low' => 'Bassa',
-                                            'medium' => 'Media',
-                                            'high' => 'Alta',
-                                            'critical' => 'Critica'
+                                            'low'        => 'Bassa',
+                                            'medium'     => 'Media',
+                                            'high'       => 'Alta',
+                                            'urgent'     => 'Urgente',
+                                            'fixed_date' => 'Data fissa',
                                         ];
                                     @endphp
                                     <span class="badge {{ $priorityClasses[$intervention->priority] ?? 'bg-secondary' }}">

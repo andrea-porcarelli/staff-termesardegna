@@ -10,6 +10,7 @@ use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\InterventionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\MaintenanceRoleController;
+use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\TeamController;
 
 Route::get('/', function () {
@@ -54,8 +55,16 @@ Route::middleware('auth')->group(function () {
     // API endpoint per dati pianificazione impianto (per form intervento)
     Route::get('/api/equipments/{equipment}/planning', [InterventionController::class, 'equipmentPlanning'])->name('api.equipments.planning');
 
+    // Presa in carico intervento (manutentore)
+    Route::post('/interventions/{intervention}/take-charge', [InterventionController::class, 'takeCharge'])->name('interventions.take-charge');
+
+    // Piano orario manutentore (self-service)
+    Route::get('/schedule', [ScheduleController::class, 'index'])->name('schedule.index');
+    Route::put('/schedule', [ScheduleController::class, 'update'])->name('schedule.update');
+
     Route::middleware('admin')->group(function () {
         Route::resource('users', UserController::class);
+        Route::put('users/{user}/schedule', [UserController::class, 'updateSchedule'])->name('users.schedule.update');
         Route::resource('areas', AreaController::class);
         Route::resource('departments', DepartmentController::class);
         Route::resource('equipments', EquipmentController::class);

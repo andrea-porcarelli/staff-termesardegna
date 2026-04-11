@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Facades\Utils;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Intervention;
@@ -132,19 +133,39 @@ class DashboardController extends Controller
             $data['quickAreas']       = Area::where('active', true)->orderBy('name')->get();
             $data['quickDepartments'] = Department::where('active', true)->orderBy('name')->get();
 
+            // Manutentore: interventi disponibili da prendere in carico
+            if ($role === 'manutentore') {
+                $userDeptIds = $user->departments()->pluck('departments.id');
+                $userMaintenanceRoleIds = $user->maintenanceRoles()->pluck('maintenance_roles.id');
+
+                $availableQuery = Intervention::with(['area', 'department', 'equipment.department.area', 'maintenanceRole'])
+                    ->whereIn('status', ['open', 'planned', 'in_progress'])
+                    ->where(function ($q) {
+                        $q->whereNull('assigned_user_id')->orWhere('assigned_user_id', Auth::id());
+                    });
+
+                // Filtra per specializzazioni del manutentore (se ne ha almeno una)
+                if ($userMaintenanceRoleIds->isNotEmpty()) {
+                    $availableQuery->whereIn('maintenance_role_id', $userMaintenanceRoleIds);
+                }
+
+                // Filtra per zone assegnate al manutentore
+                $availableQuery->where(function ($q) use ($userDeptIds) {
+                    $q->whereIn('department_id', $userDeptIds)
+                      ->orWhereHas('equipment', fn($eq) => $eq->whereIn('department_id', $userDeptIds));
+                });
+                Utils::queryLog($availableQuery
+                    ->orderByRaw("FIELD(priority, 'urgent', 'high', 'medium', 'low', 'fixed_date')")
+                    ->orderBy('created_at', 'asc'));
+                $data['availableInterventions'] = $availableQuery
+                    ->orderByRaw("FIELD(priority, 'urgent', 'high', 'medium', 'low', 'fixed_date')")
+                    ->orderBy('created_at', 'asc')
+                    ->get();
+            }
+
             // Operator: solo le sue statistiche
             $data['myInterventions'] = Intervention::where('assigned_user_id', $user->id)->count();
             $data['myReports'] = Report::where('user_id', $user->id)->count();
-
-            $data['myInterventionsPlanned'] = Intervention::where('assigned_user_id', $user->id)
-                ->where('status', 'planned')
-                ->count();
-            $data['myInterventionsInProgress'] = Intervention::where('assigned_user_id', $user->id)
-                ->where('status', 'in_progress')
-                ->count();
-            $data['myInterventionsCompleted'] = Intervention::where('assigned_user_id', $user->id)
-                ->where('status', 'completed')
-                ->count();
 
             $data['myReportsCompleted'] = Report::where('user_id', $user->id)
                 ->where('status', 'completed')
@@ -152,14 +173,6 @@ class DashboardController extends Controller
             $data['myReportsDraft'] = Report::where('user_id', $user->id)
                 ->where('status', 'draft')
                 ->count();
-
-            // Prossimi interventi dell'operatore (prossimi 7 giorni)
-            $data['myUpcomingInterventions'] = Intervention::with(['equipment'])
-                ->where('assigned_user_id', $user->id)
-                ->whereBetween('scheduled_date', [now(), now()->addDays(7)])
-                ->orderBy('scheduled_date', 'asc')
-                ->limit(5)
-                ->get();
 
             // Interventi di oggi
             $data['todayInterventions'] = Intervention::with(['equipment'])
