@@ -207,6 +207,19 @@
                                                     </div>
                                                 </div>
 
+                                                <!-- Selezione giorni della settimana (solo se ricorrente) -->
+                                                <div x-show="newSlot.type === 'lavorativo' && newSlot.is_recurring" x-cloak class="mt-3 p-2 bg-light rounded">
+                                                    <label class="small fw-bold d-block mb-2">Seleziona i giorni della settimana:</label>
+                                                    <div class="d-flex gap-2 flex-wrap">
+                                                        <template x-for="(day, idx) in [{value: 1, label: 'Lunedì'}, {value: 2, label: 'Martedì'}, {value: 3, label: 'Mercoledì'}, {value: 4, label: 'Giovedì'}, {value: 5, label: 'Venerdì'}, {value: 6, label: 'Sabato'}, {value: 0, label: 'Domenica'}]" :key="idx">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" :id="'day_' + idx" :value="day.value" @change="$event.target.checked ? newSlot.selected_days.push(day.value) : newSlot.selected_days = newSlot.selected_days.filter(d => d !== day.value)">
+                                                                <label class="form-check-label small" :for="'day_' + idx" x-text="day.label"></label>
+                                                            </div>
+                                                        </template>
+                                                    </div>
+                                                </div>
+
                                                 <div class="alert alert-warning mt-2 py-1 px-2 small" x-show="addError" x-cloak x-text="addError"></div>
                                             </div>
 
@@ -429,7 +442,7 @@ function scheduleManager(initialSlots, saveUrl) {
         saveUrl: saveUrl,
         newSlot: {
             date: '', date_from: '', date_to: '', start_time: '', end_time: '', type: 'lavorativo',
-            is_recurring: false, has_lunch: false, lunch_start: '', lunch_end: '',
+            is_recurring: false, has_lunch: false, lunch_start: '', lunch_end: '', selected_days: [],
         },
         editingIndex: null,
 
@@ -527,6 +540,7 @@ function scheduleManager(initialSlots, saveUrl) {
                         has_lunch: false,
                         lunch_start: '',
                         lunch_end: '',
+                        selected_days: (slot.is_recurring === '1' || slot.is_recurring === true) && slot.day_of_week ? [parseInt(slot.day_of_week)] : [],
                     };
                     self.showAddForm = true;
                 },
@@ -619,8 +633,11 @@ function scheduleManager(initialSlots, saveUrl) {
                 if (!this.newSlot.start_time || !this.newSlot.end_time) {
                     this.addError = 'Inserisci orario di inizio e fine.'; return;
                 }
-                if (!this.newSlot.date) {
+                if (!this.newSlot.is_recurring && !this.newSlot.date) {
                     this.addError = 'Inserisci una data di riferimento.'; return;
+                }
+                if (this.newSlot.is_recurring && this.newSlot.selected_days.length === 0) {
+                    this.addError = 'Seleziona almeno un giorno della settimana.'; return;
                 }
                 if (this.newSlot.has_lunch && (!this.newSlot.lunch_start || !this.newSlot.lunch_end)) {
                     this.addError = 'Inserisci gli orari della pausa pranzo.'; return;
@@ -657,20 +674,41 @@ function scheduleManager(initialSlots, saveUrl) {
                     current.setDate(current.getDate() + 1);
                 }
             } else {
-                const dayOfWeek = String(new Date(this.newSlot.date + 'T00:00:00').getDay());
-                const base = {
-                    date:         this.newSlot.is_recurring ? '' : this.newSlot.date,
-                    day_of_week:  this.newSlot.is_recurring ? dayOfWeek : '',
-                    type:         this.newSlot.type,
-                    is_recurring: this.newSlot.is_recurring ? '1' : '0',
-                };
+                // Se è ricorrente, crea uno slot per ogni giorno selezionato
+                if (this.newSlot.is_recurring) {
+                    this.newSlot.selected_days.forEach(dayOfWeek => {
+                        const base = {
+                            date:         '',
+                            day_of_week:  String(dayOfWeek),
+                            type:         this.newSlot.type,
+                            is_recurring: '1',
+                        };
 
-                if (this.newSlot.has_lunch && this.newSlot.lunch_start && this.newSlot.lunch_end) {
-                    this.slots.push({ ...base, start_time: this.newSlot.start_time,  end_time: this.newSlot.lunch_start });
-                    this.slots.push({ ...base, start_time: this.newSlot.lunch_start, end_time: this.newSlot.lunch_end,  type: 'pausa_pranzo' });
-                    this.slots.push({ ...base, start_time: this.newSlot.lunch_end,   end_time: this.newSlot.end_time });
+                        if (this.newSlot.has_lunch && this.newSlot.lunch_start && this.newSlot.lunch_end) {
+                            this.slots.push({ ...base, start_time: this.newSlot.start_time,  end_time: this.newSlot.lunch_start });
+                            this.slots.push({ ...base, start_time: this.newSlot.lunch_start, end_time: this.newSlot.lunch_end,  type: 'pausa_pranzo' });
+                            this.slots.push({ ...base, start_time: this.newSlot.lunch_end,   end_time: this.newSlot.end_time });
+                        } else {
+                            this.slots.push({ ...base, start_time: this.newSlot.start_time, end_time: this.newSlot.end_time });
+                        }
+                    });
                 } else {
-                    this.slots.push({ ...base, start_time: this.newSlot.start_time, end_time: this.newSlot.end_time });
+                    // Non ricorrente: usa la data singola
+                    const dayOfWeek = String(new Date(this.newSlot.date + 'T00:00:00').getDay());
+                    const base = {
+                        date:         this.newSlot.date,
+                        day_of_week:  '',
+                        type:         this.newSlot.type,
+                        is_recurring: '0',
+                    };
+
+                    if (this.newSlot.has_lunch && this.newSlot.lunch_start && this.newSlot.lunch_end) {
+                        this.slots.push({ ...base, start_time: this.newSlot.start_time,  end_time: this.newSlot.lunch_start });
+                        this.slots.push({ ...base, start_time: this.newSlot.lunch_start, end_time: this.newSlot.lunch_end,  type: 'pausa_pranzo' });
+                        this.slots.push({ ...base, start_time: this.newSlot.lunch_end,   end_time: this.newSlot.end_time });
+                    } else {
+                        this.slots.push({ ...base, start_time: this.newSlot.start_time, end_time: this.newSlot.end_time });
+                    }
                 }
             }
 
@@ -679,7 +717,7 @@ function scheduleManager(initialSlots, saveUrl) {
         },
 
         resetForm() {
-            this.newSlot = { date: '', date_from: '', date_to: '', start_time: '', end_time: '', type: 'lavorativo', is_recurring: false, has_lunch: false, lunch_start: '', lunch_end: '' };
+            this.newSlot = { date: '', date_from: '', date_to: '', start_time: '', end_time: '', type: 'lavorativo', is_recurring: false, has_lunch: false, lunch_start: '', lunch_end: '', selected_days: [] };
             this.editingIndex = null;
             this.showAddForm = false;
         },
