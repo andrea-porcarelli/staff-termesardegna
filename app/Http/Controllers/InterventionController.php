@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\InterventionRequest;
+use App\Observers\InterventionObserver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use App\Models\Intervention;
@@ -78,8 +79,23 @@ class InterventionController extends Controller
 
         Intervention::create($data);
 
-        return redirect()->route('interventions.index')
-            ->with('success', 'Intervento creato con successo!');
+        $result   = InterventionObserver::$lastAssignmentResult;
+        $redirect = redirect()->route('interventions.index');
+
+        return match ($result['status'] ?? 'skipped') {
+            'assigned' => $redirect
+                ->with('success', "Intervento creato e assegnato a {$result['user']->name}."),
+
+            'next_shift' => $redirect
+                ->with('success', "Intervento creato e assegnato a {$result['user']->name}.")
+                ->with('info', "Il manutentore è disponibile dal turno del {$result['shift_start']->translatedFormat('l d/m/Y \a\l\l\e H:i')}."),
+
+            'no_match' => $redirect
+                ->with('success', 'Intervento creato.')
+                ->with('warning', 'Nessun manutentore disponibile e compatibile trovato. L\'intervento rimane non assegnato.'),
+
+            default => $redirect->with('success', 'Intervento creato con successo!'),
+        };
     }
 
     public function show(Intervention $intervention): View

@@ -133,91 +133,81 @@
                                             </template>
 
                                             <!-- Form aggiunta slot -->
-                                            <div x-show="showAddForm" x-cloak class="card border-primary mb-3">
-                                                <div class="card-header bg-primary bg-opacity-10">
-                                                    <strong>
-                                                        <template x-if="editingIndex === null"><span><i class="bi bi-plus-circle me-2"></i>Nuovo Slot Orario</span></template>
-                                                        <template x-if="editingIndex !== null"><span><i class="bi bi-pencil me-2"></i>Modifica Slot Orario</span></template>
-                                                    </strong>
-                                                </div>
-                                                <div class="card-body">
-                                                    <div class="row g-2">
-                                                        <div class="col-md-3">
-                                                            <label class="form-label">Tipo</label>
-                                                            <select class="form-select form-select-sm" x-model="newSlot.type">
-                                                                <option value="lavorativo">Lavorativo</option>
-                                                                <option value="ferie">Ferie</option>
-                                                                <option value="riposi">Riposo</option>
-                                                            </select>
-                                                        </div>
-
-                                                        <!-- Data singola per lavorativo -->
-                                                        <div class="col-md-3" x-show="newSlot.type === 'lavorativo'">
-                                                            <label class="form-label">Data <span class="text-muted small">(riferimento)</span></label>
-                                                            <input type="date" class="form-control form-control-sm" x-model="newSlot.date">
-                                                        </div>
-
-                                                        <!-- Range date per ferie/riposo -->
-                                                        <div class="col-md-3" x-show="newSlot.type !== 'lavorativo'">
-                                                            <label class="form-label">Data inizio</label>
-                                                            <input type="date" class="form-control form-control-sm" x-model="newSlot.date_from">
-                                                        </div>
-                                                        <div class="col-md-3" x-show="newSlot.type !== 'lavorativo'">
-                                                            <label class="form-label">Data fine</label>
-                                                            <input type="date" class="form-control form-control-sm" x-model="newSlot.date_to">
-                                                        </div>
-
-                                                        <div class="col-md-3 d-flex align-items-end" x-show="newSlot.type === 'lavorativo'">
-                                                            <div class="form-check mb-2">
-                                                                <input class="form-check-input" type="checkbox" id="new_slot_recurring" x-model="newSlot.is_recurring">
-                                                                <label class="form-check-label" for="new_slot_recurring">
-                                                                    <i class="bi bi-arrow-repeat me-1"></i>Ripetizione settimanale
-                                                                </label>
-                                                            </div>
-                                                        </div>
+                                            <div x-show="showAddForm" x-cloak class="border border-primary rounded p-2 mb-3 bg-primary bg-opacity-10">
+                                                <div class="row g-2 align-items-end">
+                                                    <div class="col-auto">
+                                                        <label class="form-label form-label-sm mb-1 small">Tipo</label>
+                                                        <select class="form-select form-select-sm" style="width:130px" x-model="newSlot.type">
+                                                            <option value="lavorativo">Lavorativo</option>
+                                                            <option value="ferie">Ferie</option>
+                                                            <option value="riposi">Riposo</option>
+                                                        </select>
                                                     </div>
 
-                                                    <div class="row g-2 mt-1" x-show="newSlot.type === 'lavorativo'">
-                                                        <div class="col-md-2">
-                                                            <label class="form-label">Inizio</label>
-                                                            <input type="time" class="form-control form-control-sm" x-model="newSlot.start_time">
-                                                        </div>
-                                                        <div class="col-md-2">
-                                                            <label class="form-label">Fine</label>
-                                                            <input type="time" class="form-control form-control-sm" x-model="newSlot.end_time">
-                                                        </div>
-                                                        <div class="col-md-4 d-flex align-items-end">
-                                                            <div class="form-check mb-2">
-                                                                <input class="form-check-input" type="checkbox" id="new_slot_lunch" x-model="newSlot.has_lunch">
-                                                                <label class="form-check-label" for="new_slot_lunch">
-                                                                    <i class="bi bi-cup-hot me-1"></i>Pausa pranzo
-                                                                </label>
-                                                            </div>
-                                                        </div>
+                                                    <!-- Data singola lavorativo -->
+                                                    <div class="col-auto" x-show="newSlot.type === 'lavorativo'">
+                                                        <label class="form-label form-label-sm mb-1 small">Data</label>
+                                                        <input type="date" class="form-control form-control-sm" x-model="newSlot.date">
                                                     </div>
 
-                                                    <div class="row g-2 mt-1" x-show="newSlot.type === 'lavorativo' && newSlot.has_lunch">
-                                                        <div class="col-md-2">
-                                                            <label class="form-label">Inizio pausa</label>
-                                                            <input type="time" class="form-control form-control-sm" x-model="newSlot.lunch_start">
-                                                        </div>
-                                                        <div class="col-md-2">
-                                                            <label class="form-label">Fine pausa</label>
-                                                            <input type="time" class="form-control form-control-sm" x-model="newSlot.lunch_end">
-                                                        </div>
+                                                    <!-- Range ferie/riposo -->
+                                                    <div class="col-auto" x-show="newSlot.type !== 'lavorativo'">
+                                                        <label class="form-label form-label-sm mb-1 small">Da</label>
+                                                        <input type="date" class="form-control form-control-sm" x-model="newSlot.date_from">
+                                                    </div>
+                                                    <div class="col-auto" x-show="newSlot.type !== 'lavorativo'">
+                                                        <label class="form-label form-label-sm mb-1 small">A</label>
+                                                        <input type="date" class="form-control form-control-sm" x-model="newSlot.date_to">
                                                     </div>
 
-                                                    <div class="alert alert-warning mt-2 py-1 px-2 small" x-show="addError" x-cloak x-text="addError"></div>
+                                                    <!-- Orari lavorativo -->
+                                                    <div class="col-auto" x-show="newSlot.type === 'lavorativo'">
+                                                        <label class="form-label form-label-sm mb-1 small">Inizio</label>
+                                                        <input type="time" class="form-control form-control-sm" style="width:110px" x-model="newSlot.start_time">
+                                                    </div>
+                                                    <div class="col-auto" x-show="newSlot.type === 'lavorativo'">
+                                                        <label class="form-label form-label-sm mb-1 small">Fine</label>
+                                                        <input type="time" class="form-control form-control-sm" style="width:110px" x-model="newSlot.end_time">
+                                                    </div>
 
-                                                    <div class="mt-3 d-flex gap-2">
+                                                    <!-- Orari pausa pranzo (inline, visibili solo se has_lunch) -->
+                                                    <div class="col-auto" x-show="newSlot.type === 'lavorativo' && newSlot.has_lunch">
+                                                        <label class="form-label form-label-sm mb-1 small text-muted">Inizio pausa</label>
+                                                        <input type="time" class="form-control form-control-sm" style="width:110px" x-model="newSlot.lunch_start">
+                                                    </div>
+                                                    <div class="col-auto" x-show="newSlot.type === 'lavorativo' && newSlot.has_lunch">
+                                                        <label class="form-label form-label-sm mb-1 small text-muted">Fine pausa</label>
+                                                        <input type="time" class="form-control form-control-sm" style="width:110px" x-model="newSlot.lunch_end">
+                                                    </div>
+
+                                                    <!-- Pulsanti -->
+                                                    <div class="col-auto">
                                                         <button type="button" class="btn btn-primary btn-sm" @click="addSlot()">
                                                             <i class="bi bi-check-circle me-1"></i><span x-text="editingIndex !== null ? 'Salva' : 'Aggiungi'"></span>
                                                         </button>
-                                                        <button type="button" class="btn btn-secondary btn-sm" @click="resetForm(); addError = ''">
-                                                            <i class="bi bi-x-circle me-1"></i>Annulla
+                                                        <button type="button" class="btn btn-secondary btn-sm ms-1" @click="resetForm(); addError = ''">
+                                                            <i class="bi bi-x-circle"></i>
                                                         </button>
                                                     </div>
                                                 </div>
+
+                                                <!-- Seconda riga: checkbox (solo per lavorativo) -->
+                                                <div class="d-flex gap-4 mt-2" x-show="newSlot.type === 'lavorativo'">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="new_slot_recurring" x-model="newSlot.is_recurring">
+                                                        <label class="form-check-label small" for="new_slot_recurring">
+                                                            <i class="bi bi-arrow-repeat me-1"></i>Si ripete ogni settimana
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="new_slot_lunch" x-model="newSlot.has_lunch">
+                                                        <label class="form-check-label small" for="new_slot_lunch">
+                                                            <i class="bi bi-cup-hot me-1"></i>Pausa pranzo
+                                                        </label>
+                                                    </div>
+                                                </div>
+
+                                                <div class="alert alert-warning mt-2 py-1 px-2 small" x-show="addError" x-cloak x-text="addError"></div>
                                             </div>
 
                                             <!-- Calendario Piano Orario -->
@@ -413,6 +403,13 @@
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 <script>
+function localDateStr(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
 const TYPE_CONFIG = {
     lavorativo:   { label: 'Lavorativo',   badge: 'bg-success',               calColor: '#198754' },
     ferie:        { label: 'Ferie',         badge: 'bg-warning text-dark',     calColor: '#ffc107' },
@@ -495,7 +492,7 @@ function scheduleManager(initialSlots, saveUrl) {
                     if (!slot) { info.revert(); return; }
                     const isRec = slot.is_recurring === '1' || slot.is_recurring === true;
                     if (isRec) { info.revert(); return; }
-                    slot.date = info.event.start.toISOString().slice(0, 10);
+                    slot.date = localDateStr(info.event.start);
                     slot.start_time = info.event.start.toTimeString().slice(0, 5);
                     if (info.event.end) {
                         slot.end_time = info.event.end.toTimeString().slice(0, 5);
@@ -561,7 +558,7 @@ function scheduleManager(initialSlots, saveUrl) {
                     let d = new Date(rangeStart);
                     while (d <= rangeEnd) {
                         if (d.getDay() === dow) {
-                            const dateStr = d.toISOString().slice(0, 10);
+                            const dateStr = localDateStr(d);
                             if (!isWorkType || !offDays.has(dateStr)) {
                                 events.push({
                                     title: cfg.label,
@@ -648,7 +645,7 @@ function scheduleManager(initialSlots, saveUrl) {
                 let current = new Date(this.newSlot.date_from + 'T00:00:00');
                 const end = new Date(this.newSlot.date_to + 'T00:00:00');
                 while (current <= end) {
-                    const dateStr = current.toISOString().slice(0, 10);
+                    const dateStr = localDateStr(current);
                     this.slots.push({
                         date: dateStr,
                         day_of_week: '',

@@ -12,28 +12,23 @@
     </div>
 
 @if(auth()->user()->role === 'manutentore')
-    @if(in_array($intervention->status, ['open', 'planned']) && (!$intervention->assigned_user_id || $intervention->assigned_user_id === 0))
-        <div class="card mb-3 border-warning">
-            <div class="card-body text-center py-3">
+    <div class="card mb-3 border-warning">
+        <div class="card-body text-center py-3 d-flex justify-content-center gap-3 flex-wrap">
+            @if(in_array($intervention->status, ['open', 'planned']))
                 <form action="{{ route('interventions.take-charge', $intervention) }}" method="POST" class="d-inline">
                     @csrf
                     <button type="submit" class="btn btn-warning btn-lg">
-                        <i class="bi bi-hand-index-thumb me-2"></i>Prendi in Carico Attivit&agrave;
+                        <i class="bi bi-hand-index-thumb me-2"></i>Prendi in Carico
                     </button>
                 </form>
-            </div>
-        </div>
-    @else
-        @if($intervention->assigned_user_id === auth()->id())
-        <div class="card mb-3 border-primary">
-            <div class="card-body text-center py-3">
+            @endif
+            @if($intervention->assigned_user_id === auth()->id())
                 <a href="{{ route('interventions.reports.create', $intervention) }}" class="btn btn-light btn-lg">
-                    <i class="bi bi-plus-circle me-2"></i>Crea Rapportino per questo intervento
+                    <i class="bi bi-plus-circle me-2"></i>Crea Rapportino
                 </a>
-            </div>
+            @endif
         </div>
-        @endif
-    @endif
+    </div>
 @endif
 
     {{-- VISTA DETTAGLIO (tutti i ruoli) --}}
