@@ -47,7 +47,17 @@ class ScheduleController extends Controller
             'slots.*.group_id'     => 'nullable|string',
         ]);
 
-        $user->workScheduleSlots()->delete();
+        // Elimina slot con data concreta più vecchi di un anno
+        $oneYearAgo = now()->subYear();
+        $user->workScheduleSlots()
+            ->whereNotNull('date')
+            ->where('date', '<', $oneYearAgo)
+            ->delete();
+
+        // Elimina tutti gli altri slot (non ricorrenti infiniti)
+        $user->workScheduleSlots()
+            ->where('is_recurring', false)
+            ->delete();
 
         foreach ($request->get('slots', []) as $slot) {
             $type = in_array($slot['type'] ?? '', ['lavorativo', 'ferie', 'riposi', 'pausa_pranzo'])
