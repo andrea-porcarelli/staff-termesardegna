@@ -144,19 +144,13 @@
                                                         </select>
                                                     </div>
 
-                                                    <!-- Data singola lavorativo -->
-                                                    <div class="col-auto" x-show="newSlot.type === 'lavorativo'">
-                                                        <label class="form-label form-label-sm mb-1 small">Data</label>
-                                                        <input type="date" class="form-control form-control-sm" x-model="newSlot.date">
-                                                    </div>
-
-                                                    <!-- Range ferie/riposo -->
-                                                    <div class="col-auto" x-show="newSlot.type !== 'lavorativo'">
-                                                        <label class="form-label form-label-sm mb-1 small">Da</label>
+                                                    <!-- Range di date (sempre visibile) -->
+                                                    <div class="col-auto">
+                                                        <label class="form-label form-label-sm mb-1 small">Data inizio</label>
                                                         <input type="date" class="form-control form-control-sm" x-model="newSlot.date_from">
                                                     </div>
-                                                    <div class="col-auto" x-show="newSlot.type !== 'lavorativo'">
-                                                        <label class="form-label form-label-sm mb-1 small">A</label>
+                                                    <div class="col-auto">
+                                                        <label class="form-label form-label-sm mb-1 small">Data fine</label>
                                                         <input type="date" class="form-control form-control-sm" x-model="newSlot.date_to">
                                                     </div>
 
@@ -170,7 +164,7 @@
                                                         <input type="time" class="form-control form-control-sm" style="width:110px" x-model="newSlot.end_time">
                                                     </div>
 
-                                                    <!-- Orari pausa pranzo (inline, visibili solo se has_lunch) -->
+                                                    <!-- Orari pausa pranzo -->
                                                     <div class="col-auto" x-show="newSlot.type === 'lavorativo' && newSlot.has_lunch">
                                                         <label class="form-label form-label-sm mb-1 small text-muted">Inizio pausa</label>
                                                         <input type="time" class="form-control form-control-sm" style="width:110px" x-model="newSlot.lunch_start">
@@ -194,24 +188,8 @@
                                                     </div>
                                                 </div>
 
-                                                <!-- Seconda riga: checkbox (solo per lavorativo) -->
-                                                <div class="d-flex gap-4 mt-2" x-show="newSlot.type === 'lavorativo'">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" id="new_slot_recurring" x-model="newSlot.is_recurring">
-                                                        <label class="form-check-label small" for="new_slot_recurring">
-                                                            <i class="bi bi-arrow-repeat me-1"></i>Si ripete ogni settimana
-                                                        </label>
-                                                    </div>
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" id="new_slot_lunch" x-model="newSlot.has_lunch">
-                                                        <label class="form-check-label small" for="new_slot_lunch">
-                                                            <i class="bi bi-cup-hot me-1"></i>Pausa pranzo
-                                                        </label>
-                                                    </div>
-                                                </div>
-
-                                                <!-- Selezione giorni della settimana (solo se ricorrente) -->
-                                                <div x-show="newSlot.type === 'lavorativo' && newSlot.is_recurring" x-cloak class="mt-3 p-2 bg-light rounded">
+                                                <!-- Giorni della settimana (sempre visibile per lavorativo) -->
+                                                <div x-show="newSlot.type === 'lavorativo'" x-cloak class="mt-3 p-2 bg-light rounded">
                                                     <label class="small fw-bold d-block mb-2">Seleziona i giorni della settimana:</label>
                                                     <div class="d-flex gap-2 flex-wrap">
                                                         <template x-for="(day, idx) in [{value: 1, label: 'Lunedì'}, {value: 2, label: 'Martedì'}, {value: 3, label: 'Mercoledì'}, {value: 4, label: 'Giovedì'}, {value: 5, label: 'Venerdì'}, {value: 6, label: 'Sabato'}, {value: 0, label: 'Domenica'}]" :key="idx">
@@ -220,6 +198,16 @@
                                                                 <label class="form-check-label small" :for="'day_' + idx" x-text="day.label"></label>
                                                             </div>
                                                         </template>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Checkbox pausa pranzo (solo per lavorativo) -->
+                                                <div class="mt-2" x-show="newSlot.type === 'lavorativo'">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" id="new_slot_lunch" x-model="newSlot.has_lunch">
+                                                        <label class="form-check-label small" for="new_slot_lunch">
+                                                            <i class="bi bi-cup-hot me-1"></i>Pausa pranzo
+                                                        </label>
                                                     </div>
                                                 </div>
 
@@ -451,8 +439,8 @@ function scheduleManager(initialSlots, saveUrl) {
         calendar: null,
         saveUrl: saveUrl,
         newSlot: {
-            date: '', date_from: '', date_to: '', start_time: '', end_time: '', type: 'lavorativo',
-            is_recurring: false, has_lunch: false, lunch_start: '', lunch_end: '', selected_days: [],
+            date_from: '', date_to: '', start_time: '', end_time: '', type: 'lavorativo',
+            has_lunch: false, lunch_start: '', lunch_end: '', selected_days: [],
         },
         slotGroupCounter: 0,
         editingIndex: null,
@@ -541,13 +529,11 @@ function scheduleManager(initialSlots, saveUrl) {
                     const slot = self.slots[idx];
                     if (!slot) return;
                     self.newSlot = {
-                        date: slot.date || '',
-                        date_from: slot.date || '',
-                        date_to: slot.date || '',
+                        date_from: slot.date_from || slot.date || '',
+                        date_to: slot.date_to || slot.date || '',
                         start_time: slot.start_time || '',
                         end_time: slot.end_time || '',
                         type: slot.type || 'lavorativo',
-                        is_recurring: slot.is_recurring === '1' || slot.is_recurring === true,
                         has_lunch: false,
                         lunch_start: '',
                         lunch_end: '',
@@ -578,10 +564,13 @@ function scheduleManager(initialSlots, saveUrl) {
                 const isWorkType = slot.type === 'lavorativo' || slot.type === 'pausa_pranzo';
 
                 if (isRecurring) {
-                    // Expand into concrete dates within the visible range, skipping off days
+                    // Expand into concrete dates within the range (date_from/date_to if set, otherwise visible range)
                     const dow = parseInt(slot.day_of_week);
-                    let d = new Date(rangeStart);
-                    while (d <= rangeEnd) {
+                    const slotStart = slot.date_from ? new Date(slot.date_from + 'T00:00:00') : rangeStart;
+                    const slotEnd = slot.date_to ? new Date(slot.date_to + 'T23:59:59') : rangeEnd;
+                    let d = new Date(Math.max(slotStart.getTime(), rangeStart.getTime()));
+                    const bound = new Date(Math.min(slotEnd.getTime(), rangeEnd.getTime()));
+                    while (d <= bound) {
                         if (d.getDay() === dow) {
                             const dateStr = localDateStr(d);
                             if (!isWorkType || !offDays.has(dateStr)) {
@@ -640,25 +629,24 @@ function scheduleManager(initialSlots, saveUrl) {
             this.addError = '';
             const isRangeType = this.newSlot.type === 'ferie' || this.newSlot.type === 'riposi';
 
+            // Validazioni comuni: range date
+            if (!this.newSlot.date_from || !this.newSlot.date_to) {
+                this.addError = 'Inserisci data inizio e data fine.'; return;
+            }
+            if (this.newSlot.date_from > this.newSlot.date_to) {
+                this.addError = 'La data di inizio deve essere precedente alla data di fine.'; return;
+            }
+
+            // Validazioni specifiche per lavorativo
             if (!isRangeType) {
                 if (!this.newSlot.start_time || !this.newSlot.end_time) {
                     this.addError = 'Inserisci orario di inizio e fine.'; return;
                 }
-                if (!this.newSlot.is_recurring && !this.newSlot.date) {
-                    this.addError = 'Inserisci una data di riferimento.'; return;
-                }
-                if (this.newSlot.is_recurring && this.newSlot.selected_days.length === 0) {
+                if (this.newSlot.selected_days.length === 0) {
                     this.addError = 'Seleziona almeno un giorno della settimana.'; return;
                 }
                 if (this.newSlot.has_lunch && (!this.newSlot.lunch_start || !this.newSlot.lunch_end)) {
                     this.addError = 'Inserisci gli orari della pausa pranzo.'; return;
-                }
-            } else {
-                if (!this.newSlot.date_from || !this.newSlot.date_to) {
-                    this.addError = 'Inserisci data inizio e data fine.'; return;
-                }
-                if (this.newSlot.date_from > this.newSlot.date_to) {
-                    this.addError = 'La data di inizio deve essere precedente alla data di fine.'; return;
                 }
             }
 
@@ -669,13 +657,15 @@ function scheduleManager(initialSlots, saveUrl) {
             }
 
             if (isRangeType) {
-                // Create one slot per day in the range
+                // Ferie/Riposi: crea uno slot per ogni giorno nel range
                 let current = new Date(this.newSlot.date_from + 'T00:00:00');
                 const end = new Date(this.newSlot.date_to + 'T00:00:00');
                 while (current <= end) {
                     const dateStr = localDateStr(current);
                     this.slots.push({
                         date: dateStr,
+                        date_from: '',
+                        date_to: '',
                         day_of_week: '',
                         start_time: '',
                         end_time: '',
@@ -685,36 +675,19 @@ function scheduleManager(initialSlots, saveUrl) {
                     current.setDate(current.getDate() + 1);
                 }
             } else {
-                // Se è ricorrente, crea uno slot per ogni giorno selezionato
-                if (this.newSlot.is_recurring) {
-                    this.slotGroupCounter++;
-                    const groupId = 'group_' + this.slotGroupCounter;
+                // Lavorativo: crea uno slot per ogni giorno selezionato con range date
+                this.slotGroupCounter++;
+                const groupId = 'group_' + this.slotGroupCounter;
 
-                    this.newSlot.selected_days.forEach(dayOfWeek => {
-                        const base = {
-                            date:         '',
-                            day_of_week:  String(dayOfWeek),
-                            type:         this.newSlot.type,
-                            is_recurring: '1',
-                            group_id:     groupId,
-                        };
-
-                        if (this.newSlot.has_lunch && this.newSlot.lunch_start && this.newSlot.lunch_end) {
-                            this.slots.push({ ...base, start_time: this.newSlot.start_time,  end_time: this.newSlot.lunch_start });
-                            this.slots.push({ ...base, start_time: this.newSlot.lunch_start, end_time: this.newSlot.lunch_end,  type: 'pausa_pranzo' });
-                            this.slots.push({ ...base, start_time: this.newSlot.lunch_end,   end_time: this.newSlot.end_time });
-                        } else {
-                            this.slots.push({ ...base, start_time: this.newSlot.start_time, end_time: this.newSlot.end_time });
-                        }
-                    });
-                } else {
-                    // Non ricorrente: usa la data singola
-                    const dayOfWeek = String(new Date(this.newSlot.date + 'T00:00:00').getDay());
+                this.newSlot.selected_days.forEach(dayOfWeek => {
                     const base = {
-                        date:         this.newSlot.date,
-                        day_of_week:  '',
+                        date:         '',
+                        date_from:    this.newSlot.date_from,
+                        date_to:      this.newSlot.date_to,
+                        day_of_week:  String(dayOfWeek),
                         type:         this.newSlot.type,
-                        is_recurring: '0',
+                        is_recurring: '1',
+                        group_id:     groupId,
                     };
 
                     if (this.newSlot.has_lunch && this.newSlot.lunch_start && this.newSlot.lunch_end) {
@@ -724,7 +697,7 @@ function scheduleManager(initialSlots, saveUrl) {
                     } else {
                         this.slots.push({ ...base, start_time: this.newSlot.start_time, end_time: this.newSlot.end_time });
                     }
-                }
+                });
             }
 
             this.resetForm();
@@ -732,7 +705,7 @@ function scheduleManager(initialSlots, saveUrl) {
         },
 
         resetForm() {
-            this.newSlot = { date: '', date_from: '', date_to: '', start_time: '', end_time: '', type: 'lavorativo', is_recurring: false, has_lunch: false, lunch_start: '', lunch_end: '', selected_days: [] };
+            this.newSlot = { date_from: '', date_to: '', start_time: '', end_time: '', type: 'lavorativo', has_lunch: false, lunch_start: '', lunch_end: '', selected_days: [] };
             this.editingIndex = null;
             this.showAddForm = false;
         },

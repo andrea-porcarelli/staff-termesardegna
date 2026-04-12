@@ -10,6 +10,8 @@ class WorkScheduleSlot extends Model
     protected $fillable = [
         'user_id',
         'date',
+        'date_from',
+        'date_to',
         'day_of_week',
         'start_time',
         'end_time',
@@ -20,6 +22,8 @@ class WorkScheduleSlot extends Model
 
     protected $casts = [
         'date'         => 'date',
+        'date_from'    => 'date',
+        'date_to'      => 'date',
         'is_recurring' => 'boolean',
         'day_of_week'  => 'integer',
     ];

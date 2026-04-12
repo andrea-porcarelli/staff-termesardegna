@@ -16,6 +16,8 @@ class ScheduleController extends Controller
 
         $existingSlots = $user->workScheduleSlots->map(fn($s) => [
             'date'         => $s->date?->format('Y-m-d') ?? '',
+            'date_from'    => $s->date_from?->format('Y-m-d') ?? '',
+            'date_to'      => $s->date_to?->format('Y-m-d') ?? '',
             'day_of_week'  => $s->day_of_week !== null ? (string) $s->day_of_week : '',
             'start_time'   => $s->start_time ? substr($s->start_time, 0, 5) : '',
             'end_time'     => $s->end_time ? substr($s->end_time, 0, 5) : '',
@@ -40,6 +42,8 @@ class ScheduleController extends Controller
             'slots.*.is_recurring' => 'nullable|in:0,1',
             'slots.*.day_of_week'  => 'nullable|integer|between:0,6',
             'slots.*.date'         => 'nullable|date',
+            'slots.*.date_from'    => 'nullable|date',
+            'slots.*.date_to'      => 'nullable|date',
             'slots.*.group_id'     => 'nullable|string',
         ]);
 
@@ -56,6 +60,8 @@ class ScheduleController extends Controller
             $isRecurring = (bool)(int)($slot['is_recurring'] ?? 0);
             $user->workScheduleSlots()->create([
                 'date'         => !$isRecurring ? ($slot['date'] ?: null) : null,
+                'date_from'    => $slot['date_from'] ?: null,
+                'date_to'      => $slot['date_to'] ?: null,
                 'day_of_week'  => $isRecurring  ? (int)($slot['day_of_week'] ?? 0) : null,
                 'start_time'   => $slot['start_time'] ?: null,
                 'end_time'     => $slot['end_time'] ?: null,
