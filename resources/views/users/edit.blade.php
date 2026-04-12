@@ -175,15 +175,15 @@
                                                     </div>
 
                                                     <!-- Pulsanti -->
-                                                    <div class="col-auto">
-                                                        <button type="button" class="btn btn-primary btn-sm" @click="addSlot()">
+                                                    <div class="col-auto d-flex gap-2">
+                                                        <button type="button" class="btn btn-primary btn-sm" @click="addSlot()" title="Salva slot">
                                                             <i class="bi bi-check-circle me-1"></i><span x-text="editingIndex !== null ? 'Salva' : 'Aggiungi'"></span>
                                                         </button>
-                                                        <button type="button" class="btn btn-danger btn-sm ms-1" x-show="editingIndex !== null" @click="removeSlot(editingIndex); resetForm();">
+                                                        <button type="button" class="btn btn-outline-danger btn-sm" x-show="editingIndex !== null" @click="removeSlot(editingIndex); resetForm();" title="Elimina slot">
                                                             <i class="bi bi-trash me-1"></i>Elimina
                                                         </button>
-                                                        <button type="button" class="btn btn-secondary btn-sm ms-1" @click="resetForm(); addError = ''">
-                                                            <i class="bi bi-x-circle"></i>
+                                                        <button type="button" class="btn btn-outline-secondary btn-sm" @click="resetForm(); addError = ''" title="Chiudi form">
+                                                            <i class="bi bi-x-circle me-1"></i>Chiudi
                                                         </button>
                                                     </div>
                                                 </div>
@@ -564,7 +564,8 @@ function scheduleManager(initialSlots, saveUrl) {
                 const isWorkType = slot.type === 'lavorativo' || slot.type === 'pausa_pranzo';
 
                 if (isRecurring) {
-                    // Expand into concrete dates within the range (date_from/date_to if set, otherwise visible range)
+                    // Slot ricorrente (per backward compatibility, anche se ora gli slot lavorativi sono concreti)
+                    // Se ha date_from/date_to, usa quelle; altrimenti fallback al range visibile
                     const dow = parseInt(slot.day_of_week);
                     const slotStart = slot.date_from ? new Date(slot.date_from + 'T00:00:00') : rangeStart;
                     const slotEnd = slot.date_to ? new Date(slot.date_to + 'T23:59:59') : rangeEnd;
@@ -675,29 +676,38 @@ function scheduleManager(initialSlots, saveUrl) {
                     current.setDate(current.getDate() + 1);
                 }
             } else {
-                // Lavorativo: crea uno slot per ogni giorno selezionato con range date
+                // Lavorativo: genera slot concreti per ogni data nel range che corrisponde ai giorni selezionati
                 this.slotGroupCounter++;
                 const groupId = 'group_' + this.slotGroupCounter;
 
-                this.newSlot.selected_days.forEach(dayOfWeek => {
-                    const base = {
-                        date:         '',
-                        date_from:    this.newSlot.date_from,
-                        date_to:      this.newSlot.date_to,
-                        day_of_week:  String(dayOfWeek),
-                        type:         this.newSlot.type,
-                        is_recurring: '1',
-                        group_id:     groupId,
-                    };
+                let current = new Date(this.newSlot.date_from + 'T00:00:00');
+                const end = new Date(this.newSlot.date_to + 'T00:00:00');
 
-                    if (this.newSlot.has_lunch && this.newSlot.lunch_start && this.newSlot.lunch_end) {
-                        this.slots.push({ ...base, start_time: this.newSlot.start_time,  end_time: this.newSlot.lunch_start });
-                        this.slots.push({ ...base, start_time: this.newSlot.lunch_start, end_time: this.newSlot.lunch_end,  type: 'pausa_pranzo' });
-                        this.slots.push({ ...base, start_time: this.newSlot.lunch_end,   end_time: this.newSlot.end_time });
-                    } else {
-                        this.slots.push({ ...base, start_time: this.newSlot.start_time, end_time: this.newSlot.end_time });
+                while (current <= end) {
+                    const dayOfWeek = current.getDay();
+                    // Se il giorno corrente è nei giorni selezionati
+                    if (this.newSlot.selected_days.includes(dayOfWeek)) {
+                        const dateStr = localDateStr(current);
+                        const base = {
+                            date:         dateStr,
+                            date_from:    '',
+                            date_to:      '',
+                            day_of_week:  '',
+                            type:         this.newSlot.type,
+                            is_recurring: '0',
+                            group_id:     groupId,
+                        };
+
+                        if (this.newSlot.has_lunch && this.newSlot.lunch_start && this.newSlot.lunch_end) {
+                            this.slots.push({ ...base, start_time: this.newSlot.start_time,  end_time: this.newSlot.lunch_start });
+                            this.slots.push({ ...base, start_time: this.newSlot.lunch_start, end_time: this.newSlot.lunch_end,  type: 'pausa_pranzo' });
+                            this.slots.push({ ...base, start_time: this.newSlot.lunch_end,   end_time: this.newSlot.end_time });
+                        } else {
+                            this.slots.push({ ...base, start_time: this.newSlot.start_time, end_time: this.newSlot.end_time });
+                        }
                     }
-                });
+                    current.setDate(current.getDate() + 1);
+                }
             }
 
             this.resetForm();
