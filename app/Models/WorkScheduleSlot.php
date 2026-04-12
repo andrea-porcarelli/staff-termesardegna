@@ -15,6 +15,7 @@ class WorkScheduleSlot extends Model
         'end_time',
         'type',
         'is_recurring',
+        'group_id',
     ];
 
     protected $casts = [

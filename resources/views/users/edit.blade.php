@@ -185,6 +185,9 @@
                                                         <button type="button" class="btn btn-primary btn-sm" @click="addSlot()">
                                                             <i class="bi bi-check-circle me-1"></i><span x-text="editingIndex !== null ? 'Salva' : 'Aggiungi'"></span>
                                                         </button>
+                                                        <button type="button" class="btn btn-danger btn-sm ms-1" x-show="editingIndex !== null" @click="removeSlot(editingIndex); resetForm();">
+                                                            <i class="bi bi-trash me-1"></i>Elimina
+                                                        </button>
                                                         <button type="button" class="btn btn-secondary btn-sm ms-1" @click="resetForm(); addError = ''">
                                                             <i class="bi bi-x-circle"></i>
                                                         </button>

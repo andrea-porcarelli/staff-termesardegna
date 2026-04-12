@@ -21,6 +21,7 @@ class ScheduleController extends Controller
             'end_time'     => $s->end_time ? substr($s->end_time, 0, 5) : '',
             'type'         => $s->type,
             'is_recurring' => $s->is_recurring ? '1' : '0',
+            'group_id'     => $s->group_id ?? '',
         ])->toArray();
 
         return view('schedule.index', compact('existingSlots'));
@@ -39,6 +40,7 @@ class ScheduleController extends Controller
             'slots.*.is_recurring' => 'nullable|in:0,1',
             'slots.*.day_of_week'  => 'nullable|integer|between:0,6',
             'slots.*.date'         => 'nullable|date',
+            'slots.*.group_id'     => 'nullable|string',
         ]);
 
         $user->workScheduleSlots()->delete();
@@ -59,6 +61,7 @@ class ScheduleController extends Controller
                 'end_time'     => $slot['end_time'] ?: null,
                 'type'         => $type,
                 'is_recurring' => $isRecurring,
+                'group_id'     => $slot['group_id'] ?: null,
             ]);
         }
 
