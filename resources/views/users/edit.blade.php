@@ -360,11 +360,19 @@
                                         <div class="accordion accordion-flush mb-4" id="areasAccordion">
                                             @forelse($areas as $area)
                                                 <div class="accordion-item">
-                                                    <h2 class="accordion-header">
-                                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#area_{{ $area->id }}" aria-expanded="false">
+                                                    <h2 class="accordion-header d-flex align-items-center">
+                                                        <div class="form-check me-2 mb-0" onclick="event.stopPropagation()">
+                                                            <input class="form-check-input area-checkbox"
+                                                                   type="checkbox"
+                                                                   id="area_check_{{ $area->id }}"
+                                                                   data-area-id="{{ $area->id }}"
+                                                                   onchange="toggleAreaDepartments({{ $area->id }})">
+                                                        </div>
+                                                        <button class="accordion-button collapsed flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#area_{{ $area->id }}" aria-expanded="false" style="padding-left: 0;">
                                                             <i class="bi bi-geo-alt-fill me-2"></i>{{ $area->name }}
                                                             @if($area->departments->count() > 0)
                                                                 <span class="badge bg-secondary ms-2">{{ $area->departments->count() }}</span>
+                                                                <span class="badge bg-success ms-2" id="area_assigned_{{ $area->id }}"></span>
                                                             @endif
                                                         </button>
                                                     </h2>
@@ -372,11 +380,13 @@
                                                         <div class="accordion-body py-3">
                                                             @forelse($area->departments as $department)
                                                                 <div class="form-check mb-2">
-                                                                    <input class="form-check-input"
+                                                                    <input class="form-check-input dept-checkbox"
                                                                            type="checkbox"
                                                                            name="departments[]"
                                                                            value="{{ $department->id }}"
                                                                            id="dept_{{ $department->id }}"
+                                                                           data-area-id="{{ $area->id }}"
+                                                                           onchange="updateAreaCheckbox({{ $area->id }})"
                                                                            {{ in_array($department->id, $userDepartmentIds) ? 'checked' : '' }}>
                                                                     <label class="form-check-label" for="dept_{{ $department->id }}">
                                                                         {{ $department->name }}
@@ -805,8 +815,59 @@ function toggleRoleSections() {
     }
 }
 
+// Funzioni per la selezione delle zone per area
+function toggleAreaDepartments(areaId) {
+    const areaCheckbox = document.getElementById(`area_check_${areaId}`);
+    const deptCheckboxes = document.querySelectorAll(`input.dept-checkbox[data-area-id="${areaId}"]`);
+
+    deptCheckboxes.forEach(checkbox => {
+        checkbox.checked = areaCheckbox.checked;
+    });
+
+    updateAssignedCount(areaId);
+}
+
+function updateAreaCheckbox(areaId) {
+    const areaCheckbox = document.getElementById(`area_check_${areaId}`);
+    const deptCheckboxes = document.querySelectorAll(`input.dept-checkbox[data-area-id="${areaId}"]`);
+    const checkedDepts = Array.from(deptCheckboxes).filter(cb => cb.checked).length;
+
+    // Seleziona il checkbox dell'area se tutti i department sono selezionati
+    areaCheckbox.checked = checkedDepts === deptCheckboxes.length && deptCheckboxes.length > 0;
+    // Mostra uno stato indeterminato se solo alcuni sono selezionati
+    areaCheckbox.indeterminate = checkedDepts > 0 && checkedDepts < deptCheckboxes.length;
+
+    updateAssignedCount(areaId);
+}
+
+function updateAssignedCount(areaId) {
+    const deptCheckboxes = document.querySelectorAll(`input.dept-checkbox[data-area-id="${areaId}"]`);
+    const checkedDepts = Array.from(deptCheckboxes).filter(cb => cb.checked).length;
+    const badge = document.getElementById(`area_assigned_${areaId}`);
+
+    if (badge) {
+        if (checkedDepts === 0) {
+            badge.textContent = '';
+            badge.style.display = 'none';
+        } else {
+            badge.textContent = checkedDepts;
+            badge.style.display = 'inline-block';
+        }
+    }
+}
+
+// Inizializza lo stato dei checkbox delle aree al caricamento
+function initAreaCheckboxes() {
+    const areaCheckboxes = document.querySelectorAll('input.area-checkbox');
+    areaCheckboxes.forEach(areaCheckbox => {
+        const areaId = areaCheckbox.dataset.areaId;
+        updateAreaCheckbox(areaId);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     toggleRoleSections();
+    initAreaCheckboxes();
 });
 </script>
 @endpush
