@@ -444,6 +444,7 @@ function scheduleManager(initialSlots, saveUrl) {
             date: '', date_from: '', date_to: '', start_time: '', end_time: '', type: 'lavorativo',
             is_recurring: false, has_lunch: false, lunch_start: '', lunch_end: '', selected_days: [],
         },
+        slotGroupCounter: 0,
         editingIndex: null,
 
         init() {
@@ -676,12 +677,16 @@ function scheduleManager(initialSlots, saveUrl) {
             } else {
                 // Se è ricorrente, crea uno slot per ogni giorno selezionato
                 if (this.newSlot.is_recurring) {
+                    this.slotGroupCounter++;
+                    const groupId = 'group_' + this.slotGroupCounter;
+
                     this.newSlot.selected_days.forEach(dayOfWeek => {
                         const base = {
                             date:         '',
                             day_of_week:  String(dayOfWeek),
                             type:         this.newSlot.type,
                             is_recurring: '1',
+                            group_id:     groupId,
                         };
 
                         if (this.newSlot.has_lunch && this.newSlot.lunch_start && this.newSlot.lunch_end) {
@@ -723,7 +728,35 @@ function scheduleManager(initialSlots, saveUrl) {
         },
 
         removeSlot(index) {
-            this.slots.splice(index, 1);
+            const slot = this.slots[index];
+            if (!slot) return;
+
+            if (slot.is_recurring === '1' || slot.is_recurring === true) {
+                if (slot.group_id) {
+                    // Se ha group_id, rimuovi tutti gli slot dello stesso gruppo
+                    for (let i = this.slots.length - 1; i >= 0; i--) {
+                        if (this.slots[i].group_id === slot.group_id) {
+                            this.slots.splice(i, 1);
+                        }
+                    }
+                } else {
+                    // Fallback: rimuovi slot con stesso day_of_week, orari e tipo
+                    for (let i = this.slots.length - 1; i >= 0; i--) {
+                        const s = this.slots[i];
+                        if ((s.is_recurring === '1' || s.is_recurring === true) &&
+                            s.day_of_week === slot.day_of_week &&
+                            s.start_time === slot.start_time &&
+                            s.end_time === slot.end_time &&
+                            s.type === slot.type) {
+                            this.slots.splice(i, 1);
+                        }
+                    }
+                }
+            } else {
+                // Slot non ricorrente: rimuovi solo questo
+                this.slots.splice(index, 1);
+            }
+
             this.refreshCalendar();
         },
 
