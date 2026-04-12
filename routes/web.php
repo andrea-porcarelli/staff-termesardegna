@@ -65,6 +65,8 @@ Route::middleware('auth')->group(function () {
     Route::middleware('admin')->group(function () {
         Route::resource('users', UserController::class);
         Route::put('users/{user}/schedule', [UserController::class, 'updateSchedule'])->name('users.schedule.update');
+        Route::post('users/{user}/impersonate', [UserController::class, 'impersonate'])->name('users.impersonate');
+        Route::post('users/stop-impersonating', [UserController::class, 'stopImpersonating'])->name('users.stopImpersonating');
         Route::resource('areas', AreaController::class);
         Route::resource('departments', DepartmentController::class);
         Route::resource('equipments', EquipmentController::class);

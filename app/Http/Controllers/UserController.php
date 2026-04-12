@@ -15,6 +15,7 @@ use App\Models\WorkScheduleSlot;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -186,5 +187,48 @@ class UserController extends Controller
 
         return redirect()->route('users.index')
             ->with('success', 'Utente eliminato con successo!');
+    }
+
+    public function impersonate(User $user) : RedirectResponse
+    {
+        // Non permettere di impersonificare se già sta impersonificando
+        if (session()->has('impersonating_from')) {
+            return back()->with('error', 'Devi tornare all\'account precedente prima di impersonificare un altro utente.');
+        }
+
+        // Non permettere di impersonificare se stessi
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'Non puoi impersonificare te stesso!');
+        }
+
+        // Salva l'ID dell'admin che sta impersonificando
+        session(['impersonating_from' => auth()->id()]);
+        session(['impersonating_from_name' => auth()->user()->name]);
+
+        // Accedi come l'utente
+        auth()->login($user);
+
+        return redirect()->route('dashboard')
+            ->with('success', 'Stai impersonificando ' . $user->name);
+    }
+
+    public function stopImpersonating() : RedirectResponse
+    {
+        // Recupera l'ID dell'admin originale
+        $adminId = session('impersonating_from');
+
+        if (!$adminId) {
+            return back()->with('error', 'Non sei in modalità impersonificazione.');
+        }
+
+        // Rimuovi la sessione di impersonificazione
+        session()->forget(['impersonating_from', 'impersonating_from_name']);
+
+        // Accedi di nuovo come l'admin
+        $admin = User::findOrFail($adminId);
+        auth()->login($admin);
+
+        return redirect()->route('users.index')
+            ->with('success', 'Sei tornato al tuo account.');
     }
 }

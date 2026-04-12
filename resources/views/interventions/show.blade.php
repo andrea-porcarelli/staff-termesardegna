@@ -12,18 +12,18 @@
     </div>
 
 @if(auth()->user()->role === 'manutentore')
-    <div class="card mb-3 border-warning">
-        <div class="card-body text-center py-3 d-flex justify-content-center gap-3 flex-wrap">
+    <div class="card mb-4 border-warning border-3 shadow-lg">
+        <div class="card-body text-center py-5 px-4 d-flex justify-content-center gap-3 flex-wrap align-items-center">
             @if(in_array($intervention->status, ['open', 'planned']))
-                <form action="{{ route('interventions.take-charge', $intervention) }}" method="POST" class="d-inline">
+                <form action="{{ route('interventions.take-charge', $intervention) }}" method="POST" class="flex-grow-1">
                     @csrf
-                    <button type="submit" class="btn btn-warning btn-lg">
+                    <button type="submit" class="btn btn-warning fw-bold" style="font-size: 1.3rem; padding: 0.75rem 2rem; min-width: 300px;">
                         <i class="bi bi-hand-index-thumb me-2"></i>Prendi in Carico
                     </button>
                 </form>
             @endif
             @if($intervention->assigned_user_id === auth()->id())
-                <a href="{{ route('interventions.reports.create', $intervention) }}" class="btn btn-light btn-lg">
+                <a href="{{ route('interventions.reports.create', $intervention) }}" class="btn btn-light fw-bold" style="font-size: 1.2rem; padding: 0.75rem 1.5rem;">
                     <i class="bi bi-plus-circle me-2"></i>Crea Rapportino
                 </a>
             @endif

@@ -409,6 +409,21 @@
                                         <button type="submit" class="btn btn-primary">
                                             <i class="bi bi-check-circle me-2"></i>Salva Modifiche
                                         </button>
+                                        @if($user->id !== Auth::id() && !session()->has('impersonating_from'))
+                                            <form method="POST" action="{{ route('users.impersonate', $user) }}" style="display: inline;">
+                                                @csrf
+                                                <button type="submit" class="btn btn-warning w-100" onclick="return confirm('Impersonificare come ' + '{{ $user->name }}' + '?');">
+                                                    <i class="bi bi-person-check me-2"></i>Impersonifica
+                                                </button>
+                                            </form>
+                                        @elseif(session()->has('impersonating_from') && Auth::user()->id === $user->id)
+                                            <form method="POST" action="{{ route('users.stopImpersonating') }}" style="display: inline;">
+                                                @csrf
+                                                <button type="submit" class="btn btn-info w-100">
+                                                    <i class="bi bi-arrow-left-circle me-2"></i>Torna a {{ session('impersonating_from_name') }}
+                                                </button>
+                                            </form>
+                                        @endif
                                         <a href="{{ route('users.index') }}" class="btn btn-secondary">
                                             <i class="bi bi-x-circle me-2"></i>Annulla
                                         </a>

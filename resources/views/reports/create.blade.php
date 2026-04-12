@@ -60,7 +60,11 @@
             <div class="col-md-4">
                 <div class="p-3 rounded bg-light h-100">
                     <div class="text-muted small mb-1"><i class="bi bi-calendar3 me-1"></i>Pianificazione</div>
-                    <div class="fw-semibold">{{ $intervention->scheduled_date->isoFormat('dddd D MMMM YYYY') }}</div>
+                    @if($intervention->scheduled_date)
+                        <div class="fw-semibold">{{ $intervention->scheduled_date->isoFormat('dddd D MMMM YYYY') }}</div>
+                    @else
+                        <div class="fw-semibold text-muted">-</div>
+                    @endif
                     @if($intervention->scheduled_start_time)
                         <div class="text-muted small mt-1">
                             <i class="bi bi-clock me-1"></i>Inizio: {{ substr($intervention->scheduled_start_time, 0, 5) }}
