@@ -369,33 +369,40 @@
                                         <label class="form-label">
                                             <i class="bi bi-building me-1"></i>Zone Assegnate
                                         </label>
-                                        <div class="card mb-4">
-                                            <div class="card-body">
-                                                @forelse($areas as $area)
-                                                    <div class="mb-3">
-                                                        <h6 class="fw-bold text-primary mb-1">
-                                                            <i class="bi bi-geo-alt-fill me-1"></i>{{ $area->name }}
-                                                        </h6>
-                                                        @forelse($area->departments as $department)
-                                                            <div class="form-check ms-3">
-                                                                <input class="form-check-input"
-                                                                       type="checkbox"
-                                                                       name="departments[]"
-                                                                       value="{{ $department->id }}"
-                                                                       id="dept_{{ $department->id }}"
-                                                                       {{ in_array($department->id, $userDepartmentIds) ? 'checked' : '' }}>
-                                                                <label class="form-check-label" for="dept_{{ $department->id }}">
-                                                                    {{ $department->name }}
-                                                                </label>
-                                                            </div>
-                                                        @empty
-                                                            <p class="text-muted ms-3 mb-0 small">Nessuna zona disponibile</p>
-                                                        @endforelse
+                                        <div class="accordion accordion-flush mb-4" id="areasAccordion">
+                                            @forelse($areas as $area)
+                                                <div class="accordion-item">
+                                                    <h2 class="accordion-header">
+                                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#area_{{ $area->id }}" aria-expanded="false">
+                                                            <i class="bi bi-geo-alt-fill me-2"></i>{{ $area->name }}
+                                                            @if($area->departments->count() > 0)
+                                                                <span class="badge bg-secondary ms-2">{{ $area->departments->count() }}</span>
+                                                            @endif
+                                                        </button>
+                                                    </h2>
+                                                    <div id="area_{{ $area->id }}" class="accordion-collapse collapse" data-bs-parent="#areasAccordion">
+                                                        <div class="accordion-body py-3">
+                                                            @forelse($area->departments as $department)
+                                                                <div class="form-check mb-2">
+                                                                    <input class="form-check-input"
+                                                                           type="checkbox"
+                                                                           name="departments[]"
+                                                                           value="{{ $department->id }}"
+                                                                           id="dept_{{ $department->id }}"
+                                                                           {{ in_array($department->id, $userDepartmentIds) ? 'checked' : '' }}>
+                                                                    <label class="form-check-label" for="dept_{{ $department->id }}">
+                                                                        {{ $department->name }}
+                                                                    </label>
+                                                                </div>
+                                                            @empty
+                                                                <p class="text-muted mb-0 small">Nessuna zona disponibile</p>
+                                                            @endforelse
+                                                        </div>
                                                     </div>
-                                                @empty
-                                                    <p class="text-muted mb-0">Nessuna area configurata</p>
-                                                @endforelse
-                                            </div>
+                                                </div>
+                                            @empty
+                                                <p class="text-muted mb-0">Nessuna area configurata</p>
+                                            @endforelse
                                         </div>
                                     </div>
 
