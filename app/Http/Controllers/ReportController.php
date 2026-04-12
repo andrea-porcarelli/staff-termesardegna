@@ -203,7 +203,7 @@ class ReportController extends Controller
         // Formatta i dati per la risposta JSON
         $data = [
             'id'           => $report->id,
-            'report_date'  => $report->report_date->format('d/m/Y'),
+            'report_date'  => $report->report_date ? $report->report_date->format('d/m/Y') : null,
             'time_range'   => null,
             'user_name'    => $report->user->name,
             'status'       => $report->status,
@@ -217,7 +217,7 @@ class ReportController extends Controller
                 'notes'          => $intervention->notes,
                 'destination'    => $destination,
                 'location'       => $location,
-                'scheduled_date' => $intervention->scheduled_date->format('d/m/Y'),
+                'scheduled_date' => $intervention->scheduled_date ? $intervention->scheduled_date->format('d/m/Y') : null,
                 'scheduled_time' => $intervention->scheduled_start_time ? substr($intervention->scheduled_start_time, 0, 5) : null,
                 'priority'       => $intervention->priority,
                 'priority_label' => ['low' => 'Bassa', 'medium' => 'Media', 'high' => 'Alta', 'critical' => 'Critica'][$intervention->priority] ?? $intervention->priority,
