@@ -106,4 +106,22 @@ class Intervention extends Model
     {
         return $this->hasMany(Report::class);
     }
+
+    public function transfers(): HasMany
+    {
+        return $this->hasMany(InterventionTransfer::class)->orderByDesc('transferred_at');
+    }
+
+    public function collaborations(): HasMany
+    {
+        return $this->hasMany(InterventionCollaboration::class)->orderByDesc('created_at');
+    }
+
+    public function collaborators(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'intervention_collaborations')
+            ->withPivot(['status', 'requested_by_user_id', 'message', 'requested_at', 'responded_at'])
+            ->wherePivot('status', InterventionCollaboration::STATUS_ACCEPTED)
+            ->withTimestamps();
+    }
 }

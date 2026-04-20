@@ -63,7 +63,7 @@ class ReportController extends Controller
     public function create(Intervention $intervention): View
     {
         // Verifica che l'utente sia autorizzato
-        if (Auth::user()->role !== 'admin' && $intervention->assigned_user_id !== Auth::id()) {
+        if (!$this->canReportOn($intervention)) {
             abort(403);
         }
 
@@ -79,7 +79,7 @@ class ReportController extends Controller
     public function store(ReportRequest $request, Intervention $intervention): RedirectResponse
     {
         // Verifica che l'utente sia autorizzato
-        if (Auth::user()->role !== 'admin' && $intervention->assigned_user_id !== Auth::id()) {
+        if (!$this->canReportOn($intervention)) {
             abort(403);
         }
 
@@ -183,6 +183,18 @@ class ReportController extends Controller
 
         return redirect()->route('interventions.show', $intervention)
             ->with('success', 'Rapportino eliminato con successo!');
+    }
+
+    private function canReportOn(Intervention $intervention): bool
+    {
+        $user = Auth::user();
+        if ($user->role === 'admin') return true;
+        if ($intervention->assigned_user_id === $user->id) return true;
+
+        return $intervention->collaborations()
+            ->where('user_id', $user->id)
+            ->where('status', \App\Models\InterventionCollaboration::STATUS_ACCEPTED)
+            ->exists();
     }
 
     public function show(Report $report)

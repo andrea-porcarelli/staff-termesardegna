@@ -22,6 +22,14 @@ use Illuminate\Support\Collection;
 class AutoAssignmentService
 {
     /**
+     * Attiva/disattiva il filtro sui turni lavorativi.
+     * Quando è false ignora i WorkScheduleSlot e assegna direttamente
+     * al miglior candidato compatibile (pivot level + random).
+     * TODO: riattivare quando il piano orario sarà consolidato.
+     */
+    private const SHIFT_FILTERING_ENABLED = false;
+
+    /**
      * Finestre di priorità in ore (da created_at al limite).
      * urgent = 0 → finestra [ora, ora] = "chi è in turno adesso"
      */
@@ -46,7 +54,6 @@ class AutoAssignmentService
         }
 
         $isLow = $intervention->priority === 'low';
-        [$windowStart, $windowEnd] = $this->buildWindow($intervention);
 
         // Candidati compatibili e disponibili
         $candidates = $this->loadCandidates($intervention, $isLow);
@@ -55,26 +62,35 @@ class AutoAssignmentService
             return ['status' => 'no_match', 'user' => null, 'shift_start' => null];
         }
 
-        // 1. Cerca qualcuno in turno nella finestra
-        $inShift = $candidates->filter(
-            fn(User $u) => $this->hasShiftInWindow($u, $windowStart, $windowEnd)
-        );
+        if (self::SHIFT_FILTERING_ENABLED) {
+            [$windowStart, $windowEnd] = $this->buildWindow($intervention);
 
-        if ($inShift->isNotEmpty()) {
-            $user = $this->pickBest($inShift, $intervention->maintenance_role_id);
-            $intervention->update(['assigned_user_id' => $user->id]);
-            return ['status' => 'assigned', 'user' => $user, 'shift_start' => null];
+            // 1. Cerca qualcuno in turno nella finestra
+            $inShift = $candidates->filter(
+                fn(User $u) => $this->hasShiftInWindow($u, $windowStart, $windowEnd)
+            );
+
+            if ($inShift->isNotEmpty()) {
+                $user = $this->pickBest($inShift, $intervention->maintenance_role_id);
+                $intervention->update(['assigned_user_id' => $user->id]);
+                return ['status' => 'assigned', 'user' => $user, 'shift_start' => null];
+            }
+
+            // 2. Nessuno in turno: cerca il primo turno successivo alla finestra
+            $next = $this->findNextAvailable($candidates, $windowEnd, $intervention->maintenance_role_id);
+
+            if ($next) {
+                $intervention->update(['assigned_user_id' => $next['user']->id]);
+                return ['status' => 'next_shift', 'user' => $next['user'], 'shift_start' => $next['shift_start']];
+            }
+
+            return ['status' => 'no_match', 'user' => null, 'shift_start' => null];
         }
 
-        // 2. Nessuno in turno: cerca il primo turno successivo alla finestra
-        $next = $this->findNextAvailable($candidates, $windowEnd, $intervention->maintenance_role_id);
-
-        if ($next) {
-            $intervention->update(['assigned_user_id' => $next['user']->id]);
-            return ['status' => 'next_shift', 'user' => $next['user'], 'shift_start' => $next['shift_start']];
-        }
-
-        return ['status' => 'no_match', 'user' => null, 'shift_start' => null];
+        // ── Filtro turni DISATTIVATO: assegna direttamente al miglior candidato ──
+        $user = $this->pickBest($candidates, $intervention->maintenance_role_id);
+        $intervention->update(['assigned_user_id' => $user->id]);
+        return ['status' => 'assigned', 'user' => $user, 'shift_start' => null];
     }
 
     // ─── Finestra temporale ───────────────────────────────────────────────────

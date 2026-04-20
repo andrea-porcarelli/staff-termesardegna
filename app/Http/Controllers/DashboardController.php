@@ -19,6 +19,10 @@ class DashboardController extends Controller
         $user = Auth::user();
         $role = $user->role;
 
+        if (in_array($role, \App\Http\Middleware\EnsureMobileRole::ROLES, true)) {
+            return redirect()->route('m.home');
+        }
+
         $data = ['user' => $user];
 
         if ($role === 'admin') {

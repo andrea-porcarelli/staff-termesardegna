@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -86,5 +87,52 @@ class User extends Authenticatable
             ->orderBy('day_of_week')
             ->orderBy('date')
             ->orderBy('start_time');
+    }
+
+    public function collaborationRequests(): HasMany
+    {
+        return $this->hasMany(InterventionCollaboration::class)
+            ->where('status', InterventionCollaboration::STATUS_PENDING);
+    }
+
+    /**
+     * Verifica se l'utente è in turno al momento $at (default now).
+     * Segue le stesse regole dei WorkScheduleSlot: esclude ferie/riposi,
+     * supporta slot ricorrenti (day_of_week) e one-off (date).
+     */
+    public function isOnShift(?Carbon $at = null): bool
+    {
+        $at = $at ?? now();
+        $dateStr = $at->toDateString();
+
+        $slots = $this->relationLoaded('workScheduleSlots')
+            ? $this->workScheduleSlots
+            : $this->workScheduleSlots()->get();
+
+        foreach ($slots as $slot) {
+            if (in_array($slot->type, ['ferie', 'riposi'], true)
+                && $slot->date?->toDateString() === $dateStr) {
+                return false;
+            }
+        }
+
+        foreach ($slots as $slot) {
+            if ($slot->type !== 'lavorativo') continue;
+            if (!$slot->start_time || !$slot->end_time) continue;
+
+            if ($slot->is_recurring) {
+                if ((int) $slot->day_of_week !== $at->dayOfWeek) continue;
+                $start = $at->copy()->setTimeFromTimeString($slot->start_time);
+                $end   = $at->copy()->setTimeFromTimeString($slot->end_time);
+                if ($at->between($start, $end)) return true;
+            } else {
+                if ($slot->date?->toDateString() !== $dateStr) continue;
+                $start = Carbon::parse($dateStr . ' ' . $slot->start_time);
+                $end   = Carbon::parse($dateStr . ' ' . $slot->end_time);
+                if ($at->between($start, $end)) return true;
+            }
+        }
+
+        return false;
     }
 }

@@ -12,6 +12,11 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\MaintenanceRoleController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\Manutentore\HomeController as MHomeController;
+use App\Http\Controllers\Manutentore\InterventionController as MInterventionController;
+use App\Http\Controllers\Manutentore\CollaborationController as MCollaborationController;
+use App\Http\Controllers\Manutentore\NotificationController as MNotificationController;
+use App\Http\Controllers\Manutentore\ReportController as MReportController;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -22,6 +27,52 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 Route::impersonate();
+
+// ─── Area manutentore (layout mobile dedicato) ──────────────────────────────
+Route::prefix('m')->middleware(['auth', 'mobile'])->name('m.')->group(function () {
+    Route::get('/', [MHomeController::class, 'index'])->name('home');
+    Route::get('/profilo', [MHomeController::class, 'profile'])->name('profile');
+
+    Route::view('/calendario', 'manutentore.placeholder', [
+        'title' => 'Calendario',
+        'message' => 'La vista calendario arriva con la prossima release.',
+    ])->name('calendar');
+
+    Route::view('/piano', 'manutentore.placeholder', [
+        'title' => 'Piano orario',
+        'message' => 'Il piano orario mobile arriva con la prossima release.',
+    ])->name('schedule');
+
+    Route::get('/tickets', [MInterventionController::class, 'index'])
+        ->name('tickets.index');
+
+    Route::get('/tickets/{intervention}/json', [MInterventionController::class, 'showJson'])
+        ->name('tickets.json');
+
+    // Azioni sul ticket
+    Route::get('/interventions/{intervention}/candidates', [MInterventionController::class, 'candidatesJson'])
+        ->name('interventions.candidates');
+    Route::post('/interventions/{intervention}/transfer', [MInterventionController::class, 'transfer'])
+        ->name('interventions.transfer');
+    Route::post('/interventions/{intervention}/collaboration', [MInterventionController::class, 'requestCollaboration'])
+        ->name('interventions.collaboration');
+
+    // Risposta a richiesta di collaborazione
+    Route::post('/collaborations/{collaboration}/respond', [MCollaborationController::class, 'respond'])
+        ->name('collaborations.respond');
+
+    // Notifiche in-app
+    Route::get('/notifications/json',  [MNotificationController::class, 'indexJson'])->name('notifications.json');
+    Route::post('/notifications/read-all', [MNotificationController::class, 'markAllRead'])->name('notifications.read-all');
+    Route::post('/notifications/{notification}/read', [MNotificationController::class, 'markRead'])->name('notifications.read');
+
+    Route::post('/interventions/quick-open', [MInterventionController::class, 'quickStore'])
+        ->name('interventions.quick-open');
+
+    // Rapportino inline (mobile)
+    Route::post('/interventions/{intervention}/reports', [MReportController::class, 'store'])
+        ->name('reports.store');
+});
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

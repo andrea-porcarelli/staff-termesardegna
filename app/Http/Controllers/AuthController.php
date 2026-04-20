@@ -11,7 +11,7 @@ class AuthController extends Controller
     public function showLoginForm()
     {
         if (Auth::check()) {
-            return redirect()->route('dashboard');
+            return redirect()->route($this->homeRoute());
         }
         return view('auth.login');
     }
@@ -35,7 +35,7 @@ class AuthController extends Controller
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
 
-            return redirect()->intended(route('dashboard'));
+            return redirect()->intended(route($this->homeRoute()));
         }
 
         return back()
@@ -51,5 +51,12 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('login');
+    }
+
+    private function homeRoute(): string
+    {
+        return in_array(Auth::user()?->role, \App\Http\Middleware\EnsureMobileRole::ROLES, true)
+            ? 'm.home'
+            : 'dashboard';
     }
 }
