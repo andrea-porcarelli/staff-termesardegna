@@ -33,10 +33,17 @@ class AuthController extends Controller
         $credentials = $request->only('email', 'password');
         $remember = $request->has('remember');
 
-        if (Auth::attempt($credentials, $remember)) {
+        if (Auth::attempt([...$credentials, 'active' => true], $remember)) {
             $request->session()->regenerate();
 
             return redirect()->intended(route($this->homeRoute()));
+        }
+
+        $user = \App\Models\User::where('email', $credentials['email'])->first();
+        if ($user && ! $user->active) {
+            return back()
+                ->withErrors(['email' => 'Account disattivato. Contatta un amministratore.'])
+                ->withInput($request->only('email'));
         }
 
         return back()

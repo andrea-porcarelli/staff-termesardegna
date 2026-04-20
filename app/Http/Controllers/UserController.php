@@ -102,6 +102,7 @@ class UserController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'role' => $request->role,
+            'active' => $request->boolean('active'),
         ];
 
         if ($request->filled('password')) {
@@ -188,6 +189,22 @@ class UserController extends Controller
 
         return redirect()->route('users.index')
             ->with('success', 'Utente eliminato con successo!');
+    }
+
+    public function toggleActive(User $user): RedirectResponse
+    {
+        if ($user->id === auth()->id()) {
+            return back()->with('error', 'Non puoi disattivare il tuo account!');
+        }
+
+        $user->update(['active' => ! $user->active]);
+
+        return back()->with(
+            'success',
+            $user->active
+                ? "Utente {$user->name} riattivato."
+                : "Utente {$user->name} disattivato."
+        );
     }
 
     public function impersonate(User $user): RedirectResponse

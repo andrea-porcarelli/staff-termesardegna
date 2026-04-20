@@ -40,7 +40,7 @@ class InterventionController extends Controller
     {
         $user = Auth::user();
         $equipments = Equipment::where('active', true)->orderBy('name')->get();
-        $operators = User::whereIn('role', ['operator', 'manutentore'])->orderBy('name')->get();
+        $operators = User::whereIn('role', ['operator', 'manutentore'])->where('active', true)->orderBy('name')->get();
         $areas = Area::where('active', true)->orderBy('name')->get();
         $departments = Department::where('active', true)->orderBy('name')->get();
         $maintenanceRoles = MaintenanceRole::orderBy('name')->get();
@@ -161,7 +161,7 @@ class InterventionController extends Controller
     {
         abort_if(Auth::user()->role === 'manutentore', 403);
         $equipments = Equipment::where('active', true)->orderBy('name')->get();
-        $operators = User::whereIn('role', ['operator', 'manutentore'])->orderBy('name')->get();
+        $operators = User::whereIn('role', ['operator', 'manutentore'])->where('active', true)->orderBy('name')->get();
         $areas = Area::where('active', true)->orderBy('name')->get();
         $departments = Department::where('active', true)->orderBy('name')->get();
         $maintenanceRoles = MaintenanceRole::orderBy('name')->get();

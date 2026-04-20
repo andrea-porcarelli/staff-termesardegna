@@ -100,6 +100,24 @@
                                         @enderror
                                     </div>
 
+                                    <div class="mb-4">
+                                        <div class="form-check form-switch">
+                                            <input type="hidden" name="active" value="0">
+                                            <input class="form-check-input" type="checkbox" role="switch"
+                                                   id="active" name="active" value="1"
+                                                   {{ old('active', $user->active) ? 'checked' : '' }}
+                                                   @if($user->id === auth()->id()) disabled @endif>
+                                            <label class="form-check-label" for="active">
+                                                <i class="bi bi-power me-1"></i>Utente attivo
+                                            </label>
+                                            @if($user->id === auth()->id())
+                                                <div class="form-text text-muted">Non puoi disattivare il tuo account.</div>
+                                            @else
+                                                <div class="form-text text-muted">Gli utenti disattivati non possono accedere e non vengono auto-assegnati agli interventi.</div>
+                                            @endif
+                                        </div>
+                                    </div>
+
                                     <!-- Sezione Manutentore: Piano Orario -->
                                     <div id="manutentore-section" class="mb-4" style="display: none;">
 

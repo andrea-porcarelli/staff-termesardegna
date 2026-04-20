@@ -137,6 +137,7 @@ class AutoAssignmentService
             ?? $intervention->equipment?->department_id;
 
         $query = User::where('role', 'manutentore')
+            ->where('active', true)
             ->whereHas('maintenanceRoles', fn ($q) => $q->where('maintenance_roles.id', $intervention->maintenance_role_id)
             );
 

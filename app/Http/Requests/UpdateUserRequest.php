@@ -34,6 +34,7 @@ class UpdateUserRequest extends FormRequest
             ],
             'password' => 'nullable|string|min:6|confirmed',
             'role' => 'required|in:admin,operator,manutentore',
+            'active' => 'nullable|boolean',
             'maintenance_roles' => 'nullable|array',
             'maintenance_roles.*' => 'exists:maintenance_roles,id',
             'teams' => 'nullable|array',

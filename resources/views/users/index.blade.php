@@ -48,6 +48,7 @@
                             </a>
                         </th>
                         <th>Ruolo</th>
+                        <th>Stato</th>
                         <th>
                             @php $nextDir = ($sort==='created_at' && $dir==='asc') ? 'desc' : 'asc'; @endphp
                             <a href="{{ route('users.index', ['search'=>$search,'sort'=>'created_at','direction'=>$nextDir]) }}" class="text-decoration-none text-dark">
@@ -64,12 +65,31 @@
                             <td><strong>{{ $user->name }}</strong></td>
                             <td>{{ $user->email }}</td>
                             <td>{{ $user->role }}</td>
+                            <td>
+                                @if($user->active)
+                                    <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Attivo</span>
+                                @else
+                                    <span class="badge bg-secondary"><i class="bi bi-slash-circle me-1"></i>Disattivato</span>
+                                @endif
+                            </td>
                             <td>{{ $user->created_at->format('d/m/Y H:i') }}</td>
                             <td class="text-center">
                                 <a href="{{ route('users.edit', $user) }}" class="btn btn-warning btn-sm">
                                     <i class="bi bi-pencil"></i>
                                 </a>
                                 @if($user->id !== auth()->id())
+                                    <form action="{{ route('users.toggle-active', $user) }}"
+                                          method="POST"
+                                          class="d-inline"
+                                          onsubmit="return confirm('{{ $user->active ? "Disattivare" : "Riattivare" }} {{ $user->name }}?');">
+                                        @csrf
+                                        @method('PATCH')
+                                        <button type="submit"
+                                                class="btn btn-sm {{ $user->active ? 'btn-secondary' : 'btn-success' }}"
+                                                title="{{ $user->active ? 'Disattiva utente' : 'Riattiva utente' }}">
+                                            <i class="bi {{ $user->active ? 'bi-toggle-on' : 'bi-toggle-off' }}"></i>
+                                        </button>
+                                    </form>
                                     <a href="{{ route('impersonate', $user->id) }}" class="btn btn-info btn-sm" title="Impersona utente">
                                         <i class="bi bi-person-badge"></i>
                                     </a>
@@ -88,7 +108,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center py-4">
+                            <td colspan="7" class="text-center py-4">
                                 <i class="bi bi-inbox" style="font-size: 48px; color: #ccc;"></i>
                                 <p class="text-muted mt-2">Nessun utente trovato</p>
                             </td>

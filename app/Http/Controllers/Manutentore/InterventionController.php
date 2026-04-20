@@ -364,6 +364,7 @@ class InterventionController extends Controller
         $purpose = $request->get('purpose', 'transfer');
 
         $query = User::where('role', 'manutentore')
+            ->where('active', true)
             ->where('id', '!=', Auth::id());
 
         if ($intervention->maintenance_role_id) {
