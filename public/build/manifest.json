@@ -1,0 +1,32 @@
+{
+  "resources/css/app.css": {
+    "file": "assets/app-CqloFpVn.css",
+    "src": "resources/css/app.css",
+    "isEntry": true,
+    "name": "app",
+    "names": [
+      "app.css"
+    ]
+  },
+  "resources/css/manutentore.css": {
+    "file": "assets/manutentore-DXtk8J3J.css",
+    "src": "resources/css/manutentore.css",
+    "isEntry": true,
+    "name": "manutentore",
+    "names": [
+      "manutentore.css"
+    ]
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-BJgssCIR.js",
+    "name": "app",
+    "src": "resources/js/app.js",
+    "isEntry": true
+  },
+  "resources/js/manutentore.js": {
+    "file": "assets/manutentore-B_wqvyw2.js",
+    "name": "manutentore",
+    "src": "resources/js/manutentore.js",
+    "isEntry": true
+  }
+}
