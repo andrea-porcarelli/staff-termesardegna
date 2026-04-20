@@ -90,10 +90,9 @@ class HomeController extends Controller
         $ordinariAttivi = $interventions->filter(fn ($i) => $i->tipo !== 'pianificazione' && ! $i->is_overdue
         )->values();
 
-        $altaPriorita = $ordinariAttivi->filter(fn ($i) => in_array($i->priority, ['urgent', 'high'])
-        )->sortBy(fn ($i) => $i->priority === 'urgent' ? 0 : 1)->values();
+        $altaPriorita = $ordinariAttivi->filter(fn ($i) => $i->priority === 'high')->values();
 
-        $bassaPriorita = $ordinariAttivi->filter(fn ($i) => in_array($i->priority, ['medium', 'low', 'fixed_date'])
+        $bassaPriorita = $ordinariAttivi->filter(fn ($i) => in_array($i->priority, ['low', 'fixed_date'])
         )->values();
 
         $quickAreas = Area::where('active', true)->orderBy('name')->get();

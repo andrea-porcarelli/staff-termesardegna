@@ -265,7 +265,7 @@ class ReportController extends Controller
                 'scheduled_date' => $intervention->scheduled_date ? $intervention->scheduled_date->format('d/m/Y') : null,
                 'scheduled_time' => $intervention->scheduled_start_time ? substr($intervention->scheduled_start_time, 0, 5) : null,
                 'priority' => $intervention->priority,
-                'priority_label' => ['low' => 'Bassa', 'medium' => 'Media', 'high' => 'Alta', 'critical' => 'Critica'][$intervention->priority] ?? $intervention->priority,
+                'priority_label' => ['low' => 'Bassa', 'high' => 'Alta', 'fixed_date' => 'Data fissa'][$intervention->priority] ?? $intervention->priority,
             ],
         ];
 

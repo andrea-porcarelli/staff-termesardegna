@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'onesignal' => [
+        'app_id' => env('ONESIGNAL_APP_ID'),
+        'rest_api_key' => env('ONESIGNAL_REST_API_KEY'),
+        'safari_web_id' => env('ONESIGNAL_SAFARI_WEB_ID'),
+    ],
+
 ];

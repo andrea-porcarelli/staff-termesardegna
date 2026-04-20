@@ -32,12 +32,9 @@ class AutoAssignmentService
 
     /**
      * Finestre di priorità in ore (da created_at al limite).
-     * urgent = 0 → finestra [ora, ora] = "chi è in turno adesso"
      */
     private const WINDOW_HOURS = [
-        'urgent' => 0,
         'high' => 24,
-        'medium' => 72,
         'low' => 168,
         'fixed_date' => null,
     ];
@@ -129,8 +126,7 @@ class AutoAssignmentService
 
         $hours = self::WINDOW_HOURS[$intervention->priority] ?? 24;
 
-        // urgent → finestra puntuale su "ora"
-        return [$now, $hours === 0 ? $now->copy() : $now->copy()->addHours($hours)];
+        return [$now, $now->copy()->addHours($hours)];
     }
 
     // ─── Candidati ───────────────────────────────────────────────────────────

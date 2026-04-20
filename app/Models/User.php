@@ -89,6 +89,16 @@ class User extends Authenticatable
             ->orderBy('start_time');
     }
 
+    public function oneSignalSubscriptions(): HasMany
+    {
+        return $this->hasMany(UserOneSignalSubscription::class);
+    }
+
+    public function routeNotificationForOneSignal(): array
+    {
+        return $this->oneSignalSubscriptions()->pluck('player_id')->all();
+    }
+
     public function collaborationRequests(): HasMany
     {
         return $this->hasMany(InterventionCollaboration::class)

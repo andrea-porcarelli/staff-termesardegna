@@ -12,6 +12,7 @@ use App\Http\Controllers\Manutentore\CollaborationController as MCollaborationCo
 use App\Http\Controllers\Manutentore\HomeController as MHomeController;
 use App\Http\Controllers\Manutentore\InterventionController as MInterventionController;
 use App\Http\Controllers\Manutentore\NotificationController as MNotificationController;
+use App\Http\Controllers\Manutentore\OneSignalSubscriptionController as MOneSignalSubscriptionController;
 use App\Http\Controllers\Manutentore\ReportController as MReportController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScheduleController;
@@ -72,6 +73,10 @@ Route::prefix('m')->middleware(['auth', 'mobile'])->name('m.')->group(function (
     Route::get('/notifications/json', [MNotificationController::class, 'indexJson'])->name('notifications.json');
     Route::post('/notifications/read-all', [MNotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::post('/notifications/{notification}/read', [MNotificationController::class, 'markRead'])->name('notifications.read');
+
+    // OneSignal push subscriptions (multi-device)
+    Route::post('/onesignal/subscribe', [MOneSignalSubscriptionController::class, 'store'])->name('onesignal.subscribe');
+    Route::delete('/onesignal/subscribe/{playerId}', [MOneSignalSubscriptionController::class, 'destroy'])->name('onesignal.unsubscribe');
 
     Route::post('/interventions/quick-open', [MInterventionController::class, 'quickStore'])
         ->name('interventions.quick-open');

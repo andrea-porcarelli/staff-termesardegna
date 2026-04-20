@@ -44,7 +44,7 @@ class Intervention extends Model
 
     /**
      * Calcola la data di scadenza in base alla priorità.
-     * low = +7gg, medium = +3gg, high = +24h, urgent = stessa data, fixed_date = scheduled_date
+     * low = +7gg, high = +24h, fixed_date = scheduled_date
      */
     public function getDeadlineAttribute(): ?\Carbon\Carbon
     {
@@ -58,9 +58,7 @@ class Intervention extends Model
         }
 
         return match ($this->priority) {
-            'urgent' => $base->copy(),
             'high' => $base->copy()->addHours(24),
-            'medium' => $base->copy()->addDays(3),
             'low' => $base->copy()->addDays(7),
             default => null,
         };

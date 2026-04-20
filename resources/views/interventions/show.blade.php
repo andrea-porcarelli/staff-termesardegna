@@ -207,16 +207,12 @@
                                     @php
                                         $priorityClasses = [
                                             'low'        => 'bg-secondary',
-                                            'medium'     => 'bg-info',
                                             'high'       => 'bg-warning',
-                                            'urgent'     => 'bg-danger',
                                             'fixed_date' => 'bg-purple',
                                         ];
                                         $priorityLabels = [
                                             'low'        => 'Bassa',
-                                            'medium'     => 'Media',
                                             'high'       => 'Alta',
-                                            'urgent'     => 'Urgente',
                                             'fixed_date' => 'Data fissa',
                                         ];
                                     @endphp

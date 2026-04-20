@@ -636,9 +636,7 @@
 
                 priorityClass(priority) {
                     return {
-                        'urgent':     'bg-red-600 text-white',
                         'high':       'bg-orange-500 text-white',
-                        'medium':     'bg-amber-300 text-amber-900',
                         'low':        'bg-sky-100 text-sky-700',
                         'fixed_date': 'bg-violet-100 text-violet-700',
                     }[priority] || 'bg-gray-100 text-gray-700';

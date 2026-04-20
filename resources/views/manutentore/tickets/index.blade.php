@@ -26,9 +26,9 @@
         if ($isOverdue) return 'overdue';
         if ($i->tipo === 'pianificazione' && $i->scheduled_date?->isToday()) return 'today';
         if ($i->status === 'in_progress') return 'in_progress';
-        if (in_array($i->priority, ['urgent', 'high'])) return 'high';
+        if ($i->priority === 'high') return 'high';
         if ($i->tipo === 'pianificazione' && $i->scheduled_date && $i->scheduled_date->isFuture()) return 'planned';
-        if (in_array($i->priority, ['medium', 'low', 'fixed_date'])) return 'low';
+        if (in_array($i->priority, ['low', 'fixed_date'])) return 'low';
         return 'other';
     };
 

@@ -481,8 +481,8 @@
     {{-- Interventi da Eseguire (solo manutentore) --}}
     @if($user->role === 'manutentore' && isset($availableInterventions))
         @php
-            $priClasses = ['low' => 'bg-secondary', 'medium' => 'bg-info', 'high' => 'bg-warning text-dark', 'urgent' => 'bg-danger', 'fixed_date' => 'bg-purple'];
-            $priLabels  = ['low' => 'Bassa', 'medium' => 'Media', 'high' => 'Alta', 'urgent' => 'Urgente', 'fixed_date' => 'Data fissa'];
+            $priClasses = ['low' => 'bg-secondary', 'high' => 'bg-warning text-dark', 'fixed_date' => 'bg-purple'];
+            $priLabels  = ['low' => 'Bassa', 'high' => 'Alta', 'fixed_date' => 'Data fissa'];
             $statusClasses = ['open' => 'bg-primary', 'planned' => 'bg-info'];
             $statusLabels  = ['open' => 'Aperto', 'planned' => 'Pianificato'];
         @endphp
@@ -505,7 +505,7 @@
                             $hoursLeft = $deadline ? now()->diffInHours($deadline, false) : null;
                             $isMine = $intervention->assigned_user_id === auth()->id();
                         @endphp
-                        <div class="border-bottom px-3 py-3 {{ $isOverdue ? 'bg-danger bg-opacity-10' : ($intervention->priority === 'urgent' ? 'bg-danger bg-opacity-10' : ($intervention->priority === 'high' ? 'bg-warning bg-opacity-10' : '')) }}">
+                        <div class="border-bottom px-3 py-3 {{ $isOverdue ? 'bg-danger bg-opacity-10' : ($intervention->priority === 'high' ? 'bg-warning bg-opacity-10' : '') }}">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div class="flex-grow-1">
                                     <h6 class="mb-0 fw-bold">

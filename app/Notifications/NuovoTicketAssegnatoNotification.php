@@ -3,22 +3,16 @@
 namespace App\Notifications;
 
 use App\Models\Intervention;
-use App\Models\Report;
-use App\Models\User;
 use App\Notifications\Channels\OneSignalChannel;
 use App\Notifications\Messages\OneSignalMessage;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 
-class CollaboratorReportSubmittedNotification extends Notification
+class NuovoTicketAssegnatoNotification extends Notification
 {
     use Queueable;
 
-    public function __construct(
-        public Intervention $intervention,
-        public Report $report,
-        public User $collaborator,
-    ) {}
+    public function __construct(public Intervention $intervention) {}
 
     public function via($notifiable): array
     {
@@ -27,14 +21,19 @@ class CollaboratorReportSubmittedNotification extends Notification
 
     public function toArray($notifiable): array
     {
+        $priorityLabel = [
+            'high' => 'Alta',
+            'low' => 'Bassa',
+            'fixed_date' => 'Data fissa',
+        ][$this->intervention->priority] ?? $this->intervention->priority;
+
         return [
-            'type' => 'collaborator_report_submitted',
+            'type' => 'ticket_assigned',
             'intervention_id' => $this->intervention->id,
             'intervention_title' => $this->intervention->title,
-            'report_id' => $this->report->id,
-            'from_user_id' => $this->collaborator->id,
-            'from_user_name' => $this->collaborator->name,
-            'headline' => "{$this->collaborator->name} ha compilato il rapportino sul ticket #{$this->intervention->id}",
+            'priority' => $this->intervention->priority,
+            'priority_label' => $priorityLabel,
+            'headline' => "Nuovo ticket assegnato #{$this->intervention->id}",
             'subline' => $this->intervention->title,
         ];
     }
@@ -42,13 +41,12 @@ class CollaboratorReportSubmittedNotification extends Notification
     public function toOneSignal($notifiable): OneSignalMessage
     {
         return OneSignalMessage::create()
-            ->title("Rapportino ricevuto sul ticket #{$this->intervention->id}")
-            ->body("{$this->collaborator->name} ha compilato il rapportino. Ora puoi chiudere il ticket.")
+            ->title("Nuovo ticket #{$this->intervention->id}")
+            ->body($this->intervention->title)
             ->url(route('m.tickets.index').'?open='.$this->intervention->id)
             ->data([
-                'type' => 'collaborator_report_submitted',
+                'type' => 'ticket_assigned',
                 'intervention_id' => $this->intervention->id,
-                'report_id' => $this->report->id,
             ]);
     }
 }

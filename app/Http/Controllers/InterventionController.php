@@ -59,7 +59,7 @@ class InterventionController extends Controller
     public function store(InterventionRequest $request): RedirectResponse
     {
         $isPianificazione = $request->tipo === 'pianificazione';
-        $priority = $isPianificazione ? 'medium' : ($request->priority ?? 'medium');
+        $priority = $isPianificazione ? 'low' : ($request->priority ?? 'low');
         $isFixedDate = ! $isPianificazione && $priority === 'fixed_date';
 
         $data = [
@@ -173,7 +173,7 @@ class InterventionController extends Controller
     public function update(InterventionRequest $request, Intervention $intervention): RedirectResponse
     {
         $isPianificazione = $request->tipo === 'pianificazione';
-        $priority = $isPianificazione ? 'medium' : ($request->priority ?? 'medium');
+        $priority = $isPianificazione ? 'low' : ($request->priority ?? 'low');
         $isFixedDate = ! $isPianificazione && $priority === 'fixed_date';
 
         $previousAssignedUserId = $intervention->assigned_user_id;
@@ -256,7 +256,7 @@ class InterventionController extends Controller
             'description' => $request->description,
             'scheduled_date' => today(),
             'status' => 'open',
-            'priority' => 'medium',
+            'priority' => 'low',
         ]);
 
         return redirect()->route('dashboard')
@@ -335,9 +335,7 @@ class InterventionController extends Controller
             // Definizione colori per priorità
             $priorityColors = [
                 'low' => '#6c757d',  // grigio
-                'medium' => '#0dcaf0',  // info
                 'high' => '#ffc107',  // warning
-                'urgent' => '#dc3545',  // danger
                 'fixed_date' => '#6f42c1',  // viola
             ];
 

@@ -87,12 +87,12 @@ class InterventionController extends Controller
                 break;
 
             case 'high':
-                $query->whereIn('priority', ['urgent', 'high'])
+                $query->where('priority', 'high')
                     ->whereNotIn('status', ['completed', 'cancelled']);
                 break;
 
             case 'low':
-                $query->whereIn('priority', ['medium', 'low', 'fixed_date'])
+                $query->whereIn('priority', ['low', 'fixed_date'])
                     ->whereNotIn('status', ['completed', 'cancelled']);
                 break;
 
@@ -130,7 +130,7 @@ class InterventionController extends Controller
 
         $interventions = $query
             ->orderByRaw("FIELD(status, 'in_progress', 'open', 'planned', 'completed', 'cancelled')")
-            ->orderByRaw("FIELD(priority, 'urgent', 'high', 'medium', 'low', 'fixed_date')")
+            ->orderByRaw("FIELD(priority, 'high', 'fixed_date', 'low')")
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -294,9 +294,7 @@ class InterventionController extends Controller
             ][$intervention->status] ?? $intervention->status,
             'priority' => $intervention->priority,
             'priority_label' => [
-                'urgent' => 'Urgente',
                 'high' => 'Alta',
-                'medium' => 'Media',
                 'low' => 'Bassa',
                 'fixed_date' => 'Data fissa',
             ][$intervention->priority] ?? $intervention->priority,
@@ -669,7 +667,7 @@ class InterventionController extends Controller
             'description' => $request->description,
             'scheduled_date' => today(),
             'status' => 'open',
-            'priority' => 'medium',
+            'priority' => 'low',
         ]);
 
         $referer = $request->headers->get('referer');

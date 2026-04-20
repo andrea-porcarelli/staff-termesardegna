@@ -25,7 +25,7 @@
                     selectedAreaId: '{{ old('area_id', '') }}' || userAreaId,
                     selectedEquipmentId: '{{ old('equipment_id', '') }}',
                     assignmentType: '{{ old('assignment_type', 'specializzazione') }}',
-                    selectedPriority: '{{ old('priority', 'medium') }}',
+                    selectedPriority: '{{ old('priority', 'low') }}',
                     components: @json($components),
                     departments: @json($departments->map(fn($d) => ['id' => $d->id, 'name' => $d->name, 'area_id' => $d->area_id])),
                     userDepartmentIds: userDepartmentIds,
@@ -204,10 +204,8 @@
                             id="priority" name="priority"
                             x-model="selectedPriority"
                             :required="tipo === 'ordinario'">
-                        <option value="low"        {{ old('priority') == 'low'        ? 'selected' : '' }}>Bassa — entro 7 giorni</option>
-                        <option value="medium"     {{ old('priority', 'medium') == 'medium' ? 'selected' : '' }}>Media — entro 3 giorni</option>
+                        <option value="low"        {{ old('priority', 'low') == 'low'  ? 'selected' : '' }}>Bassa — entro 7 giorni</option>
                         <option value="high"       {{ old('priority') == 'high'       ? 'selected' : '' }}>Alta — entro 24 ore</option>
-                        <option value="urgent"     {{ old('priority') == 'urgent'     ? 'selected' : '' }}>Urgente — adesso</option>
                         <option value="fixed_date" {{ old('priority') == 'fixed_date' ? 'selected' : '' }}>Data fissa — seleziona data e ora</option>
                     </select>
                     @error('priority')

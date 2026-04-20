@@ -15,8 +15,8 @@
 @php
     $statusColors  = ['open' => 'bg-primary', 'planned' => 'bg-info', 'in_progress' => 'bg-warning', 'completed' => 'bg-success', 'cancelled' => 'bg-danger'];
     $statusLabels  = ['open' => 'Aperto', 'planned' => 'Pianificato', 'in_progress' => 'In corso', 'completed' => 'Completato', 'cancelled' => 'Annullato'];
-    $priorityColors = ['low' => 'bg-secondary', 'medium' => 'bg-info', 'high' => 'bg-warning', 'urgent' => 'bg-danger', 'fixed_date' => 'bg-purple'];
-    $priorityLabels = ['low' => 'Bassa', 'medium' => 'Media', 'high' => 'Alta', 'urgent' => 'Urgente', 'fixed_date' => 'Data fissa'];
+    $priorityColors = ['low' => 'bg-secondary', 'high' => 'bg-warning', 'fixed_date' => 'bg-purple'];
+    $priorityLabels = ['low' => 'Bassa', 'high' => 'Alta', 'fixed_date' => 'Data fissa'];
 @endphp
 
 <div class="card mb-4">

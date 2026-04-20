@@ -10,6 +10,53 @@
 
     @vite(['resources/css/manutentore.css', 'resources/js/manutentore.js'])
     @stack('head')
+
+    @if(auth()->check() && config('services.onesignal.app_id'))
+        <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+        <script>
+            window.OneSignalDeferred = window.OneSignalDeferred || [];
+            OneSignalDeferred.push(async function (OneSignal) {
+                await OneSignal.init({
+                    appId: @json(config('services.onesignal.app_id')),
+                    @if(config('services.onesignal.safari_web_id'))
+                    safari_web_id: @json(config('services.onesignal.safari_web_id')),
+                    @endif
+                    notifyButton: { enable: true },
+                });
+
+                try {
+                    await OneSignal.login(@json('user-'.auth()->id()));
+                } catch (_) {}
+
+                const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+                const saveSubscription = async () => {
+                    const id = OneSignal.User?.PushSubscription?.id;
+                    if (!id) return;
+                    try {
+                        await fetch(@json(route('m.onesignal.subscribe')), {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': csrf,
+                            },
+                            credentials: 'same-origin',
+                            body: JSON.stringify({
+                                player_id: id,
+                                device_label: navigator.platform || null,
+                            }),
+                        });
+                    } catch (_) {}
+                };
+
+                OneSignal.User.PushSubscription.addEventListener('change', saveSubscription);
+                if (OneSignal.User?.PushSubscription?.id) {
+                    saveSubscription();
+                }
+            });
+        </script>
+    @endif
 </head>
 <body x-data class="h-full bg-gray-50 font-sans text-gray-900 antialiased">
 
