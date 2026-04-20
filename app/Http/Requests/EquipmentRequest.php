@@ -43,7 +43,8 @@ class EquipmentRequest extends FormRequest
         ];
     }
 
-    public function messages(): array {
+    public function messages(): array
+    {
         return [
             'department_id.required' => 'Il reparto è obbligatorio',
             'department_id.exists' => 'Il reparto selezionato non esiste',

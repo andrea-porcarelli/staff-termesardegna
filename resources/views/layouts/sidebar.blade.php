@@ -67,6 +67,10 @@
             <i class="bi bi-people-fill"></i>
             <span>Team</span>
         </a>
+        <a href="{{ route('intervention_logs.index') }}" class="menu-item {{ request()->routeIs('intervention_logs.*') ? 'active' : '' }}">
+            <i class="bi bi-journals"></i>
+            <span>Storia interventi</span>
+        </a>
         @endif
     </div>
     <form method="POST" action="{{ route('logout') }}" style="padding: 15px 25px 20px; flex-shrink: 0;">

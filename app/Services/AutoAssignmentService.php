@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Intervention;
 use App\Models\User;
+use App\Support\InterventionLogActions;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -34,10 +35,10 @@ class AutoAssignmentService
      * urgent = 0 → finestra [ora, ora] = "chi è in turno adesso"
      */
     private const WINDOW_HOURS = [
-        'urgent'     => 0,
-        'high'       => 24,
-        'medium'     => 72,
-        'low'        => 168,
+        'urgent' => 0,
+        'high' => 24,
+        'medium' => 72,
+        'low' => 168,
         'fixed_date' => null,
     ];
 
@@ -49,7 +50,7 @@ class AutoAssignmentService
     public function assign(Intervention $intervention): array
     {
         // Non auto-assegnare se manca la specializzazione o è già assegnato
-        if (!$intervention->maintenance_role_id || $intervention->assigned_user_id) {
+        if (! $intervention->maintenance_role_id || $intervention->assigned_user_id) {
             return ['status' => 'skipped', 'user' => null, 'shift_start' => null];
         }
 
@@ -67,12 +68,14 @@ class AutoAssignmentService
 
             // 1. Cerca qualcuno in turno nella finestra
             $inShift = $candidates->filter(
-                fn(User $u) => $this->hasShiftInWindow($u, $windowStart, $windowEnd)
+                fn (User $u) => $this->hasShiftInWindow($u, $windowStart, $windowEnd)
             );
 
             if ($inShift->isNotEmpty()) {
                 $user = $this->pickBest($inShift, $intervention->maintenance_role_id);
                 $intervention->update(['assigned_user_id' => $user->id]);
+                $this->logAutoAssigned($intervention, $user, 'assigned');
+
                 return ['status' => 'assigned', 'user' => $user, 'shift_start' => null];
             }
 
@@ -81,6 +84,8 @@ class AutoAssignmentService
 
             if ($next) {
                 $intervention->update(['assigned_user_id' => $next['user']->id]);
+                $this->logAutoAssigned($intervention, $next['user'], 'next_shift', $next['shift_start']);
+
                 return ['status' => 'next_shift', 'user' => $next['user'], 'shift_start' => $next['shift_start']];
             }
 
@@ -90,7 +95,19 @@ class AutoAssignmentService
         // ── Filtro turni DISATTIVATO: assegna direttamente al miglior candidato ──
         $user = $this->pickBest($candidates, $intervention->maintenance_role_id);
         $intervention->update(['assigned_user_id' => $user->id]);
+        $this->logAutoAssigned($intervention, $user, 'assigned');
+
         return ['status' => 'assigned', 'user' => $user, 'shift_start' => null];
+    }
+
+    private function logAutoAssigned(Intervention $intervention, User $user, string $status, ?Carbon $shiftStart = null): void
+    {
+        \App\Services\InterventionActivityLogger::system($intervention, InterventionLogActions::AUTO_ASSIGNED, array_filter([
+            'assigned_user_id' => $user->id,
+            'assigned_user_name' => $user->name,
+            'assignment_status' => $status,
+            'shift_start' => $shiftStart?->toIso8601String(),
+        ], fn ($v) => $v !== null));
     }
 
     // ─── Finestra temporale ───────────────────────────────────────────────────
@@ -103,9 +120,10 @@ class AutoAssignmentService
             $end = $intervention->scheduled_date
                 ? Carbon::parse(
                     $intervention->scheduled_date->toDateString()
-                    . ' ' . ($intervention->scheduled_start_time ?? '08:00:00')
+                    .' '.($intervention->scheduled_start_time ?? '08:00:00')
                 )
                 : $now->copy()->addDays(7);
+
             return [$now, $end];
         }
 
@@ -123,26 +141,22 @@ class AutoAssignmentService
             ?? $intervention->equipment?->department_id;
 
         $query = User::where('role', 'manutentore')
-            ->whereHas('maintenanceRoles', fn($q) =>
-                $q->where('maintenance_roles.id', $intervention->maintenance_role_id)
+            ->whereHas('maintenanceRoles', fn ($q) => $q->where('maintenance_roles.id', $intervention->maintenance_role_id)
             );
 
         // Zona compatibile
         if ($deptId) {
-            $query->whereHas('departments', fn($q) =>
-                $q->where('departments.id', $deptId)
+            $query->whereHas('departments', fn ($q) => $q->where('departments.id', $deptId)
             );
         }
 
         // Escludi sempre chi è in_progress
-        $query->whereDoesntHave('interventions', fn($q) =>
-            $q->where('status', 'in_progress')
+        $query->whereDoesntHave('interventions', fn ($q) => $q->where('status', 'in_progress')
         );
 
         // Per priorità > low, escludi anche chi ha planned
-        if (!$isLow) {
-            $query->whereDoesntHave('interventions', fn($q) =>
-                $q->where('status', 'planned')
+        if (! $isLow) {
+            $query->whereDoesntHave('interventions', fn ($q) => $q->where('status', 'planned')
             );
         }
 
@@ -159,19 +173,21 @@ class AutoAssignmentService
         $offDays = $this->offDays($user);
 
         foreach ($user->workScheduleSlots as $slot) {
-            if ($slot->type !== 'lavorativo') continue;
+            if ($slot->type !== 'lavorativo') {
+                continue;
+            }
 
             if ($slot->is_recurring) {
                 // Espandi le ricorrenze settimanali nella finestra
                 $cursor = $from->copy()->startOfDay();
-                $limit  = $to->copy()->endOfDay();
+                $limit = $to->copy()->endOfDay();
 
                 while ($cursor->lte($limit)) {
                     if ($cursor->dayOfWeek === $slot->day_of_week) {
                         $dateStr = $cursor->toDateString();
-                        if (!isset($offDays[$dateStr])) {
+                        if (! isset($offDays[$dateStr])) {
                             $slotStart = $cursor->copy()->setTimeFromTimeString($slot->start_time);
-                            $slotEnd   = $cursor->copy()->setTimeFromTimeString($slot->end_time);
+                            $slotEnd = $cursor->copy()->setTimeFromTimeString($slot->end_time);
                             if ($slotStart->lte($to) && $slotEnd->gte($from)) {
                                 return true;
                             }
@@ -180,12 +196,14 @@ class AutoAssignmentService
                     $cursor->addDay();
                 }
             } else {
-                if (!$slot->date || !$slot->start_time || !$slot->end_time) continue;
-                $dateStr   = $slot->date->toDateString();
-                $slotStart = Carbon::parse($dateStr . ' ' . $slot->start_time);
-                $slotEnd   = Carbon::parse($dateStr . ' ' . $slot->end_time);
+                if (! $slot->date || ! $slot->start_time || ! $slot->end_time) {
+                    continue;
+                }
+                $dateStr = $slot->date->toDateString();
+                $slotStart = Carbon::parse($dateStr.' '.$slot->start_time);
+                $slotEnd = Carbon::parse($dateStr.' '.$slot->end_time);
 
-                if (!isset($offDays[$dateStr]) && $slotStart->lte($to) && $slotEnd->gte($from)) {
+                if (! isset($offDays[$dateStr]) && $slotStart->lte($to) && $slotEnd->gte($from)) {
                     return true;
                 }
             }
@@ -199,21 +217,23 @@ class AutoAssignmentService
      */
     private function nextShiftStart(User $user, Carbon $after): ?Carbon
     {
-        $offDays  = $this->offDays($user);
+        $offDays = $this->offDays($user);
         $earliest = null;
 
         foreach ($user->workScheduleSlots as $slot) {
-            if ($slot->type !== 'lavorativo' || !$slot->start_time) continue;
+            if ($slot->type !== 'lavorativo' || ! $slot->start_time) {
+                continue;
+            }
 
             if ($slot->is_recurring) {
                 // Cerca la prossima occorrenza del giorno (entro 14 giorni)
                 $cursor = $after->copy()->addDay()->startOfDay();
                 for ($i = 0; $i < 14; $i++, $cursor->addDay()) {
                     if ($cursor->dayOfWeek === $slot->day_of_week) {
-                        $dateStr   = $cursor->toDateString();
+                        $dateStr = $cursor->toDateString();
                         $slotStart = $cursor->copy()->setTimeFromTimeString($slot->start_time);
-                        if (!isset($offDays[$dateStr]) && $slotStart->gt($after)) {
-                            if (!$earliest || $slotStart->lt($earliest)) {
+                        if (! isset($offDays[$dateStr]) && $slotStart->gt($after)) {
+                            if (! $earliest || $slotStart->lt($earliest)) {
                                 $earliest = $slotStart;
                             }
                         }
@@ -221,11 +241,13 @@ class AutoAssignmentService
                     }
                 }
             } else {
-                if (!$slot->date) continue;
-                $dateStr   = $slot->date->toDateString();
-                $slotStart = Carbon::parse($dateStr . ' ' . $slot->start_time);
-                if (!isset($offDays[$dateStr]) && $slotStart->gt($after)) {
-                    if (!$earliest || $slotStart->lt($earliest)) {
+                if (! $slot->date) {
+                    continue;
+                }
+                $dateStr = $slot->date->toDateString();
+                $slotStart = Carbon::parse($dateStr.' '.$slot->start_time);
+                if (! isset($offDays[$dateStr]) && $slotStart->gt($after)) {
+                    if (! $earliest || $slotStart->lt($earliest)) {
                         $earliest = $slotStart;
                     }
                 }
@@ -246,6 +268,7 @@ class AutoAssignmentService
                 $off[$slot->date->toDateString()] = true;
             }
         }
+
         return $off;
     }
 
@@ -257,14 +280,14 @@ class AutoAssignmentService
     private function pickBest(Collection $candidates, int $roleId): User
     {
         $ranked = $candidates
-            ->map(fn(User $u) => [
-                'user'  => $u,
+            ->map(fn (User $u) => [
+                'user' => $u,
                 'level' => $u->maintenanceRoles->firstWhere('id', $roleId)?->pivot->level ?? 999,
             ])
             ->sortBy('level');
 
-        $best  = $ranked->first()['level'];
-        $group = $ranked->filter(fn($r) => $r['level'] === $best)->map(fn($r) => $r['user']);
+        $best = $ranked->first()['level'];
+        $group = $ranked->filter(fn ($r) => $r['level'] === $best)->map(fn ($r) => $r['user']);
 
         return $group->random();
     }
@@ -275,19 +298,21 @@ class AutoAssignmentService
     private function findNextAvailable(Collection $candidates, Carbon $after, int $roleId): ?array
     {
         $withShift = $candidates
-            ->map(fn(User $u) => ['user' => $u, 'shift_start' => $this->nextShiftStart($u, $after)])
-            ->filter(fn($r) => $r['shift_start'] !== null)
-            ->sortBy(fn($r) => $r['shift_start']->timestamp);
+            ->map(fn (User $u) => ['user' => $u, 'shift_start' => $this->nextShiftStart($u, $after)])
+            ->filter(fn ($r) => $r['shift_start'] !== null)
+            ->sortBy(fn ($r) => $r['shift_start']->timestamp);
 
-        if ($withShift->isEmpty()) return null;
+        if ($withShift->isEmpty()) {
+            return null;
+        }
 
         $earliest = $withShift->first()['shift_start'];
-        $group    = $withShift
-            ->filter(fn($r) => $r['shift_start']->equalTo($earliest))
-            ->map(fn($r) => $r['user']);
+        $group = $withShift
+            ->filter(fn ($r) => $r['shift_start']->equalTo($earliest))
+            ->map(fn ($r) => $r['user']);
 
         return [
-            'user'        => $this->pickBest($group, $roleId),
+            'user' => $this->pickBest($group, $roleId),
             'shift_start' => $earliest,
         ];
     }

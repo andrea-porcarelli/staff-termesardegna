@@ -20,18 +20,18 @@ class CollaborationRequestedNotification extends Notification
     public function toArray($notifiable): array
     {
         $intervention = $this->collaboration->intervention;
-        $requester    = $this->collaboration->requestedBy;
+        $requester = $this->collaboration->requestedBy;
 
         return [
-            'type'              => 'collaboration_requested',
-            'collaboration_id'  => $this->collaboration->id,
-            'intervention_id'   => $intervention->id,
+            'type' => 'collaboration_requested',
+            'collaboration_id' => $this->collaboration->id,
+            'intervention_id' => $intervention->id,
             'intervention_title' => $intervention->title,
-            'from_user_id'      => $requester->id,
-            'from_user_name'    => $requester->name,
-            'message'           => $this->collaboration->message,
-            'headline'          => "Richiesta di collaborazione sul ticket #{$intervention->id}",
-            'subline'           => "Da {$requester->name}",
+            'from_user_id' => $requester->id,
+            'from_user_name' => $requester->name,
+            'message' => $this->collaboration->message,
+            'headline' => "Richiesta di collaborazione sul ticket #{$intervention->id}",
+            'subline' => "Da {$requester->name}",
         ];
     }
 }

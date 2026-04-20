@@ -8,10 +8,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InterventionCollaboration extends Model
 {
-    public const STATUS_PENDING  = 'pending';
+    public const STATUS_PENDING = 'pending';
+
     public const STATUS_ACCEPTED = 'accepted';
+
     public const STATUS_DECLINED = 'declined';
-    public const STATUS_REVOKED  = 'revoked';
+
+    public const STATUS_REVOKED = 'revoked';
 
     protected $fillable = [
         'intervention_id',

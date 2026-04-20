@@ -16,7 +16,7 @@ class EnsureMobileRole
 
     public function handle(Request $request, Closure $next): Response
     {
-        if (!auth()->check() || !in_array(auth()->user()->role, self::ROLES, true)) {
+        if (! auth()->check() || ! in_array(auth()->user()->role, self::ROLES, true)) {
             abort(403, 'Accesso riservato ai ruoli operativi.');
         }
 

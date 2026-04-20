@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->unsignedTinyInteger('priority_level')->nullable()->change()
-                  ->comment('Livello minimo di priorità (1=massima, 5=minima) degli interventi visibili al manutentore');
+                ->comment('Livello minimo di priorità (1=massima, 5=minima) degli interventi visibili al manutentore');
         });
     }
 

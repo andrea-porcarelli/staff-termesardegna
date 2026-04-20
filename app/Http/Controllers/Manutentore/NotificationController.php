@@ -16,18 +16,18 @@ class NotificationController extends Controller
             ->take(50)
             ->get()
             ->map(fn ($n) => [
-                'id'         => $n->id,
-                'type'       => $n->data['type'] ?? 'info',
-                'headline'   => $n->data['headline'] ?? null,
-                'subline'    => $n->data['subline'] ?? null,
-                'intervention_id'  => $n->data['intervention_id'] ?? null,
+                'id' => $n->id,
+                'type' => $n->data['type'] ?? 'info',
+                'headline' => $n->data['headline'] ?? null,
+                'subline' => $n->data['subline'] ?? null,
+                'intervention_id' => $n->data['intervention_id'] ?? null,
                 'collaboration_id' => $n->data['collaboration_id'] ?? null,
-                'read_at'    => $n->read_at?->toIso8601String(),
+                'read_at' => $n->read_at?->toIso8601String(),
                 'created_at' => $n->created_at->diffForHumans(),
             ]);
 
         return response()->json([
-            'items'        => $items,
+            'items' => $items,
             'unread_count' => $user->unreadNotifications()->count(),
         ]);
     }
@@ -39,7 +39,7 @@ class NotificationController extends Controller
         $n->markAsRead();
 
         return response()->json([
-            'ok'           => true,
+            'ok' => true,
             'unread_count' => $user->unreadNotifications()->count(),
         ]);
     }
@@ -50,7 +50,7 @@ class NotificationController extends Controller
         $user->unreadNotifications->markAsRead();
 
         return response()->json([
-            'ok'           => true,
+            'ok' => true,
             'unread_count' => 0,
         ]);
     }

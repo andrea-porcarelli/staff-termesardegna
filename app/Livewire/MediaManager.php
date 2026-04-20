@@ -2,18 +2,21 @@
 
 namespace App\Livewire;
 
-use Livewire\Component;
-use Livewire\WithFileUploads;
 use App\Models\Media;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Component;
+use Livewire\WithFileUploads;
 
 class MediaManager extends Component
 {
     use WithFileUploads;
 
     public $mediableType;
+
     public $mediableId;
+
     public $files = [];
+
     public $description = '';
 
     protected $listeners = ['refreshMedia' => '$refresh'];

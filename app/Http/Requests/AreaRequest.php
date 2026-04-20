@@ -24,7 +24,8 @@ class AreaRequest extends FormRequest
         ];
     }
 
-    public function messages(): array {
+    public function messages(): array
+    {
         return [
             'name.required' => 'Il nome dell\'area è obbligatorio',
             'name.max' => 'Il nome non può superare i 255 caratteri',

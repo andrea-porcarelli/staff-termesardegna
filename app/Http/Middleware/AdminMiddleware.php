@@ -15,7 +15,7 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!auth()->check() || auth()->user()->role !== 'admin') {
+        if (! auth()->check() || auth()->user()->role !== 'admin') {
             abort(403, 'Accesso negato. Solo gli amministratori possono accedere a questa sezione.');
         }
 

@@ -15,7 +15,7 @@ use Lab404\Impersonate\Models\Impersonate;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, SoftDeletes, Impersonate;
+    use HasFactory, Impersonate, Notifiable, SoftDeletes;
 
     /**
      * The attributes that are mass assignable.
@@ -117,19 +117,31 @@ class User extends Authenticatable
         }
 
         foreach ($slots as $slot) {
-            if ($slot->type !== 'lavorativo') continue;
-            if (!$slot->start_time || !$slot->end_time) continue;
+            if ($slot->type !== 'lavorativo') {
+                continue;
+            }
+            if (! $slot->start_time || ! $slot->end_time) {
+                continue;
+            }
 
             if ($slot->is_recurring) {
-                if ((int) $slot->day_of_week !== $at->dayOfWeek) continue;
+                if ((int) $slot->day_of_week !== $at->dayOfWeek) {
+                    continue;
+                }
                 $start = $at->copy()->setTimeFromTimeString($slot->start_time);
-                $end   = $at->copy()->setTimeFromTimeString($slot->end_time);
-                if ($at->between($start, $end)) return true;
+                $end = $at->copy()->setTimeFromTimeString($slot->end_time);
+                if ($at->between($start, $end)) {
+                    return true;
+                }
             } else {
-                if ($slot->date?->toDateString() !== $dateStr) continue;
-                $start = Carbon::parse($dateStr . ' ' . $slot->start_time);
-                $end   = Carbon::parse($dateStr . ' ' . $slot->end_time);
-                if ($at->between($start, $end)) return true;
+                if ($slot->date?->toDateString() !== $dateStr) {
+                    continue;
+                }
+                $start = Carbon::parse($dateStr.' '.$slot->start_time);
+                $end = Carbon::parse($dateStr.' '.$slot->end_time);
+                if ($at->between($start, $end)) {
+                    return true;
+                }
             }
         }
 

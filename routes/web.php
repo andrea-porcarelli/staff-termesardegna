@@ -1,22 +1,23 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AreaController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\AreaController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\InterventionController;
-use App\Http\Controllers\ReportController;
+use App\Http\Controllers\InterventionLogController;
 use App\Http\Controllers\MaintenanceRoleController;
-use App\Http\Controllers\ScheduleController;
-use App\Http\Controllers\TeamController;
+use App\Http\Controllers\Manutentore\CollaborationController as MCollaborationController;
 use App\Http\Controllers\Manutentore\HomeController as MHomeController;
 use App\Http\Controllers\Manutentore\InterventionController as MInterventionController;
-use App\Http\Controllers\Manutentore\CollaborationController as MCollaborationController;
 use App\Http\Controllers\Manutentore\NotificationController as MNotificationController;
 use App\Http\Controllers\Manutentore\ReportController as MReportController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ScheduleController;
+use App\Http\Controllers\TeamController;
+use App\Http\Controllers\UserController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -68,7 +69,7 @@ Route::prefix('m')->middleware(['auth', 'mobile'])->name('m.')->group(function (
         ->name('collaborations.respond');
 
     // Notifiche in-app
-    Route::get('/notifications/json',  [MNotificationController::class, 'indexJson'])->name('notifications.json');
+    Route::get('/notifications/json', [MNotificationController::class, 'indexJson'])->name('notifications.json');
     Route::post('/notifications/read-all', [MNotificationController::class, 'markAllRead'])->name('notifications.read-all');
     Route::post('/notifications/{notification}/read', [MNotificationController::class, 'markRead'])->name('notifications.read');
 
@@ -82,7 +83,6 @@ Route::prefix('m')->middleware(['auth', 'mobile'])->name('m.')->group(function (
 
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
 
     // Calendario interventi
     Route::get('/interventions/calendar/view', [InterventionController::class, 'calendar'])->name('interventions.calendar');
@@ -129,5 +129,7 @@ Route::middleware('auth')->group(function () {
         Route::resource('equipments', EquipmentController::class);
         Route::resource('maintenance_roles', MaintenanceRoleController::class);
         Route::resource('teams', TeamController::class);
+
+        Route::get('/intervention-logs', [InterventionLogController::class, 'index'])->name('intervention_logs.index');
     });
 });

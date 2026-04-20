@@ -32,7 +32,7 @@ class UpdateEquipmentRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:255',
-                Rule::unique('equipments', 'code')->ignore($equipmentId)
+                Rule::unique('equipments', 'code')->ignore($equipmentId),
             ],
             'description' => 'nullable|string',
             'manufacturer' => 'nullable|string|max:255',

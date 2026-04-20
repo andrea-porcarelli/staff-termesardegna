@@ -2,9 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
 use App\Models\User;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
@@ -21,18 +20,18 @@ class UserSeeder extends Seeder
             'role' => 'admin',
         ]);
 
-//        User::create([
-//            'name' => 'Supervisor User',
-//            'email' => 'supervisor@rapportini.local',
-//            'password' => Hash::make('password'),
-//            'role' => 'supervisor',
-//        ]);
-//
-//        User::create([
-//            'name' => 'Operator User',
-//            'email' => 'operator@rapportini.local',
-//            'password' => Hash::make('password'),
-//            'role' => 'operator',
-//        ]);
+        //        User::create([
+        //            'name' => 'Supervisor User',
+        //            'email' => 'supervisor@rapportini.local',
+        //            'password' => Hash::make('password'),
+        //            'role' => 'supervisor',
+        //        ]);
+        //
+        //        User::create([
+        //            'name' => 'Operator User',
+        //            'email' => 'operator@rapportini.local',
+        //            'password' => Hash::make('password'),
+        //            'role' => 'operator',
+        //        ]);
     }
 }

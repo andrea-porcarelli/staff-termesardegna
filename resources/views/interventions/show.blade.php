@@ -14,7 +14,7 @@
 @if(auth()->user()->role === 'manutentore')
     <div class="card mb-4 border-warning border-3 shadow-lg">
         <div class="card-body text-center py-5 px-4 d-flex justify-content-center gap-3 flex-wrap align-items-center">
-            @if(in_array($intervention->status, ['open', 'planned']))
+            @if($intervention->preso_in_carico_at === null && !in_array($intervention->status, ['completed', 'cancelled']))
                 <form action="{{ route('interventions.take-charge', $intervention) }}" method="POST" class="flex-grow-1">
                     @csrf
                     <button type="submit" class="btn btn-warning fw-bold" style="font-size: 1.3rem; padding: 0.75rem 2rem; min-width: 300px;">
@@ -22,7 +22,7 @@
                     </button>
                 </form>
             @endif
-            @if($intervention->assigned_user_id === auth()->id())
+            @if($intervention->assigned_user_id === auth()->id() && $intervention->preso_in_carico_at !== null)
                 <a href="{{ route('interventions.reports.create', $intervention) }}" class="btn btn-light fw-bold" style="font-size: 1.2rem; padding: 0.75rem 1.5rem;">
                     <i class="bi bi-plus-circle me-2"></i>Crea Rapportino
                 </a>
@@ -157,6 +157,15 @@
                                     <span class="badge {{ $statusClasses[$intervention->status] ?? 'bg-secondary' }}">
                                         {{ $statusLabels[$intervention->status] ?? $intervention->status }}
                                     </span>
+                                    @if($intervention->preso_in_carico_at)
+                                        <span class="badge bg-success ms-1" title="{{ $intervention->preso_in_carico_at->format('d/m/Y H:i') }}">
+                                            <i class="bi bi-hand-index-thumb me-1"></i>Preso in carico il {{ $intervention->preso_in_carico_at->format('d/m/Y H:i') }}
+                                        </span>
+                                    @elseif($intervention->assigned_user_id && !in_array($intervention->status, ['completed', 'cancelled']))
+                                        <span class="badge bg-secondary ms-1">
+                                            <i class="bi bi-hourglass-split me-1"></i>In attesa di presa in carico
+                                        </span>
+                                    @endif
                                 </td>
                             </tr>
                             @if($intervention->deadline)
@@ -366,6 +375,66 @@
             <div class="text-center py-5 text-muted">
                 <i class="bi bi-inbox" style="font-size: 48px;"></i>
                 <p class="mt-3">Nessun rapportino disponibile</p>
+            </div>
+        @endif
+    </div>
+</div>
+
+{{-- STORICO AZIONI --}}
+@php
+    $interventionLogs = $intervention->logs()->with('user:id,name')->limit(100)->get();
+@endphp
+<div class="card mt-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0"><i class="bi bi-journals me-2"></i>Storico azioni ({{ $interventionLogs->count() }})</h4>
+        @if(auth()->user()->role === 'admin')
+            <a href="{{ route('intervention_logs.index', ['intervention_id' => $intervention->id]) }}" class="btn btn-sm btn-light">
+                <i class="bi bi-box-arrow-up-right me-1"></i>Apri in pannello
+            </a>
+        @endif
+    </div>
+    <div class="card-body p-0">
+        @if($interventionLogs->isEmpty())
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-inbox" style="font-size: 36px;"></i>
+                <p class="mt-2 mb-0">Nessuna azione registrata.</p>
+            </div>
+        @else
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 170px;">Data / ora</th>
+                            <th>Utente</th>
+                            <th>Azione</th>
+                            <th>Dettagli</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($interventionLogs as $log)
+                            <tr>
+                                <td><small class="text-nowrap">{{ $log->created_at->format('d/m/Y H:i:s') }}</small></td>
+                                <td>
+                                    @if($log->user)
+                                        <i class="bi bi-person me-1"></i>{{ $log->user->name }}
+                                    @else
+                                        <span class="text-muted"><i class="bi bi-cpu me-1"></i>Sistema</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <span class="badge bg-info text-dark">{{ \App\Support\InterventionLogActions::label($log->action) }}</span>
+                                </td>
+                                <td>
+                                    @if(!empty($log->metadata))
+                                        <code class="small text-muted">{{ json_encode($log->metadata, JSON_UNESCAPED_UNICODE) }}</code>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         @endif
     </div>

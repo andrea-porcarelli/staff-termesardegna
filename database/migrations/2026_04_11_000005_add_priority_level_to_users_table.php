@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->enum('priority_level', ['low', 'medium', 'high', 'urgent'])
-                  ->nullable()
-                  ->after('maintenance_role_id')
-                  ->comment('Livello minimo di priorità degli interventi visibili al manutentore');
+                ->nullable()
+                ->after('maintenance_role_id')
+                ->comment('Livello minimo di priorità degli interventi visibili al manutentore');
         });
     }
 

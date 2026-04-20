@@ -3,14 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Facades\Utils;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Area;
+use App\Models\Department;
+use App\Models\Equipment;
 use App\Models\Intervention;
 use App\Models\Report;
 use App\Models\User;
-use App\Models\Equipment;
-use App\Models\Area;
-use App\Models\Department;
+use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
@@ -54,7 +53,7 @@ class DashboardController extends Controller
                 ->get();
 
         } elseif ($role === 'operator') {
-            $data['quickAreas']       = Area::where('active', true)->orderBy('name')->get();
+            $data['quickAreas'] = Area::where('active', true)->orderBy('name')->get();
             $data['quickDepartments'] = Department::where('active', true)->orderBy('name')->get();
 
             // Supervisor: statistiche filtrate per reparti associati
@@ -75,45 +74,45 @@ class DashboardController extends Controller
                 $data['pendingReports'] = collect();
             } else {
                 // Filtra interventi per equipments nei reparti associati
-                $data['totalInterventions'] = Intervention::whereHas('equipment', function($query) use ($departmentIds) {
+                $data['totalInterventions'] = Intervention::whereHas('equipment', function ($query) use ($departmentIds) {
                     $query->whereIn('department_id', $departmentIds);
                 })->count();
 
-                $data['totalReports'] = Report::whereHas('intervention.equipment', function($query) use ($departmentIds) {
+                $data['totalReports'] = Report::whereHas('intervention.equipment', function ($query) use ($departmentIds) {
                     $query->whereIn('department_id', $departmentIds);
                 })->count();
 
                 // Conta solo operatori che hanno interventi nei reparti associati
                 $data['totalOperators'] = User::where('role', 'operator')
-                    ->whereHas('interventions.equipment', function($query) use ($departmentIds) {
+                    ->whereHas('interventions.equipment', function ($query) use ($departmentIds) {
                         $query->whereIn('department_id', $departmentIds);
                     })
                     ->distinct()
                     ->count();
 
-                $data['interventionsPlanned'] = Intervention::whereHas('equipment', function($query) use ($departmentIds) {
+                $data['interventionsPlanned'] = Intervention::whereHas('equipment', function ($query) use ($departmentIds) {
                     $query->whereIn('department_id', $departmentIds);
                 })->where('status', 'planned')->count();
 
-                $data['interventionsInProgress'] = Intervention::whereHas('equipment', function($query) use ($departmentIds) {
+                $data['interventionsInProgress'] = Intervention::whereHas('equipment', function ($query) use ($departmentIds) {
                     $query->whereIn('department_id', $departmentIds);
                 })->where('status', 'in_progress')->count();
 
-                $data['interventionsCompleted'] = Intervention::whereHas('equipment', function($query) use ($departmentIds) {
+                $data['interventionsCompleted'] = Intervention::whereHas('equipment', function ($query) use ($departmentIds) {
                     $query->whereIn('department_id', $departmentIds);
                 })->where('status', 'completed')->count();
 
-                $data['reportsCompleted'] = Report::whereHas('intervention.equipment', function($query) use ($departmentIds) {
+                $data['reportsCompleted'] = Report::whereHas('intervention.equipment', function ($query) use ($departmentIds) {
                     $query->whereIn('department_id', $departmentIds);
                 })->where('status', 'completed')->count();
 
-                $data['reportsDraft'] = Report::whereHas('intervention.equipment', function($query) use ($departmentIds) {
+                $data['reportsDraft'] = Report::whereHas('intervention.equipment', function ($query) use ($departmentIds) {
                     $query->whereIn('department_id', $departmentIds);
                 })->where('status', 'draft')->count();
 
                 // Interventi in scadenza (prossimi 7 giorni) nei reparti associati
                 $data['upcomingInterventions'] = Intervention::with(['equipment', 'assignedUser'])
-                    ->whereHas('equipment', function($query) use ($departmentIds) {
+                    ->whereHas('equipment', function ($query) use ($departmentIds) {
                         $query->whereIn('department_id', $departmentIds);
                     })
                     ->whereBetween('scheduled_date', [now(), now()->addDays(7)])
@@ -123,7 +122,7 @@ class DashboardController extends Controller
 
                 // Rapportini in bozza da supervisionare nei reparti associati
                 $data['pendingReports'] = Report::with(['intervention.equipment', 'user'])
-                    ->whereHas('intervention.equipment', function($query) use ($departmentIds) {
+                    ->whereHas('intervention.equipment', function ($query) use ($departmentIds) {
                         $query->whereIn('department_id', $departmentIds);
                     })
                     ->where('status', 'draft')
@@ -134,7 +133,7 @@ class DashboardController extends Controller
 
         } else {
             // Operator / Manutentore: dati per apertura rapida intervento ordinario
-            $data['quickAreas']       = Area::where('active', true)->orderBy('name')->get();
+            $data['quickAreas'] = Area::where('active', true)->orderBy('name')->get();
             $data['quickDepartments'] = Department::where('active', true)->orderBy('name')->get();
 
             // Manutentore: interventi disponibili da prendere in carico
@@ -156,7 +155,7 @@ class DashboardController extends Controller
                 // Filtra per zone assegnate al manutentore
                 $availableQuery->where(function ($q) use ($userDeptIds) {
                     $q->whereIn('department_id', $userDeptIds)
-                      ->orWhereHas('equipment', fn($eq) => $eq->whereIn('department_id', $userDeptIds));
+                        ->orWhereHas('equipment', fn ($eq) => $eq->whereIn('department_id', $userDeptIds));
                 });
                 Utils::queryLog($availableQuery
                     ->orderByRaw("FIELD(priority, 'urgent', 'high', 'medium', 'low', 'fixed_date')")
@@ -180,7 +179,7 @@ class DashboardController extends Controller
 
             // Interventi di oggi
             $data['todayInterventions'] = Intervention::with(['equipment'])
-                ->where(function ($q) use($user) {
+                ->where(function ($q) use ($user) {
                     $q->where('assigned_user_id', $user->id)
                         ->orWhere('assigned_user_id', 0);
                 })

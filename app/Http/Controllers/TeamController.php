@@ -14,10 +14,14 @@ class TeamController extends Controller
         $search = $request->get('search', '');
         $sort = $request->get('sort', 'name');
         $dir = $request->get('direction', 'asc');
-        if (!in_array($sort, ['id', 'name', 'created_at'])) { $sort = 'name'; }
-        if (!in_array($dir, ['asc', 'desc'])) { $dir = 'asc'; }
+        if (! in_array($sort, ['id', 'name', 'created_at'])) {
+            $sort = 'name';
+        }
+        if (! in_array($dir, ['asc', 'desc'])) {
+            $dir = 'asc';
+        }
 
-        $teams = Team::when($search, fn($q) => $q->where('name', 'LIKE', "%{$search}%"))
+        $teams = Team::when($search, fn ($q) => $q->where('name', 'LIKE', "%{$search}%"))
             ->orderBy($sort, $dir)
             ->get();
 
@@ -53,7 +57,7 @@ class TeamController extends Controller
     public function update(Request $request, Team $team): RedirectResponse
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:teams,name,' . $team->id,
+            'name' => 'required|string|max:255|unique:teams,name,'.$team->id,
             'description' => 'nullable|string',
         ]);
 

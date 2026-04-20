@@ -19,21 +19,21 @@ class HomeController extends Controller
 
         // Miei interventi + interventi disponibili compatibili (non ancora chiusi).
         $interventions = Intervention::with([
-                'equipment.department.area',
-                'area',
-                'department',
-                'maintenanceRole',
-                'assignedUser',
-                'collaborations' => fn ($q) => $q
-                    ->where('user_id', $user->id)
-                    ->where('status', \App\Models\InterventionCollaboration::STATUS_ACCEPTED),
-                'reports' => fn ($q) => $q->where('user_id', $user->id),
-            ])
+            'equipment.department.area',
+            'area',
+            'department',
+            'maintenanceRole',
+            'assignedUser',
+            'collaborations' => fn ($q) => $q
+                ->where('user_id', $user->id)
+                ->where('status', \App\Models\InterventionCollaboration::STATUS_ACCEPTED),
+            'reports' => fn ($q) => $q->where('user_id', $user->id),
+        ])
             ->whereIn('status', ['open', 'planned', 'in_progress'])
             ->where(function ($q) {
                 // Nasconde ticket sospesi/rinviati finché non arriva la data.
                 $q->whereNull('suspended_until')
-                  ->orWhere('suspended_until', '<=', today());
+                    ->orWhere('suspended_until', '<=', today());
             })
             ->where(function ($q) use ($user, $deptIds, $roleIds) {
                 // Miei assegnati
@@ -64,43 +64,36 @@ class HomeController extends Controller
         $future30 = today()->copy()->addDays(30);
 
         // 1a. Pianificati scaduti (scheduled_date < oggi)
-        $overduePianificati = $interventions->filter(fn ($i) =>
-            $i->tipo === 'pianificazione'
+        $overduePianificati = $interventions->filter(fn ($i) => $i->tipo === 'pianificazione'
             && $i->scheduled_date
             && $i->scheduled_date->lt($today)
         )->sortBy(fn ($i) => $i->scheduled_date->timestamp)->values();
 
         // 1b. Liberi (ordinari) in ritardo via accessor is_overdue
-        $overdueLiberi = $interventions->filter(fn ($i) =>
-            $i->tipo !== 'pianificazione' && $i->is_overdue
+        $overdueLiberi = $interventions->filter(fn ($i) => $i->tipo !== 'pianificazione' && $i->is_overdue
         )->values();
 
         // 2. Pianificati data di oggi
-        $pianificatiOggi = $interventions->filter(fn ($i) =>
-            $i->tipo === 'pianificazione'
+        $pianificatiOggi = $interventions->filter(fn ($i) => $i->tipo === 'pianificazione'
             && $i->scheduled_date
             && $i->scheduled_date->isSameDay($today)
         )->values();
 
         // 5. Programmati futuri (pianificazione, data > oggi e <= +30gg), ordinati per data
-        $programmatiFuturi = $interventions->filter(fn ($i) =>
-            $i->tipo === 'pianificazione'
+        $programmatiFuturi = $interventions->filter(fn ($i) => $i->tipo === 'pianificazione'
             && $i->scheduled_date
             && $i->scheduled_date->gt($today)
             && $i->scheduled_date->lte($future30)
         )->sortBy(fn ($i) => $i->scheduled_date->timestamp)->values();
 
         // 3 & 4. Ordinari non scaduti, suddivisi per priorità
-        $ordinariAttivi = $interventions->filter(fn ($i) =>
-            $i->tipo !== 'pianificazione' && !$i->is_overdue
+        $ordinariAttivi = $interventions->filter(fn ($i) => $i->tipo !== 'pianificazione' && ! $i->is_overdue
         )->values();
 
-        $altaPriorita = $ordinariAttivi->filter(fn ($i) =>
-            in_array($i->priority, ['urgent', 'high'])
+        $altaPriorita = $ordinariAttivi->filter(fn ($i) => in_array($i->priority, ['urgent', 'high'])
         )->sortBy(fn ($i) => $i->priority === 'urgent' ? 0 : 1)->values();
 
-        $bassaPriorita = $ordinariAttivi->filter(fn ($i) =>
-            in_array($i->priority, ['medium', 'low', 'fixed_date'])
+        $bassaPriorita = $ordinariAttivi->filter(fn ($i) => in_array($i->priority, ['medium', 'low', 'fixed_date'])
         )->values();
 
         $quickAreas = Area::where('active', true)->orderBy('name')->get();

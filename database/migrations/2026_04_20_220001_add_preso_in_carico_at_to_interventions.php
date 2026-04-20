@@ -9,16 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('interventions', function (Blueprint $table) {
-            $table->date('suspended_until')->nullable()->after('completed_at');
-            $table->index('suspended_until');
+            $table->timestamp('preso_in_carico_at')->nullable()->after('completed_at');
         });
     }
 
     public function down(): void
     {
         Schema::table('interventions', function (Blueprint $table) {
-            $table->dropIndex(['suspended_until']);
-            $table->dropColumn('suspended_until');
+            $table->dropColumn('preso_in_carico_at');
         });
     }
 };

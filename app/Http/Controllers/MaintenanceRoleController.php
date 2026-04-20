@@ -14,10 +14,14 @@ class MaintenanceRoleController extends Controller
         $search = $request->get('search', '');
         $sort = $request->get('sort', 'name');
         $dir = $request->get('direction', 'asc');
-        if (!in_array($sort, ['id', 'name', 'created_at'])) { $sort = 'name'; }
-        if (!in_array($dir, ['asc', 'desc'])) { $dir = 'asc'; }
+        if (! in_array($sort, ['id', 'name', 'created_at'])) {
+            $sort = 'name';
+        }
+        if (! in_array($dir, ['asc', 'desc'])) {
+            $dir = 'asc';
+        }
 
-        $maintenanceRoles = MaintenanceRole::when($search, fn($q) => $q->where('name', 'LIKE', "%{$search}%"))
+        $maintenanceRoles = MaintenanceRole::when($search, fn ($q) => $q->where('name', 'LIKE', "%{$search}%"))
             ->orderBy($sort, $dir)
             ->get();
 
@@ -53,7 +57,7 @@ class MaintenanceRoleController extends Controller
     public function update(Request $request, MaintenanceRole $maintenanceRole): RedirectResponse
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:maintenance_roles,name,' . $maintenanceRole->id,
+            'name' => 'required|string|max:255|unique:maintenance_roles,name,'.$maintenanceRole->id,
             'description' => 'nullable|string',
         ]);
 

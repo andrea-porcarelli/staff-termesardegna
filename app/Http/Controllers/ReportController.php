@@ -4,12 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ReportRequest;
 use App\Http\Requests\UpdateReportRequest;
+use App\Models\Intervention;
+use App\Models\Media;
+use App\Models\Report;
+use App\Models\User;
+use App\Services\InterventionActivityLogger;
+use App\Support\InterventionLogActions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use App\Models\Report;
-use App\Models\Media;
-use App\Models\Intervention;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -18,7 +20,7 @@ class ReportController extends Controller
 {
     public function index(Request $request): View
     {
-        abort_if(!in_array(Auth::user()->role, ['admin', 'operator']), 403);
+        abort_if(! in_array(Auth::user()->role, ['admin', 'operator']), 403);
 
         $query = Report::with(['user', 'intervention.equipment', 'intervention.area', 'intervention.department'])
             ->orderBy('report_date', 'desc');
@@ -44,7 +46,7 @@ class ReportController extends Controller
 
     public function close(Intervention $intervention, Report $report): RedirectResponse
     {
-        abort_if(!in_array(Auth::user()->role, ['admin', 'operator']), 403);
+        abort_if(! in_array(Auth::user()->role, ['admin', 'operator']), 403);
 
         if ($report->intervention_id !== $intervention->id) {
             abort(404);
@@ -52,10 +54,16 @@ class ReportController extends Controller
 
         $report->update(['status' => 'chiuso']);
 
+        InterventionActivityLogger::log($intervention, InterventionLogActions::REPORT_CLOSED, [
+            'report_id' => $report->id,
+        ]);
+
         $intervention->update([
-            'status'       => 'completed',
+            'status' => 'completed',
             'completed_at' => now(),
         ]);
+
+        InterventionActivityLogger::log($intervention, InterventionLogActions::COMPLETED);
 
         return back()->with('success', 'Rapportino chiuso e intervento segnato come completato.');
     }
@@ -63,12 +71,12 @@ class ReportController extends Controller
     public function create(Intervention $intervention): View
     {
         // Verifica che l'utente sia autorizzato
-        if (!$this->canReportOn($intervention)) {
+        if (! $this->canReportOn($intervention)) {
             abort(403);
         }
 
         // Genera un ID temporaneo unico per questa sessione di upload
-        $tempMediaId = 'temp_' . uniqid() . '_' . Auth::id();
+        $tempMediaId = 'temp_'.uniqid().'_'.Auth::id();
         session(['temp_media_id' => $tempMediaId]);
 
         $intervention->load(['equipment.components', 'equipment.department.area', 'area', 'department', 'assignedUser']);
@@ -79,7 +87,7 @@ class ReportController extends Controller
     public function store(ReportRequest $request, Intervention $intervention): RedirectResponse
     {
         // Verifica che l'utente sia autorizzato
-        if (!$this->canReportOn($intervention)) {
+        if (! $this->canReportOn($intervention)) {
             abort(403);
         }
 
@@ -108,6 +116,11 @@ class ReportController extends Controller
             // Rimuovi l'ID temporaneo dalla sessione
             session()->forget('temp_media_id');
         }
+
+        InterventionActivityLogger::log($intervention, InterventionLogActions::REPORT_CREATED, [
+            'report_id' => $report->id,
+            'report_status' => $report->status,
+        ]);
 
         return redirect()->route('interventions.show', $intervention)
             ->with('success', 'Rapportino creato con successo!');
@@ -150,17 +163,28 @@ class ReportController extends Controller
         ];
 
         // Solo admin/operator possono impostare "chiuso"
-        if (($data['status'] ?? '') === 'chiuso' && !in_array(Auth::user()->role, ['admin', 'operator'])) {
+        if (($data['status'] ?? '') === 'chiuso' && ! in_array(Auth::user()->role, ['admin', 'operator'])) {
             $data['status'] = 'completed';
         }
 
         $report->update($data);
 
+        InterventionActivityLogger::log($intervention, InterventionLogActions::REPORT_UPDATED, [
+            'report_id' => $report->id,
+            'report_status' => $report->status,
+        ]);
+
         if (($data['status'] ?? '') === 'chiuso') {
+            InterventionActivityLogger::log($intervention, InterventionLogActions::REPORT_CLOSED, [
+                'report_id' => $report->id,
+            ]);
+
             $intervention->update([
-                'status'       => 'completed',
+                'status' => 'completed',
                 'completed_at' => now(),
             ]);
+
+            InterventionActivityLogger::log($intervention, InterventionLogActions::COMPLETED);
         }
 
         return redirect()->route('interventions.show', $intervention)
@@ -179,7 +203,12 @@ class ReportController extends Controller
             abort(403);
         }
 
+        $reportId = $report->id;
         $report->delete();
+
+        InterventionActivityLogger::log($intervention, InterventionLogActions::REPORT_DELETED, [
+            'report_id' => $reportId,
+        ]);
 
         return redirect()->route('interventions.show', $intervention)
             ->with('success', 'Rapportino eliminato con successo!');
@@ -188,8 +217,12 @@ class ReportController extends Controller
     private function canReportOn(Intervention $intervention): bool
     {
         $user = Auth::user();
-        if ($user->role === 'admin') return true;
-        if ($intervention->assigned_user_id === $user->id) return true;
+        if ($user->role === 'admin') {
+            return true;
+        }
+        if ($intervention->assigned_user_id === $user->id) {
+            return true;
+        }
 
         return $intervention->collaborations()
             ->where('user_id', $user->id)
@@ -205,40 +238,40 @@ class ReportController extends Controller
         $intervention = $report->intervention;
 
         if ($intervention->equipment) {
-            $destination = $intervention->equipment->name . ' (' . $intervention->equipment->code . ')';
-            $location    = ($intervention->equipment->department->area->name ?? '') . ' / ' . ($intervention->equipment->department->name ?? '');
+            $destination = $intervention->equipment->name.' ('.$intervention->equipment->code.')';
+            $location = ($intervention->equipment->department->area->name ?? '').' / '.($intervention->equipment->department->name ?? '');
         } else {
-            $destination = ($intervention->area->name ?? '-') . ' / ' . ($intervention->department->name ?? '-');
-            $location    = null;
+            $destination = ($intervention->area->name ?? '-').' / '.($intervention->department->name ?? '-');
+            $location = null;
         }
 
         // Formatta i dati per la risposta JSON
         $data = [
-            'id'           => $report->id,
-            'report_date'  => $report->report_date ? $report->report_date->format('d/m/Y') : null,
-            'time_range'   => null,
-            'user_name'    => $report->user->name,
-            'status'       => $report->status,
+            'id' => $report->id,
+            'report_date' => $report->report_date ? $report->report_date->format('d/m/Y') : null,
+            'time_range' => null,
+            'user_name' => $report->user->name,
+            'status' => $report->status,
             'status_label' => ['draft' => 'Bozza', 'completed' => 'Completato', 'chiuso' => 'Chiuso'][$report->status] ?? $report->status,
-            'activities'   => $report->activities,
-            'notes'        => $report->notes,
-            'media'        => [],
+            'activities' => $report->activities,
+            'notes' => $report->notes,
+            'media' => [],
             'intervention' => [
-                'title'          => $intervention->title,
-                'description'    => $intervention->description,
-                'notes'          => $intervention->notes,
-                'destination'    => $destination,
-                'location'       => $location,
+                'title' => $intervention->title,
+                'description' => $intervention->description,
+                'notes' => $intervention->notes,
+                'destination' => $destination,
+                'location' => $location,
                 'scheduled_date' => $intervention->scheduled_date ? $intervention->scheduled_date->format('d/m/Y') : null,
                 'scheduled_time' => $intervention->scheduled_start_time ? substr($intervention->scheduled_start_time, 0, 5) : null,
-                'priority'       => $intervention->priority,
+                'priority' => $intervention->priority,
                 'priority_label' => ['low' => 'Bassa', 'medium' => 'Media', 'high' => 'Alta', 'critical' => 'Critica'][$intervention->priority] ?? $intervention->priority,
             ],
         ];
 
         // Formatta orario
         if ($report->start_time && $report->end_time) {
-            $data['time_range'] = substr($report->start_time, 0, 5) . ' - ' . substr($report->end_time, 0, 5);
+            $data['time_range'] = substr($report->start_time, 0, 5).' - '.substr($report->end_time, 0, 5);
         }
 
         // Formatta media
@@ -251,7 +284,7 @@ class ReportController extends Controller
                 'file_type' => $media->file_type,
                 'file_size' => $media->file_size_formatted,
                 'created_at' => $media->created_at->format('d/m/Y H:i'),
-                'description' => $media->description
+                'description' => $media->description,
             ];
         }
 

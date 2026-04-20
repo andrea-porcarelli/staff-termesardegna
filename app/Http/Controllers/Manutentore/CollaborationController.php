@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Manutentore;
 use App\Http\Controllers\Controller;
 use App\Models\InterventionCollaboration;
 use App\Notifications\CollaborationRespondedNotification;
+use App\Services\InterventionActivityLogger;
+use App\Support\InterventionLogActions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,8 +41,18 @@ class CollaborationController extends Controller
             new CollaborationRespondedNotification($collaboration->fresh())
         );
 
+        if ($collaboration->intervention) {
+            InterventionActivityLogger::log(
+                $collaboration->intervention,
+                $data['decision'] === 'accept'
+                    ? InterventionLogActions::COLLABORATION_ACCEPTED
+                    : InterventionLogActions::COLLABORATION_DECLINED,
+                ['collaboration_id' => $collaboration->id]
+            );
+        }
+
         return response()->json([
-            'ok'      => true,
+            'ok' => true,
             'message' => $data['decision'] === 'accept'
                 ? 'Collaborazione accettata.'
                 : 'Richiesta rifiutata.',

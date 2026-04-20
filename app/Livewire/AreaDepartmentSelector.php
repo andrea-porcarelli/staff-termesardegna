@@ -2,21 +2,26 @@
 
 namespace App\Livewire;
 
-use Livewire\Component;
 use App\Models\Area;
 use App\Models\Department;
+use Livewire\Component;
 
 class AreaDepartmentSelector extends Component
 {
     public $areas;
+
     public $departments;
+
     public $selectedAreaId;
+
     public $selectedDepartmentId;
 
     public $showNewAreaForm = false;
+
     public $showNewDepartmentForm = false;
 
     public $newAreaName = '';
+
     public $newDepartmentName = '';
 
     public function mount($areaId = null, $departmentId = null)
@@ -58,18 +63,19 @@ class AreaDepartmentSelector extends Component
 
     public function toggleNewAreaForm()
     {
-        $this->showNewAreaForm = !$this->showNewAreaForm;
+        $this->showNewAreaForm = ! $this->showNewAreaForm;
         $this->showNewDepartmentForm = false;
         $this->resetNewAreaForm();
     }
 
     public function toggleNewDepartmentForm()
     {
-        if (!$this->selectedAreaId) {
+        if (! $this->selectedAreaId) {
             session()->flash('error', 'Seleziona prima un\'area');
+
             return;
         }
-        $this->showNewDepartmentForm = !$this->showNewDepartmentForm;
+        $this->showNewDepartmentForm = ! $this->showNewDepartmentForm;
         $this->showNewAreaForm = false;
         $this->resetNewDepartmentForm();
     }

@@ -4,43 +4,46 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\EquipmentRequest;
 use App\Http\Requests\UpdateEquipmentRequest;
+use App\Models\Area;
+use App\Models\Department;
+use App\Models\Equipment;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use App\Models\Equipment;
-use App\Models\EquipmentComponent;
-use App\Models\Department;
-use App\Models\Area;
-use Illuminate\Support\Facades\Validator;
-use Carbon\Carbon;
 use Illuminate\View\View;
 
 class EquipmentController extends Controller
 {
-    public function index(Request $request) : View
+    public function index(Request $request): View
     {
         $search = $request->get('search', '');
         $sort = $request->get('sort', 'created_at');
         $dir = $request->get('direction', 'desc');
         $allowedSorts = ['code', 'name', 'created_at'];
-        if (!in_array($sort, $allowedSorts)) { $sort = 'created_at'; }
-        if (!in_array($dir, ['asc', 'desc'])) { $dir = 'desc'; }
+        if (! in_array($sort, $allowedSorts)) {
+            $sort = 'created_at';
+        }
+        if (! in_array($dir, ['asc', 'desc'])) {
+            $dir = 'desc';
+        }
 
         $equipment = Equipment::with(['department.area'])
-            ->when($search, fn($q) => $q->where('name', 'LIKE', "%{$search}%")->orWhere('code', 'LIKE', "%{$search}%"))
+            ->when($search, fn ($q) => $q->where('name', 'LIKE', "%{$search}%")->orWhere('code', 'LIKE', "%{$search}%"))
             ->orderBy($sort, $dir)
             ->get();
 
         return view('equipment.index', compact('equipment', 'search', 'sort', 'dir'));
     }
 
-    public function create()  : View
+    public function create(): View
     {
         $areas = Area::where('active', true)->with('departments')->orderBy('name')->get();
         $departments = Department::where('active', true)->orderBy('name')->get();
+
         return view('equipment.create', compact('areas', 'departments'));
     }
 
-    public function store(EquipmentRequest $request) : RedirectResponse
+    public function store(EquipmentRequest $request): RedirectResponse
     {
         $data = [
             'department_id' => $request->department_id,
@@ -65,13 +68,13 @@ class EquipmentController extends Controller
 
         // Salva componenti
         foreach ($request->get('components', []) as $comp) {
-            if (!empty($comp['name'])) {
+            if (! empty($comp['name'])) {
                 $equipment->components()->create([
                     'name' => $comp['name'],
                     'description' => $comp['description'] ?? null,
                     'maintenance_type' => $comp['maintenance_type'] ?? 'frequency',
-                    'frequency_days' => !empty($comp['frequency_days']) ? (int)$comp['frequency_days'] : null,
-                    'next_maintenance_date' => !empty($comp['next_maintenance_date']) ? $comp['next_maintenance_date'] : null,
+                    'frequency_days' => ! empty($comp['frequency_days']) ? (int) $comp['frequency_days'] : null,
+                    'next_maintenance_date' => ! empty($comp['next_maintenance_date']) ? $comp['next_maintenance_date'] : null,
                 ]);
             }
         }
@@ -80,21 +83,23 @@ class EquipmentController extends Controller
             ->with('success', 'Impianto/Macchina creato con successo!');
     }
 
-    public function show(Equipment $equipment) : View
+    public function show(Equipment $equipment): View
     {
         $equipment->load('department.area', 'components');
+
         return view('equipment.show', compact('equipment'));
     }
 
-    public function edit(Equipment $equipment) : View
+    public function edit(Equipment $equipment): View
     {
         $areas = Area::where('active', true)->with('departments')->orderBy('name')->get();
         $departments = Department::where('active', true)->orderBy('name')->get();
         $equipment->load('components');
+
         return view('equipment.edit', compact('equipment', 'areas', 'departments'));
     }
 
-    public function update(UpdateEquipmentRequest $request, Equipment $equipment) : RedirectResponse
+    public function update(UpdateEquipmentRequest $request, Equipment $equipment): RedirectResponse
     {
         $data = [
             'department_id' => $request->department_id,
@@ -120,13 +125,13 @@ class EquipmentController extends Controller
         // Aggiorna componenti: elimina esistenti e ricrea
         $equipment->components()->delete();
         foreach ($request->get('components', []) as $comp) {
-            if (!empty($comp['name'])) {
+            if (! empty($comp['name'])) {
                 $equipment->components()->create([
                     'name' => $comp['name'],
                     'description' => $comp['description'] ?? null,
                     'maintenance_type' => $comp['maintenance_type'] ?? 'frequency',
-                    'frequency_days' => !empty($comp['frequency_days']) ? (int)$comp['frequency_days'] : null,
-                    'next_maintenance_date' => !empty($comp['next_maintenance_date']) ? $comp['next_maintenance_date'] : null,
+                    'frequency_days' => ! empty($comp['frequency_days']) ? (int) $comp['frequency_days'] : null,
+                    'next_maintenance_date' => ! empty($comp['next_maintenance_date']) ? $comp['next_maintenance_date'] : null,
                 ]);
             }
         }
@@ -135,7 +140,7 @@ class EquipmentController extends Controller
             ->with('success', 'Impianto/Macchina aggiornato con successo!');
     }
 
-    public function destroy(Equipment $equipment) : RedirectResponse
+    public function destroy(Equipment $equipment): RedirectResponse
     {
         $equipment->delete();
 

@@ -21,11 +21,11 @@ class WorkScheduleSlot extends Model
     ];
 
     protected $casts = [
-        'date'         => 'date',
-        'date_from'    => 'date',
-        'date_to'      => 'date',
+        'date' => 'date',
+        'date_from' => 'date',
+        'date_to' => 'date',
         'is_recurring' => 'boolean',
-        'day_of_week'  => 'integer',
+        'day_of_week' => 'integer',
     ];
 
     public function user(): BelongsTo

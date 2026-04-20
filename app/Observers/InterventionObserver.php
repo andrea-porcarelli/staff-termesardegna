@@ -4,6 +4,8 @@ namespace App\Observers;
 
 use App\Models\Intervention;
 use App\Services\AutoAssignmentService;
+use App\Services\InterventionActivityLogger;
+use App\Support\InterventionLogActions;
 
 class InterventionObserver
 {
@@ -15,6 +17,12 @@ class InterventionObserver
 
     public function created(Intervention $intervention): void
     {
-        static::$lastAssignmentResult = (new AutoAssignmentService())->assign($intervention);
+        InterventionActivityLogger::log($intervention, InterventionLogActions::CREATED, [
+            'tipo' => $intervention->tipo,
+            'priority' => $intervention->priority,
+            'status' => $intervention->status,
+        ]);
+
+        static::$lastAssignmentResult = (new AutoAssignmentService)->assign($intervention);
     }
 }

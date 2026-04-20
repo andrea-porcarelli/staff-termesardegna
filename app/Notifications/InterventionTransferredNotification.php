@@ -25,14 +25,14 @@ class InterventionTransferredNotification extends Notification
     public function toArray($notifiable): array
     {
         return [
-            'type'            => 'transfer_received',
+            'type' => 'transfer_received',
             'intervention_id' => $this->intervention->id,
             'intervention_title' => $this->intervention->title,
-            'from_user_id'    => $this->fromUser->id,
-            'from_user_name'  => $this->fromUser->name,
-            'reason'          => $this->reason,
-            'headline'        => "Ti è stato trasferito il ticket #{$this->intervention->id}",
-            'subline'         => "Da {$this->fromUser->name}",
+            'from_user_id' => $this->fromUser->id,
+            'from_user_name' => $this->fromUser->name,
+            'reason' => $this->reason,
+            'headline' => "Ti è stato trasferito il ticket #{$this->intervention->id}",
+            'subline' => "Da {$this->fromUser->name}",
         ];
     }
 }

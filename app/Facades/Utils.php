@@ -10,7 +10,7 @@ class Utils
     {
         Log::info($models->toSql());
         if (preg_match('/\?/', $models->toSql())) {
-            $query = str_replace(array('?'), array('\'%s\''), $models->toSql());
+            $query = str_replace(['?'], ['\'%s\''], $models->toSql());
             $query = vsprintf($query, $models->getBindings());
         } else {
             $query = $models->toSql();
@@ -18,7 +18,7 @@ class Utils
         if ($return) {
             return $query;
         }
-        if (!$print) {
+        if (! $print) {
             Log::info($query);
         } else {
             echo $query;

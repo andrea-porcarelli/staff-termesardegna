@@ -3,19 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\InterventionRequest;
-use App\Observers\InterventionObserver;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use App\Models\Intervention;
 use App\Models\Area;
 use App\Models\Department;
 use App\Models\Equipment;
 use App\Models\EquipmentComponent;
+use App\Models\Intervention;
 use App\Models\MaintenanceRole;
 use App\Models\User;
-use Illuminate\View\View;
+use App\Observers\InterventionObserver;
+use App\Services\InterventionActivityLogger;
+use App\Support\InterventionLogActions;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\View;
 
 class InterventionController extends Controller
 {
@@ -30,6 +32,7 @@ class InterventionController extends Controller
         }
 
         $interventions = $query->get();
+
         return view('interventions.index', compact('interventions'));
     }
 
@@ -57,29 +60,29 @@ class InterventionController extends Controller
     {
         $isPianificazione = $request->tipo === 'pianificazione';
         $priority = $isPianificazione ? 'medium' : ($request->priority ?? 'medium');
-        $isFixedDate = !$isPianificazione && $priority === 'fixed_date';
+        $isFixedDate = ! $isPianificazione && $priority === 'fixed_date';
 
         $data = [
-            'tipo'                       => $request->tipo,
-            'equipment_id'               => $isPianificazione ? $request->equipment_id : null,
-            'component_id'               => $isPianificazione ? ($request->component_id ?: null) : null,
-            'maintenance_role_id'        => $request->filled('maintenance_role_id') ? $request->maintenance_role_id : null,
-            'area_id'                    => !$isPianificazione ? $request->area_id : null,
-            'department_id'              => !$isPianificazione ? $request->department_id : null,
-            'assigned_user_id'           => $isPianificazione ? ($request->assigned_user_id ?: null) : null,
-            'title'                      => $request->title,
-            'description'                => $request->description,
-            'scheduled_date'             => ($isPianificazione || $isFixedDate) ? ($request->scheduled_date ?: null) : null,
-            'scheduled_start_time'       => ($isPianificazione || $isFixedDate) ? ($request->scheduled_start_time ?: null) : null,
+            'tipo' => $request->tipo,
+            'equipment_id' => $isPianificazione ? $request->equipment_id : null,
+            'component_id' => $isPianificazione ? ($request->component_id ?: null) : null,
+            'maintenance_role_id' => $request->filled('maintenance_role_id') ? $request->maintenance_role_id : null,
+            'area_id' => ! $isPianificazione ? $request->area_id : null,
+            'department_id' => ! $isPianificazione ? $request->department_id : null,
+            'assigned_user_id' => $isPianificazione ? ($request->assigned_user_id ?: null) : null,
+            'title' => $request->title,
+            'description' => $request->description,
+            'scheduled_date' => ($isPianificazione || $isFixedDate) ? ($request->scheduled_date ?: null) : null,
+            'scheduled_start_time' => ($isPianificazione || $isFixedDate) ? ($request->scheduled_start_time ?: null) : null,
             'estimated_duration_minutes' => $isPianificazione ? ($request->estimated_duration_minutes ?: null) : null,
-            'status'                     => in_array(Auth::user()->role, ['operator', 'manutentore']) ? 'open' : ($request->status ?? 'planned'),
-            'priority'                   => $priority,
-            'notes'                      => $request->notes,
+            'status' => in_array(Auth::user()->role, ['operator', 'manutentore']) ? 'open' : ($request->status ?? 'planned'),
+            'priority' => $priority,
+            'notes' => $request->notes,
         ];
 
         Intervention::create($data);
 
-        $result   = InterventionObserver::$lastAssignmentResult;
+        $result = InterventionObserver::$lastAssignmentResult;
         $redirect = redirect()->route('interventions.index');
 
         return match ($result['status'] ?? 'skipped') {
@@ -101,6 +104,7 @@ class InterventionController extends Controller
     public function show(Intervention $intervention): View
     {
         $intervention->load(['equipment.department.area', 'assignedUser', 'maintenanceRole', 'reports.user']);
+
         return view('interventions.show', compact('intervention'));
     }
 
@@ -109,15 +113,21 @@ class InterventionController extends Controller
         $user = Auth::user();
         abort_if($user->role !== 'manutentore', 403);
 
-        // Verifica che l'intervento sia prendibile in carico
-        if (!in_array($intervention->status, ['open', 'planned'])) {
+        if ($intervention->preso_in_carico_at !== null) {
+            return back()->with('error', 'Questo intervento è già stato preso in carico.');
+        }
+
+        if (in_array($intervention->status, ['completed', 'cancelled'])) {
             return back()->with('error', 'Questo intervento non può essere preso in carico.');
         }
 
         $intervention->update([
             'assigned_user_id' => $user->id,
             'status' => 'in_progress',
+            'preso_in_carico_at' => now(),
         ]);
+
+        InterventionActivityLogger::log($intervention, InterventionLogActions::TAKEN_IN_CHARGE);
 
         return redirect()->route('interventions.show', $intervention)
             ->with('success', 'Intervento preso in carico con successo!');
@@ -132,6 +142,7 @@ class InterventionController extends Controller
         $departments = Department::where('active', true)->orderBy('name')->get();
         $maintenanceRoles = MaintenanceRole::orderBy('name')->get();
         $components = EquipmentComponent::all(['id', 'equipment_id', 'name']);
+
         return view('interventions.edit', compact('intervention', 'equipments', 'operators', 'areas', 'departments', 'maintenanceRoles', 'components'));
     }
 
@@ -139,27 +150,46 @@ class InterventionController extends Controller
     {
         $isPianificazione = $request->tipo === 'pianificazione';
         $priority = $isPianificazione ? 'medium' : ($request->priority ?? 'medium');
-        $isFixedDate = !$isPianificazione && $priority === 'fixed_date';
+        $isFixedDate = ! $isPianificazione && $priority === 'fixed_date';
+
+        $previousAssignedUserId = $intervention->assigned_user_id;
 
         $data = [
-            'tipo'                       => $request->tipo,
-            'equipment_id'               => $isPianificazione ? $request->equipment_id : null,
-            'component_id'               => $isPianificazione ? ($request->component_id ?: null) : null,
-            'maintenance_role_id'        => $request->filled('maintenance_role_id') ? $request->maintenance_role_id : null,
-            'area_id'                    => !$isPianificazione ? $request->area_id : null,
-            'department_id'              => !$isPianificazione ? $request->department_id : null,
-            'assigned_user_id'           => $isPianificazione ? ($request->assigned_user_id ?: null) : null,
-            'title'                      => $request->title,
-            'description'                => $request->description,
-            'scheduled_date'             => ($isPianificazione || $isFixedDate) ? ($request->scheduled_date ?: null) : null,
-            'scheduled_start_time'       => ($isPianificazione || $isFixedDate) ? ($request->scheduled_start_time ?: null) : null,
+            'tipo' => $request->tipo,
+            'equipment_id' => $isPianificazione ? $request->equipment_id : null,
+            'component_id' => $isPianificazione ? ($request->component_id ?: null) : null,
+            'maintenance_role_id' => $request->filled('maintenance_role_id') ? $request->maintenance_role_id : null,
+            'area_id' => ! $isPianificazione ? $request->area_id : null,
+            'department_id' => ! $isPianificazione ? $request->department_id : null,
+            'assigned_user_id' => $isPianificazione ? ($request->assigned_user_id ?: null) : null,
+            'title' => $request->title,
+            'description' => $request->description,
+            'scheduled_date' => ($isPianificazione || $isFixedDate) ? ($request->scheduled_date ?: null) : null,
+            'scheduled_start_time' => ($isPianificazione || $isFixedDate) ? ($request->scheduled_start_time ?: null) : null,
             'estimated_duration_minutes' => $isPianificazione ? ($request->estimated_duration_minutes ?: null) : null,
-            'status'                     => $request->status ?? 'planned',
-            'priority'                   => $priority,
-            'notes'                      => $request->notes,
+            'status' => $request->status ?? 'planned',
+            'priority' => $priority,
+            'notes' => $request->notes,
         ];
 
-        $intervention->update($data);
+        $intervention->fill($data);
+        $changed = array_keys($intervention->getDirty());
+        $intervention->save();
+
+        if (in_array('assigned_user_id', $changed, true)
+            && $previousAssignedUserId !== $intervention->assigned_user_id) {
+            InterventionActivityLogger::log($intervention, InterventionLogActions::MANUALLY_ASSIGNED, [
+                'from_user_id' => $previousAssignedUserId,
+                'to_user_id' => $intervention->assigned_user_id,
+            ]);
+            $changed = array_values(array_diff($changed, ['assigned_user_id']));
+        }
+
+        if (! empty($changed)) {
+            InterventionActivityLogger::log($intervention, InterventionLogActions::UPDATED, [
+                'changed_fields' => array_values($changed),
+            ]);
+        }
 
         return redirect()->route('interventions.index')
             ->with('success', 'Intervento aggiornato con successo!');
@@ -167,6 +197,10 @@ class InterventionController extends Controller
 
     public function destroy(Intervention $intervention): RedirectResponse
     {
+        InterventionActivityLogger::log($intervention, InterventionLogActions::CANCELLED, [
+            'reason' => 'deleted_by_admin',
+        ]);
+
         $intervention->delete();
 
         return redirect()->route('interventions.index')
@@ -175,30 +209,30 @@ class InterventionController extends Controller
 
     public function quickStore(Request $request): RedirectResponse
     {
-        abort_if(!in_array(Auth::user()->role, ['operator', 'manutentore']), 403);
+        abort_if(! in_array(Auth::user()->role, ['operator', 'manutentore']), 403);
 
         $request->validate([
-            'area_id'       => 'required|exists:areas,id',
+            'area_id' => 'required|exists:areas,id',
             'department_id' => 'required|exists:departments,id',
-            'description'   => 'nullable|string',
+            'description' => 'nullable|string',
         ], [
-            'area_id.required'       => 'Seleziona un\'area.',
+            'area_id.required' => 'Seleziona un\'area.',
             'department_id.required' => 'Seleziona una zona.',
         ]);
 
-        $area       = \App\Models\Area::find($request->area_id);
+        $area = \App\Models\Area::find($request->area_id);
         $department = \App\Models\Department::find($request->department_id);
 
         Intervention::create([
-            'tipo'             => 'ordinario',
-            'area_id'          => $request->area_id,
-            'department_id'    => $request->department_id,
+            'tipo' => 'ordinario',
+            'area_id' => $request->area_id,
+            'department_id' => $request->department_id,
             'assigned_user_id' => Auth::id(),
-            'title'            => 'Intervento - ' . $area->name . ' / ' . $department->name,
-            'description'      => $request->description,
-            'scheduled_date'   => today(),
-            'status'           => 'in_progress',
-            'priority'         => 'medium',
+            'title' => 'Intervento - '.$area->name.' / '.$department->name,
+            'description' => $request->description,
+            'scheduled_date' => today(),
+            'status' => 'open',
+            'priority' => 'medium',
         ]);
 
         return redirect()->route('dashboard')
@@ -208,8 +242,8 @@ class InterventionController extends Controller
     public function equipmentPlanning(Equipment $equipment): JsonResponse
     {
         return response()->json([
-            'next_maintenance_date'       => $equipment->next_maintenance_date?->format('Y-m-d'),
-            'maintenance_frequency_days'  => $equipment->maintenance_frequency_days,
+            'next_maintenance_date' => $equipment->next_maintenance_date?->format('Y-m-d'),
+            'maintenance_frequency_days' => $equipment->maintenance_frequency_days,
         ]);
     }
 
@@ -235,21 +269,21 @@ class InterventionController extends Controller
         foreach ($interventions as $intervention) {
             $weekNumber = $intervention->scheduled_date->week;
             $year = $intervention->scheduled_date->year;
-            $weekKey = $year . '-W' . $weekNumber;
+            $weekKey = $year.'-W'.$weekNumber;
 
-            if (!isset($weeklyInterventions[$weekKey])) {
+            if (! isset($weeklyInterventions[$weekKey])) {
                 $weeklyInterventions[$weekKey] = [
                     'start' => $intervention->scheduled_date->startOfWeek(),
                     'end' => $intervention->scheduled_date->endOfWeek(),
-                    'days' => []
+                    'days' => [],
                 ];
             }
 
             $dayKey = $intervention->scheduled_date->format('Y-m-d');
-            if (!isset($weeklyInterventions[$weekKey]['days'][$dayKey])) {
+            if (! isset($weeklyInterventions[$weekKey]['days'][$dayKey])) {
                 $weeklyInterventions[$weekKey]['days'][$dayKey] = [
                     'date' => $intervention->scheduled_date,
-                    'interventions' => []
+                    'interventions' => [],
                 ];
             }
 
@@ -276,10 +310,10 @@ class InterventionController extends Controller
         $events = $interventions->map(function ($intervention) {
             // Definizione colori per priorità
             $priorityColors = [
-                'low'        => '#6c757d',  // grigio
-                'medium'     => '#0dcaf0',  // info
-                'high'       => '#ffc107',  // warning
-                'urgent'     => '#dc3545',  // danger
+                'low' => '#6c757d',  // grigio
+                'medium' => '#0dcaf0',  // info
+                'high' => '#ffc107',  // warning
+                'urgent' => '#dc3545',  // danger
                 'fixed_date' => '#6f42c1',  // viola
             ];
 
@@ -288,16 +322,16 @@ class InterventionController extends Controller
                 'planned' => '#0dcaf0',      // info
                 'in_progress' => '#ffc107',  // warning
                 'completed' => '#198754',    // success
-                'cancelled' => '#6c757d'     // secondary
+                'cancelled' => '#6c757d',     // secondary
             ];
 
             // Calcola ora fine se disponibile
             $startTime = $intervention->scheduled_start_time ?? '09:00:00';
-            $start = $intervention->scheduled_date->format('Y-m-d') . 'T' . substr($startTime, 0, 5);
+            $start = $intervention->scheduled_date->format('Y-m-d').'T'.substr($startTime, 0, 5);
 
             $end = null;
             if ($intervention->scheduled_start_time && $intervention->estimated_duration_minutes) {
-                $startDateTime = \Carbon\Carbon::parse($intervention->scheduled_date->format('Y-m-d') . ' ' . $startTime);
+                $startDateTime = \Carbon\Carbon::parse($intervention->scheduled_date->format('Y-m-d').' '.$startTime);
                 $endDateTime = $startDateTime->addMinutes($intervention->estimated_duration_minutes);
                 $end = $endDateTime->format('Y-m-d\TH:i');
             }
@@ -310,18 +344,18 @@ class InterventionController extends Controller
                 'backgroundColor' => $statusColors[$intervention->status] ?? '#0dcaf0',
                 'borderColor' => $priorityColors[$intervention->priority] ?? '#6c757d',
                 'extendedProps' => [
-                    'equipment'   => $intervention->equipment
+                    'equipment' => $intervention->equipment
                         ? $intervention->equipment->name
-                        : (($intervention->area->name ?? '') . ' / ' . ($intervention->department->name ?? '')),
-                    'operator'    => $intervention->assignedUser->name,
-                    'status'      => $intervention->status,
-                    'priority'    => $intervention->priority,
+                        : (($intervention->area->name ?? '').' / '.($intervention->department->name ?? '')),
+                    'operator' => $intervention->assignedUser->name,
+                    'status' => $intervention->status,
+                    'priority' => $intervention->priority,
                     'description' => $intervention->description,
-                    'notes'       => $intervention->notes,
-                    'duration'    => $intervention->estimated_duration_minutes,
-                    'showUrl'     => route('interventions.show', $intervention),
-                    'reportUrl'   => route('interventions.reports.create', $intervention),
-                ]
+                    'notes' => $intervention->notes,
+                    'duration' => $intervention->estimated_duration_minutes,
+                    'showUrl' => route('interventions.show', $intervention),
+                    'reportUrl' => route('interventions.reports.create', $intervention),
+                ],
             ];
         });
 

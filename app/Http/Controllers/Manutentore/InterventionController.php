@@ -11,6 +11,8 @@ use App\Models\InterventionTransfer;
 use App\Models\User;
 use App\Notifications\CollaborationRequestedNotification;
 use App\Notifications\InterventionTransferredNotification;
+use App\Services\InterventionActivityLogger;
+use App\Support\InterventionLogActions;
 use Carbon\CarbonInterface;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -21,39 +23,39 @@ use Illuminate\View\View;
 class InterventionController extends Controller
 {
     public const CHIPS = [
-        'all'         => 'Tutti',
-        'overdue'     => 'Scaduti',
-        'today'       => 'Oggi',
-        'high'        => 'Alta priorità',
-        'low'         => 'Bassa priorità',
+        'all' => 'Tutti',
+        'overdue' => 'Scaduti',
+        'today' => 'Oggi',
+        'high' => 'Alta priorità',
+        'low' => 'Bassa priorità',
         'in_progress' => 'In lavorazione',
-        'cancelled'   => 'Sospesi',
-        'planned'     => 'Programmati',
-        'assigned'    => 'Presi in carico',
+        'cancelled' => 'Sospesi',
+        'planned' => 'Programmati',
+        'assigned' => 'Presi in carico',
     ];
 
     public function index(Request $request): View
     {
-        $user    = Auth::user();
+        $user = Auth::user();
         $deptIds = $user->departments()->pluck('departments.id');
-        $filter  = $request->get('filter', 'all');
-        $q       = trim((string) $request->get('q', ''));
+        $filter = $request->get('filter', 'all');
+        $q = trim((string) $request->get('q', ''));
 
-        if (!array_key_exists($filter, self::CHIPS)) {
+        if (! array_key_exists($filter, self::CHIPS)) {
             $filter = 'all';
         }
 
         $query = Intervention::with([
-                'equipment.department.area',
-                'area',
-                'department',
-                'maintenanceRole',
-                'assignedUser',
-                'collaborations' => fn ($q) => $q
-                    ->where('user_id', $user->id)
-                    ->where('status', InterventionCollaboration::STATUS_ACCEPTED),
-                'reports' => fn ($q) => $q->where('user_id', $user->id),
-            ])
+            'equipment.department.area',
+            'area',
+            'department',
+            'maintenanceRole',
+            'assignedUser',
+            'collaborations' => fn ($q) => $q
+                ->where('user_id', $user->id)
+                ->where('status', InterventionCollaboration::STATUS_ACCEPTED),
+            'reports' => fn ($q) => $q->where('user_id', $user->id),
+        ])
             ->where(function ($q) use ($user, $deptIds) {
                 $q->where('assigned_user_id', $user->id);
 
@@ -74,7 +76,7 @@ class InterventionController extends Controller
         if ($filter !== 'cancelled') {
             $query->where(function ($q) {
                 $q->whereNull('suspended_until')
-                  ->orWhere('suspended_until', '<=', today());
+                    ->orWhere('suspended_until', '<=', today());
             });
         }
 
@@ -114,14 +116,14 @@ class InterventionController extends Controller
         }
 
         if ($q !== '') {
-            $like = '%' . $q . '%';
+            $like = '%'.$q.'%';
             $query->where(function ($qq) use ($like) {
                 $qq->where('title', 'like', $like)
                     ->orWhere('description', 'like', $like)
-                    ->orWhereHas('area',            fn ($s) => $s->where('name', 'like', $like))
-                    ->orWhereHas('department',      fn ($s) => $s->where('name', 'like', $like))
-                    ->orWhereHas('equipment',       fn ($s) => $s->where('name', 'like', $like))
-                    ->orWhereHas('assignedUser',    fn ($s) => $s->where('name', 'like', $like))
+                    ->orWhereHas('area', fn ($s) => $s->where('name', 'like', $like))
+                    ->orWhereHas('department', fn ($s) => $s->where('name', 'like', $like))
+                    ->orWhereHas('equipment', fn ($s) => $s->where('name', 'like', $like))
+                    ->orWhereHas('assignedUser', fn ($s) => $s->where('name', 'like', $like))
                     ->orWhereHas('maintenanceRole', fn ($s) => $s->where('name', 'like', $like));
             });
         }
@@ -137,9 +139,10 @@ class InterventionController extends Controller
                 if ($i->tipo === 'pianificazione'
                     && $i->scheduled_date
                     && $i->scheduled_date->isPast()
-                    && !in_array($i->status, ['completed', 'cancelled'])) {
+                    && ! in_array($i->status, ['completed', 'cancelled'])) {
                     return true;
                 }
+
                 return $i->is_overdue;
             })->values();
         }
@@ -148,11 +151,11 @@ class InterventionController extends Controller
         $quickDepartments = Department::where('active', true)->orderBy('name')->get(['id', 'name', 'area_id']);
 
         return view('manutentore.tickets.index', [
-            'interventions'    => $interventions,
-            'filter'           => $filter,
-            'q'                => $q,
-            'chips'            => self::CHIPS,
-            'quickAreas'       => $quickAreas,
+            'interventions' => $interventions,
+            'filter' => $filter,
+            'q' => $q,
+            'chips' => self::CHIPS,
+            'quickAreas' => $quickAreas,
             'quickDepartments' => $quickDepartments,
         ]);
     }
@@ -177,7 +180,7 @@ class InterventionController extends Controller
             || ($intervention->tipo === 'pianificazione'
                 && $intervention->scheduled_date
                 && $intervention->scheduled_date->isPast()
-                && !in_array($intervention->status, ['completed', 'cancelled']));
+                && ! in_array($intervention->status, ['completed', 'cancelled']));
 
         $mine = $intervention->assigned_user_id === $me->id;
         $unassigned = is_null($intervention->assigned_user_id);
@@ -208,52 +211,53 @@ class InterventionController extends Controller
                 ? $intervention->assignedUser
                 : $intervention->collaborations->firstWhere('user_id', $userId)?->user;
             $report = $reportsByUser->get($userId);
+
             return [
-                'user_id'   => $userId,
-                'name'      => $user?->name,
-                'initials'  => $this->initials($user?->name ?? ''),
-                'role'      => $userId === $intervention->assigned_user_id ? 'Assegnatario' : 'Collaboratore',
-                'has_report'=> (bool) $report,
-                'status'    => $report?->status,
+                'user_id' => $userId,
+                'name' => $user?->name,
+                'initials' => $this->initials($user?->name ?? ''),
+                'role' => $userId === $intervention->assigned_user_id ? 'Assegnatario' : 'Collaboratore',
+                'has_report' => (bool) $report,
+                'status' => $report?->status,
             ];
         })->values();
 
-        $area       = $intervention->area ?? $intervention->equipment?->department?->area;
+        $area = $intervention->area ?? $intervention->equipment?->department?->area;
         $department = $intervention->department ?? $intervention->equipment?->department;
 
         $transfers = $intervention->transfers->map(fn ($t) => [
-            'id'              => $t->id,
-            'event'           => 'transfer',
-            'from_user_name'  => $t->fromUser?->name ?? '—',
-            'to_user_name'    => $t->toUser?->name,
-            'initiated_by'    => $t->initiatedBy?->name,
-            'reason'          => $t->reason,
-            'at'              => $t->transferred_at?->isoFormat('D MMM YYYY · HH:mm'),
-            'at_sort'         => $t->transferred_at?->timestamp,
+            'id' => $t->id,
+            'event' => 'transfer',
+            'from_user_name' => $t->fromUser?->name ?? '—',
+            'to_user_name' => $t->toUser?->name,
+            'initiated_by' => $t->initiatedBy?->name,
+            'reason' => $t->reason,
+            'at' => $t->transferred_at?->isoFormat('D MMM YYYY · HH:mm'),
+            'at_sort' => $t->transferred_at?->timestamp,
         ]);
 
         $collabEvents = $intervention->collaborations->map(fn ($c) => [
-            'id'              => $c->id,
-            'event'           => 'collaboration_' . $c->status,
-            'user_name'       => $c->user?->name,
-            'requested_by'    => $c->requestedBy?->name,
-            'message'         => $c->message,
-            'status'          => $c->status,
-            'at'              => ($c->responded_at ?? $c->requested_at ?? $c->created_at)?->isoFormat('D MMM YYYY · HH:mm'),
-            'at_sort'         => ($c->responded_at ?? $c->requested_at ?? $c->created_at)?->timestamp,
+            'id' => $c->id,
+            'event' => 'collaboration_'.$c->status,
+            'user_name' => $c->user?->name,
+            'requested_by' => $c->requestedBy?->name,
+            'message' => $c->message,
+            'status' => $c->status,
+            'at' => ($c->responded_at ?? $c->requested_at ?? $c->created_at)?->isoFormat('D MMM YYYY · HH:mm'),
+            'at_sort' => ($c->responded_at ?? $c->requested_at ?? $c->created_at)?->timestamp,
         ]);
 
         $reportEvents = $intervention->reports->map(fn ($r) => [
-            'id'            => $r->id,
-            'event'         => 'report_' . ($r->status ?? 'draft'),
-            'user_name'     => $r->user?->name,
-            'status'        => $r->status,
-            'duration'      => $r->duration_minutes
+            'id' => $r->id,
+            'event' => 'report_'.($r->status ?? 'draft'),
+            'user_name' => $r->user?->name,
+            'status' => $r->status,
+            'duration' => $r->duration_minutes
                 ? $this->formatDuration((int) $r->duration_minutes)
                 : null,
-            'activities'    => $r->activities,
-            'at'            => $r->created_at?->isoFormat('D MMM YYYY · HH:mm'),
-            'at_sort'       => $r->created_at?->timestamp,
+            'activities' => $r->activities,
+            'at' => $r->created_at?->isoFormat('D MMM YYYY · HH:mm'),
+            'at_sort' => $r->created_at?->timestamp,
         ]);
 
         $history = $transfers
@@ -265,90 +269,92 @@ class InterventionController extends Controller
         $collaborators = $intervention->collaborations
             ->whereIn('status', [InterventionCollaboration::STATUS_ACCEPTED, InterventionCollaboration::STATUS_PENDING])
             ->map(fn ($c) => [
-                'id'       => $c->id,
-                'user_id'  => $c->user_id,
-                'name'     => $c->user?->name,
-                'status'   => $c->status,
+                'id' => $c->id,
+                'user_id' => $c->user_id,
+                'name' => $c->user?->name,
+                'status' => $c->status,
                 'initials' => $this->initials($c->user?->name ?? ''),
             ])
             ->values();
 
         return response()->json([
-            'id'          => $intervention->id,
-            'code'        => '#' . $intervention->id,
-            'title'       => $intervention->title,
+            'id' => $intervention->id,
+            'code' => '#'.$intervention->id,
+            'title' => $intervention->title,
             'description' => $intervention->description,
-            'tipo'        => $intervention->tipo,
-            'tipo_label'  => $intervention->tipo === 'pianificazione' ? 'Pianificato' : 'Libero',
-            'status'      => $intervention->status,
+            'tipo' => $intervention->tipo,
+            'tipo_label' => $intervention->tipo === 'pianificazione' ? 'Pianificato' : 'Libero',
+            'status' => $intervention->status,
             'status_label' => [
-                'open'        => 'Aperto',
-                'planned'     => 'Pianificato',
+                'open' => 'Aperto',
+                'planned' => 'Pianificato',
                 'in_progress' => 'In carico',
-                'completed'   => 'Chiuso',
-                'cancelled'   => 'Sospeso',
+                'completed' => 'Chiuso',
+                'cancelled' => 'Sospeso',
             ][$intervention->status] ?? $intervention->status,
-            'priority'       => $intervention->priority,
+            'priority' => $intervention->priority,
             'priority_label' => [
-                'urgent'     => 'Urgente',
-                'high'       => 'Alta',
-                'medium'     => 'Media',
-                'low'        => 'Bassa',
+                'urgent' => 'Urgente',
+                'high' => 'Alta',
+                'medium' => 'Media',
+                'low' => 'Bassa',
                 'fixed_date' => 'Data fissa',
             ][$intervention->priority] ?? $intervention->priority,
-            'created_at'         => $intervention->created_at?->isoFormat('D MMM YYYY · HH:mm'),
-            'scheduled_date'     => $intervention->scheduled_date?->isoFormat('dddd D MMM YYYY'),
-            'scheduled_start'    => $intervention->scheduled_start_time,
-            'duration_minutes'   => $intervention->estimated_duration_minutes,
-            'area'               => $area?->name,
-            'department'         => $department?->name,
-            'equipment'          => $intervention->equipment?->name,
-            'maintenance_role'   => $intervention->maintenanceRole?->name,
-            'assigned_user'      => $intervention->assignedUser
+            'created_at' => $intervention->created_at?->isoFormat('D MMM YYYY · HH:mm'),
+            'scheduled_date' => $intervention->scheduled_date?->isoFormat('dddd D MMM YYYY'),
+            'scheduled_start' => $intervention->scheduled_start_time,
+            'duration_minutes' => $intervention->estimated_duration_minutes,
+            'area' => $area?->name,
+            'department' => $department?->name,
+            'equipment' => $intervention->equipment?->name,
+            'maintenance_role' => $intervention->maintenanceRole?->name,
+            'assigned_user' => $intervention->assignedUser
                 ? array_merge($intervention->assignedUser->only(['id', 'name']),
                     ['initials' => $this->initials($intervention->assignedUser->name)])
                 : null,
-            'mine'               => $mine,
-            'unassigned'         => $unassigned,
-            'is_overdue'         => $isOverdue,
-            'overdue_since'      => $isOverdue && $deadline
+            'mine' => $mine,
+            'unassigned' => $unassigned,
+            'is_overdue' => $isOverdue,
+            'overdue_since' => $isOverdue && $deadline
                 ? $deadline->diffForHumans(['parts' => 2, 'syntax' => CarbonInterface::DIFF_ABSOLUTE])
                 : null,
-            'deadline_at'        => $deadline?->isoFormat('D MMM · HH:mm'),
-            'notes'              => $intervention->notes,
-            'collaborators'      => $collaborators,
-            'report_statuses'    => $reportStatuses,
-            'has_my_report'      => $hasMyReport,
-            'my_report_id'       => $myReport?->id,
-            'history'            => $history,
-            'pending_request'    => $pendingCollabForMe ? [
-                'id'              => $pendingCollabForMe->id,
-                'requested_by'    => $pendingCollabForMe->requestedBy?->name,
-                'message'         => $pendingCollabForMe->message,
-                'respond_url'     => route('m.collaborations.respond', $pendingCollabForMe->id),
+            'deadline_at' => $deadline?->isoFormat('D MMM · HH:mm'),
+            'notes' => $intervention->notes,
+            'collaborators' => $collaborators,
+            'report_statuses' => $reportStatuses,
+            'has_my_report' => $hasMyReport,
+            'my_report_id' => $myReport?->id,
+            'history' => $history,
+            'pending_request' => $pendingCollabForMe ? [
+                'id' => $pendingCollabForMe->id,
+                'requested_by' => $pendingCollabForMe->requestedBy?->name,
+                'message' => $pendingCollabForMe->message,
+                'respond_url' => route('m.collaborations.respond', $pendingCollabForMe->id),
             ] : null,
-            'suspended_until'    => $intervention->suspended_until?->toDateString(),
+            'suspended_until' => $intervention->suspended_until?->toDateString(),
             'suspended_until_label' => $intervention->suspended_until?->isoFormat('D MMM YYYY'),
             'urls' => [
-                'take_charge'       => route('interventions.take-charge', $intervention),
-                'details'           => route('interventions.show', $intervention),
-                'transfer'          => route('m.interventions.transfer', $intervention),
-                'collaboration'     => route('m.interventions.collaboration', $intervention),
-                'candidates'        => route('m.interventions.candidates', $intervention),
-                'report_store'      => route('m.reports.store', $intervention),
-                'close'             => route('m.interventions.close', $intervention),
-                'suspend'           => route('m.interventions.suspend', $intervention),
-                'defer'             => route('m.interventions.defer', $intervention),
+                'take_charge' => route('interventions.take-charge', $intervention),
+                'details' => route('interventions.show', $intervention),
+                'transfer' => route('m.interventions.transfer', $intervention),
+                'collaboration' => route('m.interventions.collaboration', $intervention),
+                'candidates' => route('m.interventions.candidates', $intervention),
+                'report_store' => route('m.reports.store', $intervention),
+                'close' => route('m.interventions.close', $intervention),
+                'suspend' => route('m.interventions.suspend', $intervention),
+                'defer' => route('m.interventions.defer', $intervention),
             ],
             'actions' => [
-                'can_take_charge'    => $unassigned && in_array($intervention->status, ['open', 'planned']),
-                'can_create_report'  => ($mine || $iAmAcceptedCollaborator)
+                'can_take_charge' => ($unassigned || $mine)
+                                        && $intervention->preso_in_carico_at === null
+                                        && ! in_array($intervention->status, ['completed', 'cancelled']),
+                'can_create_report' => ($mine || $iAmAcceptedCollaborator)
                                         && $intervention->status === 'in_progress'
-                                        && !$hasMyReport,
-                'can_edit_report'    => $hasMyReport && $myReport?->status !== 'chiuso',
-                'can_transfer'       => $mine && !in_array($intervention->status, ['completed', 'cancelled']),
-                'can_collaborate'    => ($mine || $iAmAcceptedCollaborator) && !in_array($intervention->status, ['completed', 'cancelled']),
-                'can_close_ticket'   => $mine && $intervention->status === 'in_progress'
+                                        && ! $hasMyReport,
+                'can_edit_report' => $hasMyReport && $myReport?->status !== 'chiuso',
+                'can_transfer' => $mine && ! in_array($intervention->status, ['completed', 'cancelled']),
+                'can_collaborate' => ($mine || $iAmAcceptedCollaborator) && ! in_array($intervention->status, ['completed', 'cancelled']),
+                'can_close_ticket' => $mine && $intervention->status === 'in_progress'
                                         && $this->allRequiredReportsCompleted($intervention),
             ],
         ]);
@@ -363,15 +369,13 @@ class InterventionController extends Controller
             ->where('id', '!=', Auth::id());
 
         if ($intervention->maintenance_role_id) {
-            $query->whereHas('maintenanceRoles', fn ($q) =>
-                $q->where('maintenance_roles.id', $intervention->maintenance_role_id)
+            $query->whereHas('maintenanceRoles', fn ($q) => $q->where('maintenance_roles.id', $intervention->maintenance_role_id)
             );
         }
 
         $deptId = $intervention->department_id ?? $intervention->equipment?->department_id;
         if ($deptId) {
-            $query->whereHas('departments', fn ($q) =>
-                $q->where('departments.id', $deptId)
+            $query->whereHas('departments', fn ($q) => $q->where('departments.id', $deptId)
             );
         }
 
@@ -403,9 +407,9 @@ class InterventionController extends Controller
         }
 
         $candidates = $users->map(fn ($u) => [
-            'id'       => $u->id,
-            'name'     => $u->name,
-            'role'     => ucfirst($u->role),
+            'id' => $u->id,
+            'name' => $u->name,
+            'role' => ucfirst($u->role),
             'initials' => $this->initials($u->name),
         ])->values();
 
@@ -426,7 +430,7 @@ class InterventionController extends Controller
 
         $data = $request->validate([
             'to_user_id' => ['required', 'integer', 'exists:users,id'],
-            'reason'     => ['nullable', 'string', 'max:500'],
+            'reason' => ['nullable', 'string', 'max:500'],
         ]);
 
         if ((int) $data['to_user_id'] === (int) $intervention->assigned_user_id) {
@@ -435,25 +439,34 @@ class InterventionController extends Controller
 
         $toUser = User::findOrFail($data['to_user_id']);
 
+        $fromUserId = $intervention->assigned_user_id;
+
         InterventionTransfer::create([
-            'intervention_id'      => $intervention->id,
-            'from_user_id'         => $intervention->assigned_user_id,
-            'to_user_id'           => $toUser->id,
+            'intervention_id' => $intervention->id,
+            'from_user_id' => $fromUserId,
+            'to_user_id' => $toUser->id,
             'initiated_by_user_id' => $me->id,
-            'reason'               => $data['reason'] ?? null,
-            'transferred_at'       => now(),
+            'reason' => $data['reason'] ?? null,
+            'transferred_at' => now(),
         ]);
 
         $intervention->update([
             'assigned_user_id' => $toUser->id,
             'status' => in_array($intervention->status, ['open', 'planned']) ? 'in_progress' : $intervention->status,
+            'preso_in_carico_at' => null,
         ]);
+
+        InterventionActivityLogger::log($intervention, InterventionLogActions::TRANSFERRED, array_filter([
+            'from_user_id' => $fromUserId,
+            'to_user_id' => $toUser->id,
+            'reason' => $data['reason'] ?? null,
+        ], fn ($v) => $v !== null));
 
         $toUser->notify(new InterventionTransferredNotification($intervention->fresh(), $me, $data['reason'] ?? null));
 
         return response()->json([
-            'ok'      => true,
-            'message' => 'Ticket trasferito a ' . $toUser->name . '.',
+            'ok' => true,
+            'message' => 'Ticket trasferito a '.$toUser->name.'.',
         ]);
     }
 
@@ -467,7 +480,7 @@ class InterventionController extends Controller
             ->where('status', InterventionCollaboration::STATUS_ACCEPTED)
             ->exists();
 
-        if (!$isAssignee && !$isCollaborator && $me->role !== 'admin') {
+        if (! $isAssignee && ! $isCollaborator && $me->role !== 'admin') {
             return response()->json(['ok' => false, 'message' => 'Non hai i permessi per richiedere collaborazione su questo ticket.'], 403);
         }
 
@@ -497,20 +510,26 @@ class InterventionController extends Controller
         }
 
         $collab = InterventionCollaboration::create([
-            'intervention_id'      => $intervention->id,
-            'user_id'              => $data['user_id'],
+            'intervention_id' => $intervention->id,
+            'user_id' => $data['user_id'],
             'requested_by_user_id' => $me->id,
-            'status'               => InterventionCollaboration::STATUS_PENDING,
-            'message'              => $data['message'] ?? null,
-            'requested_at'         => now(),
+            'status' => InterventionCollaboration::STATUS_PENDING,
+            'message' => $data['message'] ?? null,
+            'requested_at' => now(),
         ]);
 
         $target = User::find($data['user_id']);
         $target->notify(new CollaborationRequestedNotification($collab));
 
+        InterventionActivityLogger::log($intervention, InterventionLogActions::COLLABORATION_REQUESTED, [
+            'collaboration_id' => $collab->id,
+            'target_user_id' => $target->id,
+            'target_user_name' => $target->name,
+        ]);
+
         return response()->json([
-            'ok'      => true,
-            'message' => 'Richiesta inviata a ' . $target->name . '.',
+            'ok' => true,
+            'message' => 'Richiesta inviata a '.$target->name.'.',
         ]);
     }
 
@@ -547,19 +566,21 @@ class InterventionController extends Controller
         $missing = $requiredIds->diff($completedIds);
         if ($missing->isNotEmpty()) {
             return response()->json([
-                'ok'      => false,
+                'ok' => false,
                 'message' => 'Per chiudere il ticket serve il rapportino di chiusura di tutti i collaboratori.',
             ], 422);
         }
 
         $intervention->update([
-            'status'          => 'completed',
-            'completed_at'    => now(),
+            'status' => 'completed',
+            'completed_at' => now(),
             'suspended_until' => null,
         ]);
 
+        InterventionActivityLogger::log($intervention, InterventionLogActions::COMPLETED);
+
         return response()->json([
-            'ok'      => true,
+            'ok' => true,
             'message' => 'Ticket chiuso.',
         ]);
     }
@@ -583,13 +604,17 @@ class InterventionController extends Controller
         ]);
 
         $intervention->update([
-            'status'          => 'cancelled',
+            'status' => 'cancelled',
+            'suspended_until' => $data['until'],
+        ]);
+
+        InterventionActivityLogger::log($intervention, InterventionLogActions::SUSPENDED, [
             'suspended_until' => $data['until'],
         ]);
 
         return response()->json([
-            'ok'      => true,
-            'message' => 'Ticket sospeso fino al ' . \Carbon\Carbon::parse($data['until'])->isoFormat('D MMM YYYY') . '.',
+            'ok' => true,
+            'message' => 'Ticket sospeso fino al '.\Carbon\Carbon::parse($data['until'])->isoFormat('D MMM YYYY').'.',
         ]);
     }
 
@@ -605,13 +630,19 @@ class InterventionController extends Controller
             return response()->json(['ok' => false, 'message' => 'Ticket già chiuso o sospeso.'], 422);
         }
 
+        $until = today()->copy()->addDay();
+
         $intervention->update([
-            'status'          => 'in_progress',
-            'suspended_until' => today()->copy()->addDay(),
+            'status' => 'in_progress',
+            'suspended_until' => $until,
+        ]);
+
+        InterventionActivityLogger::log($intervention, InterventionLogActions::DEFERRED, [
+            'until' => $until->toDateString(),
         ]);
 
         return response()->json([
-            'ok'      => true,
+            'ok' => true,
             'message' => 'Ticket rinviato a domani.',
         ]);
     }
@@ -619,27 +650,27 @@ class InterventionController extends Controller
     public function quickStore(Request $request): RedirectResponse
     {
         $request->validate([
-            'area_id'       => 'required|exists:areas,id',
+            'area_id' => 'required|exists:areas,id',
             'department_id' => 'required|exists:departments,id',
-            'description'   => 'nullable|string',
+            'description' => 'nullable|string',
         ], [
-            'area_id.required'       => 'Seleziona un\'area.',
+            'area_id.required' => 'Seleziona un\'area.',
             'department_id.required' => 'Seleziona una zona.',
         ]);
 
-        $area       = Area::find($request->area_id);
+        $area = Area::find($request->area_id);
         $department = Department::find($request->department_id);
 
         Intervention::create([
-            'tipo'             => 'ordinario',
-            'area_id'          => $request->area_id,
-            'department_id'    => $request->department_id,
+            'tipo' => 'ordinario',
+            'area_id' => $request->area_id,
+            'department_id' => $request->department_id,
             'assigned_user_id' => Auth::id(),
-            'title'            => 'Intervento - ' . $area->name . ' / ' . $department->name,
-            'description'      => $request->description,
-            'scheduled_date'   => today(),
-            'status'           => 'in_progress',
-            'priority'         => 'medium',
+            'title' => 'Intervento - '.$area->name.' / '.$department->name,
+            'description' => $request->description,
+            'scheduled_date' => today(),
+            'status' => 'open',
+            'priority' => 'medium',
         ]);
 
         $referer = $request->headers->get('referer');
@@ -702,7 +733,9 @@ class InterventionController extends Controller
             ->unique()
             ->values();
 
-        if ($requiredIds->isEmpty()) return false;
+        if ($requiredIds->isEmpty()) {
+            return false;
+        }
 
         $completedIds = $intervention->reports
             ->where('status', 'completed')
@@ -716,8 +749,13 @@ class InterventionController extends Controller
     {
         $h = intdiv($minutes, 60);
         $m = $minutes % 60;
-        if ($h > 0 && $m > 0) return "{$h}h {$m}m";
-        if ($h > 0) return "{$h}h";
+        if ($h > 0 && $m > 0) {
+            return "{$h}h {$m}m";
+        }
+        if ($h > 0) {
+            return "{$h}h";
+        }
+
         return "{$m}m";
     }
 }

@@ -30,20 +30,20 @@ class UpdateUserRequest extends FormRequest
             'email' => [
                 'required',
                 'email',
-                Rule::unique('users', 'email')->whereNull('deleted_at')->ignore($userId)
+                Rule::unique('users', 'email')->whereNull('deleted_at')->ignore($userId),
             ],
             'password' => 'nullable|string|min:6|confirmed',
             'role' => 'required|in:admin,operator,manutentore',
-            'maintenance_roles'   => 'nullable|array',
+            'maintenance_roles' => 'nullable|array',
             'maintenance_roles.*' => 'exists:maintenance_roles,id',
             'teams' => 'nullable|array',
             'teams.*' => 'exists:teams,id',
-            'areas'          => 'nullable|array',
-            'areas.*'        => 'exists:areas,id',
-            'departments'                => 'nullable|array',
-            'departments.*'              => 'exists:departments,id',
-            'maintenance_role_levels'    => 'nullable|array',
-            'maintenance_role_levels.*'  => 'integer|between:1,5',
+            'areas' => 'nullable|array',
+            'areas.*' => 'exists:areas,id',
+            'departments' => 'nullable|array',
+            'departments.*' => 'exists:departments,id',
+            'maintenance_role_levels' => 'nullable|array',
+            'maintenance_role_levels.*' => 'integer|between:1,5',
         ];
     }
 

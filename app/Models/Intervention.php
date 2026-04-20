@@ -27,13 +27,20 @@ class Intervention extends Model
         'notes',
         'completed_at',
         'suspended_until',
+        'preso_in_carico_at',
     ];
 
     protected $casts = [
-        'scheduled_date'  => 'date',
-        'completed_at'    => 'datetime',
+        'scheduled_date' => 'date',
+        'completed_at' => 'datetime',
         'suspended_until' => 'date',
+        'preso_in_carico_at' => 'datetime',
     ];
+
+    public function getIsPresoInCaricoAttribute(): bool
+    {
+        return $this->preso_in_carico_at !== null;
+    }
 
     /**
      * Calcola la data di scadenza in base alla priorità.
@@ -46,14 +53,16 @@ class Intervention extends Model
         }
 
         $base = $this->created_at;
-        if (!$base) return null;
+        if (! $base) {
+            return null;
+        }
 
         return match ($this->priority) {
             'urgent' => $base->copy(),
-            'high'   => $base->copy()->addHours(24),
+            'high' => $base->copy()->addHours(24),
             'medium' => $base->copy()->addDays(3),
-            'low'    => $base->copy()->addDays(7),
-            default  => null,
+            'low' => $base->copy()->addDays(7),
+            default => null,
         };
     }
 
@@ -63,8 +72,12 @@ class Intervention extends Model
     public function getIsOverdueAttribute(): bool
     {
         $deadline = $this->deadline;
-        if (!$deadline) return false;
-        if (in_array($this->status, ['completed', 'cancelled'])) return false;
+        if (! $deadline) {
+            return false;
+        }
+        if (in_array($this->status, ['completed', 'cancelled'])) {
+            return false;
+        }
 
         return now()->greaterThan($deadline);
     }
@@ -117,6 +130,11 @@ class Intervention extends Model
     public function collaborations(): HasMany
     {
         return $this->hasMany(InterventionCollaboration::class)->orderByDesc('created_at');
+    }
+
+    public function logs(): HasMany
+    {
+        return $this->hasMany(InterventionLog::class)->latest('created_at');
     }
 
     public function collaborators(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
