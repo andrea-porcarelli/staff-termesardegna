@@ -14,6 +14,7 @@ class Report extends Model
         'report_date',
         'start_time',
         'end_time',
+        'duration_minutes',
         'activities',
         'notes',
         'status',

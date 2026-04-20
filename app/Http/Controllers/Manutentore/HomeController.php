@@ -30,6 +30,11 @@ class HomeController extends Controller
                 'reports' => fn ($q) => $q->where('user_id', $user->id),
             ])
             ->whereIn('status', ['open', 'planned', 'in_progress'])
+            ->where(function ($q) {
+                // Nasconde ticket sospesi/rinviati finché non arriva la data.
+                $q->whereNull('suspended_until')
+                  ->orWhere('suspended_until', '<=', today());
+            })
             ->where(function ($q) use ($user, $deptIds, $roleIds) {
                 // Miei assegnati
                 $q->where('assigned_user_id', $user->id);

@@ -26,11 +26,13 @@ class Intervention extends Model
         'priority',
         'notes',
         'completed_at',
+        'suspended_until',
     ];
 
     protected $casts = [
-        'scheduled_date' => 'date',
-        'completed_at' => 'datetime',
+        'scheduled_date'  => 'date',
+        'completed_at'    => 'datetime',
+        'suspended_until' => 'date',
     ];
 
     /**

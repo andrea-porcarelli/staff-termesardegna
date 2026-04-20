@@ -37,29 +37,39 @@ class ReportController extends Controller
         }
 
         $data = $request->validate([
-            'report_date' => ['required', 'date'],
-            'start_time'  => ['required', 'date_format:H:i'],
-            'end_time'    => ['required', 'date_format:H:i', 'after:start_time'],
-            'activities'  => ['required', 'string', 'max:4000'],
-            'notes'       => ['nullable', 'string', 'max:4000'],
-            'status'      => ['nullable', 'in:draft,completed'],
-            'files'       => ['nullable', 'array', 'max:10'],
-            'files.*'     => ['file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,gif,zip'],
+            'hours'      => ['required', 'integer', 'min:0', 'max:24'],
+            'minutes'    => ['required', 'integer', 'min:0', 'max:59'],
+            'activities' => ['required', 'string', 'max:4000'],
+            'notes'      => ['nullable', 'string', 'max:4000'],
+            'status'     => ['nullable', 'in:draft,completed'],
+            'files'      => ['nullable', 'array', 'max:10'],
+            'files.*'    => ['file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,gif,zip'],
         ], [
-            'end_time.after'      => 'L\'ora di fine deve essere successiva a quella di inizio.',
-            'files.*.mimes'       => 'Sono accettati solo PDF, immagini (JPG/PNG/GIF) e ZIP.',
-            'files.*.max'         => 'Il file non può superare 10 MB.',
+            'hours.required'    => 'Indica le ore impiegate.',
+            'minutes.required'  => 'Indica i minuti impiegati.',
+            'files.*.mimes'     => 'Sono accettati solo PDF, immagini (JPG/PNG/GIF) e ZIP.',
+            'files.*.max'       => 'Il file non può superare 10 MB.',
         ]);
 
+        $totalMinutes = ((int) $data['hours']) * 60 + (int) $data['minutes'];
+        if ($totalMinutes <= 0) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'Il tempo impiegato deve essere maggiore di zero.',
+                'errors'  => ['hours' => ['Il tempo impiegato deve essere maggiore di zero.']],
+            ], 422);
+        }
+
         $report = Report::create([
-            'intervention_id' => $intervention->id,
-            'user_id'         => $user->id,
-            'report_date'     => $data['report_date'],
-            'start_time'      => $data['start_time'],
-            'end_time'        => $data['end_time'],
-            'activities'      => $data['activities'],
-            'notes'           => $data['notes'] ?? null,
-            'status'          => $data['status'] ?? 'draft',
+            'intervention_id'  => $intervention->id,
+            'user_id'          => $user->id,
+            'report_date'      => now()->toDateString(),
+            'start_time'       => null,
+            'end_time'         => null,
+            'duration_minutes' => $totalMinutes,
+            'activities'       => $data['activities'],
+            'notes'            => $data['notes'] ?? null,
+            'status'           => $data['status'] ?? 'draft',
         ]);
 
         if ($request->hasFile('files')) {
@@ -76,10 +86,18 @@ class ReportController extends Controller
             }
         }
 
+        // Ricalcolo se il ticket è pronto per la chiusura
+        $intervention->load(['collaborations', 'reports']);
+        $canClose = $this->allRequiredReportsCompleted($intervention);
+
         return response()->json([
-            'ok'        => true,
-            'message'   => 'Rapportino salvato.',
-            'report_id' => $report->id,
+            'ok'          => true,
+            'message'     => 'Rapportino salvato.',
+            'report_id'   => $report->id,
+            'report_status' => $report->status,
+            'can_close_ticket' => $canClose,
+            // Il flusso "chiudi/sospendi" è sensato solo se il rapportino è di chiusura
+            'should_prompt_close' => $report->status === 'completed',
         ]);
     }
 
@@ -96,5 +114,33 @@ class ReportController extends Controller
             ->where('user_id', $user->id)
             ->where('status', InterventionCollaboration::STATUS_ACCEPTED)
             ->exists();
+    }
+
+    /**
+     * True se assegnatario + collaboratori accettati hanno tutti
+     * scritto un rapportino con status=completed.
+     */
+    private function allRequiredReportsCompleted(Intervention $intervention): bool
+    {
+        $requiredIds = collect([$intervention->assigned_user_id])
+            ->merge(
+                $intervention->collaborations
+                    ->where('status', InterventionCollaboration::STATUS_ACCEPTED)
+                    ->pluck('user_id')
+            )
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($requiredIds->isEmpty()) {
+            return false;
+        }
+
+        $completedIds = $intervention->reports
+            ->where('status', 'completed')
+            ->pluck('user_id')
+            ->unique();
+
+        return $requiredIds->diff($completedIds)->isEmpty();
     }
 }

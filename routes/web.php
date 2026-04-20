@@ -56,6 +56,12 @@ Route::prefix('m')->middleware(['auth', 'mobile'])->name('m.')->group(function (
         ->name('interventions.transfer');
     Route::post('/interventions/{intervention}/collaboration', [MInterventionController::class, 'requestCollaboration'])
         ->name('interventions.collaboration');
+    Route::post('/interventions/{intervention}/close', [MInterventionController::class, 'close'])
+        ->name('interventions.close');
+    Route::post('/interventions/{intervention}/suspend', [MInterventionController::class, 'suspend'])
+        ->name('interventions.suspend');
+    Route::post('/interventions/{intervention}/defer', [MInterventionController::class, 'defer'])
+        ->name('interventions.defer');
 
     // Risposta a richiesta di collaborazione
     Route::post('/collaborations/{collaboration}/respond', [MCollaborationController::class, 'respond'])

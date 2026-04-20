@@ -122,19 +122,29 @@
                               x-text="ticket?.priority_label"></span>
                     </div>
 
-                    <div class="flex items-center gap-2 text-sm pt-1">
-                        <span class="text-gray-500">Assegnato:</span>
-                        <template x-if="ticket?.mine">
-                            <span class="text-brand-700 font-semibold">A te</span>
-                        </template>
-                        <template x-if="!ticket?.mine && ticket?.assigned_user">
-                            <span class="inline-flex items-center gap-1.5">
-                                <span class="w-6 h-6 rounded-full bg-sky-100 text-sky-800 flex items-center justify-center text-[10px] font-bold" x-text="ticket.assigned_user.initials"></span>
-                                <span class="text-gray-800 font-medium" x-text="ticket.assigned_user.name"></span>
-                            </span>
-                        </template>
+                    <div class="pt-2">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Assegnatario</div>
                         <template x-if="ticket?.unassigned">
-                            <span class="text-gray-500 italic">Non assegnato</span>
+                            <div class="inline-flex items-center gap-2 px-2.5 h-9 rounded-full bg-gray-100 text-gray-500">
+                                <span class="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+                                    <svg class="w-3.5 h-3.5 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12h12"/>
+                                    </svg>
+                                </span>
+                                <span class="text-sm italic">Non assegnato</span>
+                            </div>
+                        </template>
+                        <template x-if="!ticket?.unassigned && ticket?.assigned_user">
+                            <div class="inline-flex items-center gap-2 pl-1 pr-3 h-9 rounded-full border"
+                                 :class="ticket?.mine ? 'border-brand-300 bg-brand-50' : 'border-gray-200 bg-white'">
+                                <span class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold"
+                                      :class="ticket?.mine ? 'bg-brand-100 text-brand-800' : 'bg-sky-100 text-sky-800'"
+                                      x-text="ticket.assigned_user.initials"></span>
+                                <span class="text-sm font-semibold text-gray-900" x-text="ticket.assigned_user.name"></span>
+                                <template x-if="ticket?.mine">
+                                    <span class="text-[11px] font-semibold text-brand-700 uppercase tracking-wide">Tu</span>
+                                </template>
+                            </div>
                         </template>
                     </div>
                 </div>
@@ -158,10 +168,29 @@
                     </div>
                 </template>
 
-                {{-- Stato rapportini (assegnatario + collaboratori accettati) --}}
+                {{-- Dettagli --}}
+                <div class="px-4 py-4 space-y-4">
+                    <template x-if="ticket?.description">
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Descrizione</div>
+                            <p class="text-sm text-gray-800 whitespace-pre-line" x-text="ticket.description"></p>
+                        </div>
+                    </template>
+
+                    <template x-if="ticket?.notes">
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Note</div>
+                            <p class="text-sm text-gray-800 whitespace-pre-line" x-text="ticket.notes"></p>
+                        </div>
+                    </template>
+                </div>
+
+                {{-- Rapportini del ticket (chi ha scritto, chi ancora no) --}}
                 <template x-if="ticket?.report_statuses?.length">
-                    <div class="px-4 pt-4">
-                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Rapportini</div>
+                    <div class="px-4 pb-4">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                            Rapportini del ticket
+                        </div>
                         <ul class="space-y-1.5">
                             <template x-for="rs in ticket.report_statuses" :key="rs.user_id">
                                 <li class="flex items-center gap-2 text-sm">
@@ -176,34 +205,6 @@
                         </ul>
                     </div>
                 </template>
-
-                {{-- Dettagli --}}
-                <div class="px-4 py-4 space-y-4">
-                    <template x-if="ticket?.description">
-                        <div>
-                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Descrizione</div>
-                            <p class="text-sm text-gray-800 whitespace-pre-line" x-text="ticket.description"></p>
-                        </div>
-                    </template>
-
-                    <template x-if="ticket?.scheduled_date">
-                        <div>
-                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Pianificazione</div>
-                            <div class="text-sm text-gray-800">
-                                <span x-text="ticket.scheduled_date"></span>
-                                <template x-if="ticket.scheduled_start"> · <span x-text="ticket.scheduled_start"></span></template>
-                                <template x-if="ticket.duration_minutes"> · <span x-text="ticket.duration_minutes + ' min'"></span></template>
-                            </div>
-                        </div>
-                    </template>
-
-                    <template x-if="ticket?.notes">
-                        <div>
-                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Note</div>
-                            <p class="text-sm text-gray-800 whitespace-pre-line" x-text="ticket.notes"></p>
-                        </div>
-                    </template>
-                </div>
 
                 {{-- Storico --}}
                 <template x-if="ticket?.history?.length">
@@ -542,10 +543,12 @@
                 },
 
                 historyColor(event) {
-                    if (event === 'transfer')               return 'bg-brand-500';
-                    if (event === 'collaboration_accepted') return 'bg-emerald-500';
-                    if (event === 'collaboration_declined') return 'bg-red-500';
-                    if (event === 'collaboration_revoked')  return 'bg-gray-500';
+                    if (event === 'transfer')                 return 'bg-brand-500';
+                    if (event === 'collaboration_accepted')   return 'bg-emerald-500';
+                    if (event === 'collaboration_declined')   return 'bg-red-500';
+                    if (event === 'collaboration_revoked')    return 'bg-gray-500';
+                    if (event === 'report_completed')         return 'bg-emerald-600';
+                    if (event === 'report_draft')             return 'bg-amber-400';
                     return 'bg-amber-500'; // pending
                 },
 
@@ -561,6 +564,14 @@
                     }
                     if (ev.event === 'collaboration_revoked') {
                         return `Richiesta di collaborazione a <span class="font-medium">${ev.user_name}</span> revocata`;
+                    }
+                    if (ev.event === 'report_completed') {
+                        const dur = ev.duration ? ` <span class="text-gray-500">(${ev.duration})</span>` : '';
+                        return `<span class="font-medium">${ev.user_name}</span> ha scritto il <span class="text-emerald-700">rapportino di chiusura</span>${dur}`;
+                    }
+                    if (ev.event === 'report_draft') {
+                        const dur = ev.duration ? ` <span class="text-gray-500">(${ev.duration})</span>` : '';
+                        return `<span class="font-medium">${ev.user_name}</span> ha salvato una <span class="text-amber-700">bozza di rapportino</span>${dur}`;
                     }
                     return `Richiesta di collaborazione a <span class="font-medium">${ev.user_name}</span> (in attesa)`;
                 },

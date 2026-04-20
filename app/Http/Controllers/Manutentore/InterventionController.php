@@ -69,6 +69,15 @@ class InterventionController extends Controller
                 }
             });
 
+        // Nasconde ticket sospesi/rinviati fino alla data di ripresa, tranne quando
+        // l'utente filtra esplicitamente "sospesi".
+        if ($filter !== 'cancelled') {
+            $query->where(function ($q) {
+                $q->whereNull('suspended_until')
+                  ->orWhere('suspended_until', '<=', today());
+            });
+        }
+
         switch ($filter) {
             case 'today':
                 $query->where('tipo', 'pianificazione')
@@ -234,7 +243,24 @@ class InterventionController extends Controller
             'at_sort'         => ($c->responded_at ?? $c->requested_at ?? $c->created_at)?->timestamp,
         ]);
 
-        $history = $transfers->concat($collabEvents)->sortByDesc('at_sort')->values();
+        $reportEvents = $intervention->reports->map(fn ($r) => [
+            'id'            => $r->id,
+            'event'         => 'report_' . ($r->status ?? 'draft'),
+            'user_name'     => $r->user?->name,
+            'status'        => $r->status,
+            'duration'      => $r->duration_minutes
+                ? $this->formatDuration((int) $r->duration_minutes)
+                : null,
+            'activities'    => $r->activities,
+            'at'            => $r->created_at?->isoFormat('D MMM YYYY · HH:mm'),
+            'at_sort'       => $r->created_at?->timestamp,
+        ]);
+
+        $history = $transfers
+            ->concat($collabEvents)
+            ->concat($reportEvents)
+            ->sortByDesc('at_sort')
+            ->values();
 
         $collaborators = $intervention->collaborations
             ->whereIn('status', [InterventionCollaboration::STATUS_ACCEPTED, InterventionCollaboration::STATUS_PENDING])
@@ -259,7 +285,7 @@ class InterventionController extends Controller
                 'open'        => 'Aperto',
                 'planned'     => 'Pianificato',
                 'in_progress' => 'In carico',
-                'completed'   => 'Completato',
+                'completed'   => 'Chiuso',
                 'cancelled'   => 'Sospeso',
             ][$intervention->status] ?? $intervention->status,
             'priority'       => $intervention->priority,
@@ -301,13 +327,18 @@ class InterventionController extends Controller
                 'message'         => $pendingCollabForMe->message,
                 'respond_url'     => route('m.collaborations.respond', $pendingCollabForMe->id),
             ] : null,
+            'suspended_until'    => $intervention->suspended_until?->toDateString(),
+            'suspended_until_label' => $intervention->suspended_until?->isoFormat('D MMM YYYY'),
             'urls' => [
                 'take_charge'       => route('interventions.take-charge', $intervention),
-                'report_create'     => route('interventions.reports.create', $intervention),
                 'details'           => route('interventions.show', $intervention),
                 'transfer'          => route('m.interventions.transfer', $intervention),
                 'collaboration'     => route('m.interventions.collaboration', $intervention),
                 'candidates'        => route('m.interventions.candidates', $intervention),
+                'report_store'      => route('m.reports.store', $intervention),
+                'close'             => route('m.interventions.close', $intervention),
+                'suspend'           => route('m.interventions.suspend', $intervention),
+                'defer'             => route('m.interventions.defer', $intervention),
             ],
             'actions' => [
                 'can_take_charge'    => $unassigned && in_array($intervention->status, ['open', 'planned']),
@@ -317,6 +348,8 @@ class InterventionController extends Controller
                 'can_edit_report'    => $hasMyReport && $myReport?->status !== 'chiuso',
                 'can_transfer'       => $mine && !in_array($intervention->status, ['completed', 'cancelled']),
                 'can_collaborate'    => ($mine || $iAmAcceptedCollaborator) && !in_array($intervention->status, ['completed', 'cancelled']),
+                'can_close_ticket'   => $mine && $intervention->status === 'in_progress'
+                                        && $this->allRequiredReportsCompleted($intervention),
             ],
         ]);
     }
@@ -481,6 +514,108 @@ class InterventionController extends Controller
         ]);
     }
 
+    public function close(Intervention $intervention): JsonResponse
+    {
+        $me = Auth::user();
+
+        if ($intervention->assigned_user_id !== $me->id && $me->role !== 'admin') {
+            return response()->json(['ok' => false, 'message' => 'Solo l\'assegnatario può chiudere il ticket.'], 403);
+        }
+
+        if (in_array($intervention->status, ['completed', 'cancelled'])) {
+            return response()->json(['ok' => false, 'message' => 'Ticket già chiuso.'], 422);
+        }
+
+        $intervention->load(['collaborations', 'reports']);
+
+        // Verifica che tutti gli utenti richiesti abbiano scritto un rapportino di chiusura (status=completed)
+        $requiredIds = collect([$intervention->assigned_user_id])
+            ->merge(
+                $intervention->collaborations
+                    ->where('status', InterventionCollaboration::STATUS_ACCEPTED)
+                    ->pluck('user_id')
+            )
+            ->filter()
+            ->unique()
+            ->values();
+
+        $completedIds = $intervention->reports
+            ->where('status', 'completed')
+            ->pluck('user_id')
+            ->unique();
+
+        $missing = $requiredIds->diff($completedIds);
+        if ($missing->isNotEmpty()) {
+            return response()->json([
+                'ok'      => false,
+                'message' => 'Per chiudere il ticket serve il rapportino di chiusura di tutti i collaboratori.',
+            ], 422);
+        }
+
+        $intervention->update([
+            'status'          => 'completed',
+            'completed_at'    => now(),
+            'suspended_until' => null,
+        ]);
+
+        return response()->json([
+            'ok'      => true,
+            'message' => 'Ticket chiuso.',
+        ]);
+    }
+
+    public function suspend(Request $request, Intervention $intervention): JsonResponse
+    {
+        $me = Auth::user();
+
+        if ($intervention->assigned_user_id !== $me->id && $me->role !== 'admin') {
+            return response()->json(['ok' => false, 'message' => 'Solo l\'assegnatario può sospendere il ticket.'], 403);
+        }
+
+        if (in_array($intervention->status, ['completed', 'cancelled'])) {
+            return response()->json(['ok' => false, 'message' => 'Ticket già chiuso o sospeso.'], 422);
+        }
+
+        $data = $request->validate([
+            'until' => ['required', 'date', 'after_or_equal:tomorrow'],
+        ], [
+            'until.after_or_equal' => 'La data di ripresa deve essere futura.',
+        ]);
+
+        $intervention->update([
+            'status'          => 'cancelled',
+            'suspended_until' => $data['until'],
+        ]);
+
+        return response()->json([
+            'ok'      => true,
+            'message' => 'Ticket sospeso fino al ' . \Carbon\Carbon::parse($data['until'])->isoFormat('D MMM YYYY') . '.',
+        ]);
+    }
+
+    public function defer(Intervention $intervention): JsonResponse
+    {
+        $me = Auth::user();
+
+        if ($intervention->assigned_user_id !== $me->id && $me->role !== 'admin') {
+            return response()->json(['ok' => false, 'message' => 'Solo l\'assegnatario può rimandare il ticket.'], 403);
+        }
+
+        if (in_array($intervention->status, ['completed', 'cancelled'])) {
+            return response()->json(['ok' => false, 'message' => 'Ticket già chiuso o sospeso.'], 422);
+        }
+
+        $intervention->update([
+            'status'          => 'in_progress',
+            'suspended_until' => today()->copy()->addDay(),
+        ]);
+
+        return response()->json([
+            'ok'      => true,
+            'message' => 'Ticket rinviato a domani.',
+        ]);
+    }
+
     public function quickStore(Request $request): RedirectResponse
     {
         $request->validate([
@@ -553,5 +688,36 @@ class InterventionController extends Controller
                 ->take(2)
                 ->implode('')
         );
+    }
+
+    private function allRequiredReportsCompleted(Intervention $intervention): bool
+    {
+        $requiredIds = collect([$intervention->assigned_user_id])
+            ->merge(
+                $intervention->collaborations
+                    ->where('status', InterventionCollaboration::STATUS_ACCEPTED)
+                    ->pluck('user_id')
+            )
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($requiredIds->isEmpty()) return false;
+
+        $completedIds = $intervention->reports
+            ->where('status', 'completed')
+            ->pluck('user_id')
+            ->unique();
+
+        return $requiredIds->diff($completedIds)->isEmpty();
+    }
+
+    private function formatDuration(int $minutes): string
+    {
+        $h = intdiv($minutes, 60);
+        $m = $minutes % 60;
+        if ($h > 0 && $m > 0) return "{$h}h {$m}m";
+        if ($h > 0) return "{$h}h";
+        return "{$m}m";
     }
 }
