@@ -85,7 +85,7 @@
                                         @csrf
                                         @method('PATCH')
                                         <button type="submit"
-                                                class="btn btn-sm {{ $user->active ? 'btn-secondary' : 'btn-success' }}"
+                                                class="btn btn-sm {{ $user->active ? 'btn-dark' : 'btn-success' }} user-toggle-btn"
                                                 title="{{ $user->active ? 'Disattiva utente' : 'Riattiva utente' }}">
                                             <i class="bi {{ $user->active ? 'bi-toggle-on' : 'bi-toggle-off' }}"></i>
                                         </button>

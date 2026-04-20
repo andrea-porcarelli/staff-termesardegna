@@ -272,6 +272,32 @@
             color: white;
         }
 
+        .user-toggle-btn {
+            border: none;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 14px;
+            color: white;
+        }
+
+        .user-toggle-btn.btn-dark {
+            background: #1a1a1a;
+        }
+
+        .user-toggle-btn.btn-dark:hover {
+            background: #000000;
+            color: white;
+        }
+
+        .user-toggle-btn.btn-success {
+            background: #10b981;
+        }
+
+        .user-toggle-btn.btn-success:hover {
+            background: #059669;
+            color: white;
+        }
+
         .btn-secondary {
             background: #6c757d;
             border: none;
