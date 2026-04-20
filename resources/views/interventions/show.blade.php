@@ -12,21 +12,29 @@
     </div>
 
 @if(auth()->user()->role === 'manutentore')
-    <div class="card mb-4 border-warning border-3 shadow-lg">
-        <div class="card-body text-center py-5 px-4 d-flex justify-content-center gap-3 flex-wrap align-items-center">
-            @if($intervention->preso_in_carico_at === null && !in_array($intervention->status, ['completed', 'cancelled']))
-                <form action="{{ route('interventions.take-charge', $intervention) }}" method="POST" class="flex-grow-1">
-                    @csrf
-                    <button type="submit" class="btn btn-warning fw-bold" style="font-size: 1.3rem; padding: 0.75rem 2rem; min-width: 300px;">
-                        <i class="bi bi-hand-index-thumb me-2"></i>Prendi in Carico
-                    </button>
-                </form>
-            @endif
-            @if($intervention->assigned_user_id === auth()->id() && $intervention->preso_in_carico_at !== null)
-                <a href="{{ route('interventions.reports.create', $intervention) }}" class="btn btn-light fw-bold" style="font-size: 1.2rem; padding: 0.75rem 1.5rem;">
-                    <i class="bi bi-plus-circle me-2"></i>Crea Rapportino
-                </a>
-            @endif
+    <div class="card mb-4 border-warning border-3 shadow-lg" id="takeChargeCard">
+        <div class="card-body text-center py-5 px-4 d-flex justify-content-center gap-3 flex-wrap align-items-center" id="takeChargeCardBody">
+            <div id="takeChargeAlert" class="w-100" style="display:none;"></div>
+            <form
+                action="{{ route('interventions.take-charge', $intervention) }}"
+                method="POST"
+                class="flex-grow-1"
+                id="takeChargeForm"
+                style="{{ $intervention->preso_in_carico_at === null && !in_array($intervention->status, ['completed', 'cancelled']) ? '' : 'display:none;' }}"
+            >
+                @csrf
+                <button type="submit" class="btn btn-warning fw-bold" style="font-size: 1.3rem; padding: 0.75rem 2rem; min-width: 300px;" id="takeChargeButton">
+                    <i class="bi bi-hand-index-thumb me-2"></i>Prendi in Carico
+                </button>
+            </form>
+            <a
+                href="{{ route('interventions.reports.create', $intervention) }}"
+                class="btn btn-light fw-bold"
+                style="font-size: 1.2rem; padding: 0.75rem 1.5rem; {{ $intervention->assigned_user_id === auth()->id() && $intervention->preso_in_carico_at !== null ? '' : 'display:none;' }}"
+                id="createReportLink"
+            >
+                <i class="bi bi-plus-circle me-2"></i>Crea Rapportino
+            </a>
         </div>
     </div>
 @endif
@@ -154,18 +162,20 @@
                                             'cancelled' => 'Annullato'
                                         ];
                                     @endphp
-                                    <span class="badge {{ $statusClasses[$intervention->status] ?? 'bg-secondary' }}">
+                                    <span class="badge {{ $statusClasses[$intervention->status] ?? 'bg-secondary' }}" id="statusBadge">
                                         {{ $statusLabels[$intervention->status] ?? $intervention->status }}
                                     </span>
-                                    @if($intervention->preso_in_carico_at)
-                                        <span class="badge bg-success ms-1" title="{{ $intervention->preso_in_carico_at->format('d/m/Y H:i') }}">
-                                            <i class="bi bi-hand-index-thumb me-1"></i>Preso in carico il {{ $intervention->preso_in_carico_at->format('d/m/Y H:i') }}
-                                        </span>
-                                    @elseif($intervention->assigned_user_id && !in_array($intervention->status, ['completed', 'cancelled']))
-                                        <span class="badge bg-secondary ms-1">
-                                            <i class="bi bi-hourglass-split me-1"></i>In attesa di presa in carico
-                                        </span>
-                                    @endif
+                                    <span id="presoInCaricoBadge">
+                                        @if($intervention->preso_in_carico_at)
+                                            <span class="badge bg-success ms-1" title="{{ $intervention->preso_in_carico_at->format('d/m/Y H:i') }}">
+                                                <i class="bi bi-hand-index-thumb me-1"></i>Preso in carico il {{ $intervention->preso_in_carico_at->format('d/m/Y H:i') }}
+                                            </span>
+                                        @elseif($intervention->assigned_user_id && !in_array($intervention->status, ['completed', 'cancelled']))
+                                            <span class="badge bg-secondary ms-1">
+                                                <i class="bi bi-hourglass-split me-1"></i>In attesa di presa in carico
+                                            </span>
+                                        @endif
+                                    </span>
                                 </td>
                             </tr>
                             @if($intervention->deadline)
@@ -707,5 +717,79 @@ function viewReport(reportId) {
             `;
         });
 }
+
+(function () {
+    const form = document.getElementById('takeChargeForm');
+    if (!form) return;
+
+    const alertBox = document.getElementById('takeChargeAlert');
+    const button = document.getElementById('takeChargeButton');
+    const createReportLink = document.getElementById('createReportLink');
+    const statusBadge = document.getElementById('statusBadge');
+    const presoBadge = document.getElementById('presoInCaricoBadge');
+
+    const statusClasses = {
+        'open': 'bg-primary',
+        'planned': 'bg-info',
+        'in_progress': 'bg-warning',
+        'completed': 'bg-success',
+        'cancelled': 'bg-danger',
+    };
+
+    function showAlert(type, message) {
+        alertBox.style.display = '';
+        alertBox.innerHTML = `<div class="alert alert-${type} mb-3"><i class="bi bi-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>${message}</div>`;
+    }
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        button.disabled = true;
+        const originalHtml = button.innerHTML;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Attendere...';
+
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': form.querySelector('input[name="_token"]').value,
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+            });
+
+            const data = await response.json();
+
+            if (!response.ok || !data.ok) {
+                showAlert('danger', data.message || 'Errore durante la presa in carico.');
+                button.disabled = false;
+                button.innerHTML = originalHtml;
+                return;
+            }
+
+            form.style.display = 'none';
+
+            if (createReportLink) {
+                createReportLink.style.display = '';
+            }
+
+            if (statusBadge && data.intervention) {
+                const newClass = statusClasses[data.intervention.status] || 'bg-secondary';
+                statusBadge.className = 'badge ' + newClass;
+                statusBadge.id = 'statusBadge';
+                statusBadge.textContent = data.intervention.status_label;
+            }
+
+            if (presoBadge && data.intervention) {
+                presoBadge.innerHTML = `<span class="badge bg-success ms-1" title="${data.intervention.preso_in_carico_at}"><i class="bi bi-hand-index-thumb me-1"></i>Preso in carico il ${data.intervention.preso_in_carico_at}</span>`;
+            }
+
+            showAlert('success', data.message);
+        } catch (error) {
+            showAlert('danger', 'Errore di rete. Riprova.');
+            button.disabled = false;
+            button.innerHTML = originalHtml;
+        }
+    });
+})();
 </script>
 @endpush

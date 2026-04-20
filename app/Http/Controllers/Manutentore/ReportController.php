@@ -8,6 +8,7 @@ use App\Models\InterventionCollaboration;
 use App\Models\Media;
 use App\Models\Report;
 use App\Models\User;
+use App\Notifications\CollaboratorReportSubmittedNotification;
 use App\Services\InterventionActivityLogger;
 use App\Support\InterventionLogActions;
 use Illuminate\Http\JsonResponse;
@@ -93,6 +94,14 @@ class ReportController extends Controller
             'report_status' => $report->status,
         ]);
 
+        $isAssignee = $intervention->assigned_user_id === $user->id;
+
+        if (! $isAssignee && $intervention->assignedUser) {
+            $intervention->assignedUser->notify(
+                new CollaboratorReportSubmittedNotification($intervention, $report, $user)
+            );
+        }
+
         // Ricalcolo se il ticket è pronto per la chiusura
         $intervention->load(['collaborations', 'reports']);
         $canClose = $this->allRequiredReportsCompleted($intervention);
@@ -103,8 +112,9 @@ class ReportController extends Controller
             'report_id' => $report->id,
             'report_status' => $report->status,
             'can_close_ticket' => $canClose,
-            // Il flusso "chiudi/sospendi" è sensato solo se il rapportino è di chiusura
-            'should_prompt_close' => $report->status === 'completed',
+            // Il flusso "chiudi/sospendi" è visibile solo all'assegnatario del ticket.
+            // Il collaboratore dopo il salvataggio chiude la modale.
+            'should_prompt_close' => $isAssignee,
         ]);
     }
 

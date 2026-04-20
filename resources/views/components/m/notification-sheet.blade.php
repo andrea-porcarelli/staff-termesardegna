@@ -89,18 +89,20 @@
                 },
                 iconBg(type) {
                     return {
-                        transfer_received:       'bg-indigo-100 text-indigo-700',
-                        collaboration_requested: 'bg-amber-100 text-amber-700',
-                        collaboration_accepted:  'bg-emerald-100 text-emerald-700',
-                        collaboration_declined:  'bg-red-100 text-red-700',
+                        transfer_received:             'bg-indigo-100 text-indigo-700',
+                        collaboration_requested:       'bg-amber-100 text-amber-700',
+                        collaboration_accepted:        'bg-emerald-100 text-emerald-700',
+                        collaboration_declined:        'bg-red-100 text-red-700',
+                        collaborator_report_submitted: 'bg-sky-100 text-sky-700',
                     }[type] || 'bg-gray-100 text-gray-700';
                 },
                 iconSvg(type) {
                     return {
-                        transfer_received:       '<path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0-3-3m3 3-3 3M16 17H4m0 0 3 3m-3-3 3-3"/>',
-                        collaboration_requested: '<path stroke-linecap="round" stroke-linejoin="round" d="M17 20v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM20 8v6m-3-3h6"/>',
-                        collaboration_accepted:  '<path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7"/>',
-                        collaboration_declined:  '<path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>',
+                        transfer_received:             '<path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0-3-3m3 3-3 3M16 17H4m0 0 3 3m-3-3 3-3"/>',
+                        collaboration_requested:       '<path stroke-linecap="round" stroke-linejoin="round" d="M17 20v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM20 8v6m-3-3h6"/>',
+                        collaboration_accepted:        '<path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7"/>',
+                        collaboration_declined:        '<path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>',
+                        collaborator_report_submitted: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6M7 4h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>',
                     }[type] || '<path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14V11a6 6 0 1 0-12 0v3a2 2 0 0 1-.6 1.6L4 17h5m6 0a3 3 0 1 1-6 0"/>';
                 },
             };

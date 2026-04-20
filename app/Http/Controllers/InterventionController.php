@@ -108,17 +108,25 @@ class InterventionController extends Controller
         return view('interventions.show', compact('intervention'));
     }
 
-    public function takeCharge(Intervention $intervention): RedirectResponse
+    public function takeCharge(Request $request, Intervention $intervention): RedirectResponse|JsonResponse
     {
         $user = Auth::user();
         abort_if($user->role !== 'manutentore', 403);
 
         if ($intervention->preso_in_carico_at !== null) {
-            return back()->with('error', 'Questo intervento è già stato preso in carico.');
+            $message = 'Questo intervento è già stato preso in carico.';
+
+            return $request->wantsJson()
+                ? response()->json(['ok' => false, 'message' => $message], 422)
+                : back()->with('error', $message);
         }
 
         if (in_array($intervention->status, ['completed', 'cancelled'])) {
-            return back()->with('error', 'Questo intervento non può essere preso in carico.');
+            $message = 'Questo intervento non può essere preso in carico.';
+
+            return $request->wantsJson()
+                ? response()->json(['ok' => false, 'message' => $message], 422)
+                : back()->with('error', $message);
         }
 
         $intervention->update([
@@ -128,6 +136,22 @@ class InterventionController extends Controller
         ]);
 
         InterventionActivityLogger::log($intervention, InterventionLogActions::TAKEN_IN_CHARGE);
+
+        if ($request->wantsJson()) {
+            $intervention->refresh();
+
+            return response()->json([
+                'ok' => true,
+                'message' => 'Intervento preso in carico con successo!',
+                'intervention' => [
+                    'id' => $intervention->id,
+                    'status' => $intervention->status,
+                    'status_label' => 'In corso',
+                    'preso_in_carico_at' => $intervention->preso_in_carico_at->format('d/m/Y H:i'),
+                ],
+                'report_create_url' => route('interventions.reports.create', $intervention),
+            ]);
+        }
 
         return redirect()->route('interventions.show', $intervention)
             ->with('success', 'Intervento preso in carico con successo!');

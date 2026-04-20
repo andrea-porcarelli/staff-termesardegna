@@ -101,23 +101,6 @@
                                       placeholder="Annotazioni, parti sostituite, segnalazioni…"></textarea>
                         </div>
 
-                        {{-- Stato --}}
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Stato</label>
-                            <div class="grid grid-cols-2 gap-2">
-                                <label class="flex items-center justify-center h-11 rounded-xl border cursor-pointer text-sm font-semibold"
-                                       :class="form.status === 'draft' ? 'bg-amber-50 border-amber-400 text-amber-800' : 'bg-white border-gray-300 text-gray-700 active:bg-gray-50'">
-                                    <input type="radio" value="draft" x-model="form.status" class="sr-only">
-                                    Bozza
-                                </label>
-                                <label class="flex items-center justify-center h-11 rounded-xl border cursor-pointer text-sm font-semibold"
-                                       :class="form.status === 'completed' ? 'bg-emerald-50 border-emerald-500 text-emerald-800' : 'bg-white border-gray-300 text-gray-700 active:bg-gray-50'">
-                                    <input type="radio" value="completed" x-model="form.status" class="sr-only">
-                                    Completato
-                                </label>
-                            </div>
-                        </div>
-
                         {{-- Allegati --}}
                         <div>
                             <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Allegati</label>
@@ -282,7 +265,6 @@
                     minutes: 0,
                     activities: '',
                     notes: '',
-                    status: 'completed',
                 },
                 files: [],
                 csrf: document.querySelector('meta[name="csrf-token"]')?.content || '',
@@ -316,7 +298,7 @@
 
                     this.step = 'form';
                     this.result = null;
-                    this.form = { hours: 0, minutes: 0, activities: '', notes: '', status: 'completed' };
+                    this.form = { hours: 0, minutes: 0, activities: '', notes: '' };
                     this.files = [];
 
                     const now = new Date();
@@ -390,7 +372,7 @@
                     fd.append('minutes', String(this.form.minutes ?? 0));
                     fd.append('activities', this.form.activities);
                     fd.append('notes', this.form.notes || '');
-                    fd.append('status', this.form.status);
+                    fd.append('status', 'completed');
                     this.files.forEach((f) => fd.append('files[]', f.file));
 
                     try {

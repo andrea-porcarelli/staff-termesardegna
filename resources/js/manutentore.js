@@ -52,19 +52,24 @@ const playChime = () => {
     if (!audioCtx) return
     try {
         const now = audioCtx.currentTime
-        const tone = (freq, start, dur = 0.22, gain = 0.08) => {
+        const tone = (freq, start, dur = 0.32, gain = 0.55) => {
             const osc = audioCtx.createOscillator()
             const g = audioCtx.createGain()
-            osc.type = 'sine'
+            osc.type = 'triangle'
             osc.frequency.value = freq
-            g.gain.setValueAtTime(gain, now + start)
+            g.gain.setValueAtTime(0.0001, now + start)
+            g.gain.exponentialRampToValueAtTime(gain, now + start + 0.015)
             g.gain.exponentialRampToValueAtTime(0.0001, now + start + dur)
             osc.connect(g).connect(audioCtx.destination)
             osc.start(now + start)
             osc.stop(now + start + dur + 0.02)
         }
         tone(880, 0)          // A5
-        tone(1175, 0.14)      // D6
+        tone(1175, 0.18)      // D6
+        tone(1568, 0.36)      // G6
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            navigator.vibrate([120, 40, 120])
+        }
     } catch (_) {}
 }
 
