@@ -365,12 +365,11 @@ class InterventionController extends Controller
         $this->authorizeVisibility($intervention);
         $purpose = $request->get('purpose', 'transfer');
 
-        $query = User::whereIn('role', ['manutentore', 'operator'])
+        $query = User::where('role', 'manutentore')
             ->where('id', '!=', Auth::id());
 
         if ($intervention->maintenance_role_id) {
-            $query->whereHas('maintenanceRoles', fn ($q) => $q->where('maintenance_roles.id', $intervention->maintenance_role_id)
-            );
+            $query->whereHas('maintenanceRoles', fn ($q) => $q->where('maintenance_roles.id', $intervention->maintenance_role_id));
         }
 
         $deptId = $intervention->department_id ?? $intervention->equipment?->department_id;
@@ -402,9 +401,9 @@ class InterventionController extends Controller
         $users = $query->with('workScheduleSlots')->orderBy('name')->get();
 
         // Per collaborazione: solo utenti attualmente in turno
-        if ($purpose === 'collaboration') {
-            $users = $users->filter(fn ($u) => $u->isOnShift())->values();
-        }
+//        if ($purpose === 'collaboration') {
+//            $users = $users->filter(fn ($u) => $u->isOnShift())->values();
+//        }
 
         $candidates = $users->map(fn ($u) => [
             'id' => $u->id,
