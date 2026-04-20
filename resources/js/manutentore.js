@@ -51,14 +51,16 @@ const unlockAudio = () => {
 const playChime = () => {
     if (!audioCtx) return
     try {
+        if (audioCtx.state === 'suspended') {
+            audioCtx.resume()
+        }
         const now = audioCtx.currentTime
-        const tone = (freq, start, dur = 0.32, gain = 0.55) => {
+        const tone = (freq, start, dur = 0.35, gain = 0.45) => {
             const osc = audioCtx.createOscillator()
             const g = audioCtx.createGain()
-            osc.type = 'triangle'
+            osc.type = 'sine'
             osc.frequency.value = freq
-            g.gain.setValueAtTime(0.0001, now + start)
-            g.gain.exponentialRampToValueAtTime(gain, now + start + 0.015)
+            g.gain.setValueAtTime(gain, now + start)
             g.gain.exponentialRampToValueAtTime(0.0001, now + start + dur)
             osc.connect(g).connect(audioCtx.destination)
             osc.start(now + start)

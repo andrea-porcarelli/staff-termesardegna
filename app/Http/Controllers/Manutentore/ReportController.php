@@ -106,15 +106,34 @@ class ReportController extends Controller
         $intervention->load(['collaborations', 'reports']);
         $canClose = $this->allRequiredReportsCompleted($intervention);
 
+        // Se il collaboratore è l'ultimo a compilare (assegnatario ha già chiuso)
+        // il ticket si chiude automaticamente.
+        $autoClosed = false;
+        if (! $isAssignee && $canClose && ! in_array($intervention->status, ['completed', 'cancelled'])) {
+            $intervention->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+                'suspended_until' => null,
+            ]);
+            InterventionActivityLogger::log($intervention, InterventionLogActions::COMPLETED, [
+                'auto_closed' => true,
+                'closed_by_report_id' => $report->id,
+            ]);
+            $autoClosed = true;
+        }
+
         return response()->json([
             'ok' => true,
-            'message' => 'Rapportino salvato.',
+            'message' => $autoClosed
+                ? 'Rapportino salvato. Ticket chiuso automaticamente.'
+                : 'Rapportino salvato.',
             'report_id' => $report->id,
             'report_status' => $report->status,
             'can_close_ticket' => $canClose,
-            // Il flusso "chiudi/sospendi" è visibile solo all'assegnatario del ticket.
-            // Il collaboratore dopo il salvataggio chiude la modale.
-            'should_prompt_close' => $isAssignee,
+            'auto_closed' => $autoClosed,
+            // Il flusso "chiudi/sospendi" è visibile solo all'assegnatario del ticket,
+            // e solo se il ticket non è stato appena auto-chiuso.
+            'should_prompt_close' => $isAssignee && ! $autoClosed,
         ]);
     }
 

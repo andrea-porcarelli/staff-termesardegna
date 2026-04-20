@@ -268,26 +268,30 @@
                     </button>
                 </template>
 
-                <div class="grid grid-cols-2 gap-2">
-                    <button type="button"
-                            @click="openSub('transfer')"
-                            :disabled="!ticket?.actions?.can_transfer"
-                            class="h-11 rounded-xl bg-gray-100 text-gray-800 font-semibold text-sm disabled:opacity-50 active:bg-gray-200 flex items-center justify-center gap-1.5">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0-3-3m3 3-3 3M16 17H4m0 0 3 3m-3-3 3-3"/>
-                        </svg>
-                        Trasferisci
-                    </button>
-                    <button type="button"
-                            @click="openSub('collab')"
-                            :disabled="!ticket?.actions?.can_collaborate"
-                            class="h-11 rounded-xl bg-gray-100 text-gray-800 font-semibold text-sm disabled:opacity-50 active:bg-gray-200 flex items-center justify-center gap-1.5">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm14 9v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-                        </svg>
-                        Collabora
-                    </button>
-                </div>
+                <template x-if="ticket?.actions?.can_transfer || ticket?.actions?.can_collaborate">
+                    <div class="grid grid-cols-2 gap-2">
+                        <template x-if="ticket?.actions?.can_transfer">
+                            <button type="button"
+                                    @click="openSub('transfer')"
+                                    class="h-11 rounded-xl bg-gray-100 text-gray-800 font-semibold text-sm active:bg-gray-200 flex items-center justify-center gap-1.5">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0-3-3m3 3-3 3M16 17H4m0 0 3 3m-3-3 3-3"/>
+                                </svg>
+                                Trasferisci
+                            </button>
+                        </template>
+                        <template x-if="ticket?.actions?.can_collaborate">
+                            <button type="button"
+                                    @click="openSub('collab')"
+                                    class="h-11 rounded-xl bg-gray-100 text-gray-800 font-semibold text-sm active:bg-gray-200 flex items-center justify-center gap-1.5">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 20v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm14 9v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                                </svg>
+                                Collabora
+                            </button>
+                        </template>
+                    </div>
+                </template>
 
             </div>
         </div>

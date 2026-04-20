@@ -352,8 +352,8 @@ class InterventionController extends Controller
                                         && $intervention->status === 'in_progress'
                                         && ! $hasMyReport,
                 'can_edit_report' => $hasMyReport && $myReport?->status !== 'chiuso',
-                'can_transfer' => $mine && ! in_array($intervention->status, ['completed', 'cancelled']),
-                'can_collaborate' => ($mine || $iAmAcceptedCollaborator) && ! in_array($intervention->status, ['completed', 'cancelled']),
+                'can_transfer' => $mine && ! $hasMyReport && ! in_array($intervention->status, ['completed', 'cancelled']),
+                'can_collaborate' => $mine && ! $hasMyReport && ! in_array($intervention->status, ['completed', 'cancelled']),
                 'can_close_ticket' => $mine && $intervention->status === 'in_progress'
                                         && $this->allRequiredReportsCompleted($intervention),
             ],
@@ -401,9 +401,9 @@ class InterventionController extends Controller
         $users = $query->with('workScheduleSlots')->orderBy('name')->get();
 
         // Per collaborazione: solo utenti attualmente in turno
-//        if ($purpose === 'collaboration') {
-//            $users = $users->filter(fn ($u) => $u->isOnShift())->values();
-//        }
+        //        if ($purpose === 'collaboration') {
+        //            $users = $users->filter(fn ($u) => $u->isOnShift())->values();
+        //        }
 
         $candidates = $users->map(fn ($u) => [
             'id' => $u->id,
