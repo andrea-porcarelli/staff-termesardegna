@@ -136,16 +136,16 @@
                                 Hai terminato il tuo lavoro sul ticket? <span class="text-red-500">*</span>
                             </label>
                             <div class="grid grid-cols-2 gap-2">
-                                <label class="h-11 rounded-xl border-2 flex items-center justify-center gap-2 cursor-pointer font-semibold text-sm transition-colors"
-                                       :class="form.is_final === true ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-300 bg-white text-gray-700 active:bg-gray-50'">
-                                    <input type="radio" :value="true" x-model="form.is_final" @change="onYes()" class="sr-only">
+                                <button type="button" @click="chooseYes()"
+                                        class="h-11 rounded-xl border-2 flex items-center justify-center gap-2 font-semibold text-sm transition-colors"
+                                        :class="form.is_final === true ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-300 bg-white text-gray-700 active:bg-gray-50'">
                                     Sì, ho finito
-                                </label>
-                                <label class="h-11 rounded-xl border-2 flex items-center justify-center gap-2 cursor-pointer font-semibold text-sm transition-colors"
-                                       :class="form.is_final === false ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-gray-300 bg-white text-gray-700 active:bg-gray-50'">
-                                    <input type="radio" :value="false" x-model="form.is_final" @change="onNo()" class="sr-only">
+                                </button>
+                                <button type="button" @click="chooseNo()"
+                                        class="h-11 rounded-xl border-2 flex items-center justify-center gap-2 font-semibold text-sm transition-colors"
+                                        :class="form.is_final === false ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-gray-300 bg-white text-gray-700 active:bg-gray-50'">
                                     No
-                                </label>
+                                </button>
                             </div>
                         </div>
 
@@ -325,8 +325,9 @@
                     return true;
                 },
 
-                // Click radio "Sì, ho finito" → auto-submit se i campi base sono pronti.
-                onYes() {
+                // Click "Sì, ho finito" → imposta is_final=true e prova auto-submit.
+                chooseYes() {
+                    this.form.is_final = true;
                     this.whenChoice = null;
                     this.form.next_work_date = '';
                     if (!this.form.duration || !this.form.activities || !this.form.activities.trim()) {
@@ -335,8 +336,9 @@
                     this.submit();
                 },
 
-                // Click radio "No": azzera la scelta "quando torni" per forzare l'utente a sceglierla.
-                onNo() {
+                // Click "No" → imposta is_final=false e azzera la scelta "quando torni".
+                chooseNo() {
+                    this.form.is_final = false;
                     this.whenChoice = null;
                     this.form.next_work_date = '';
                 },
