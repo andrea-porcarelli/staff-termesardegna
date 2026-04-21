@@ -82,6 +82,8 @@ Route::prefix('m')->middleware(['auth', 'mobile'])->name('m.')->group(function (
     // Rapportino inline (mobile)
     Route::post('/interventions/{intervention}/reports', [MReportController::class, 'store'])
         ->name('reports.store');
+    Route::post('/reports', [MReportController::class, 'storeStandalone'])
+        ->name('reports.store-standalone');
 });
 
 Route::middleware('auth')->group(function () {

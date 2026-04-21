@@ -64,42 +64,63 @@ class HomeController extends Controller
 
         $today = today();
         $weekAhead = today()->copy()->addDays(7);
+        $weekEnd = $weekAhead->copy()->endOfDay();
 
-        // Urgenti: tutto ciò che è scaduto + tutto ciò che è a priorità alta (non scaduto).
-        $urgenti = $interventions->filter(function ($i) use ($today) {
-            if (in_array($i->status, ['completed', 'cancelled'], true)) {
-                return false;
-            }
+        $active = $interventions->reject(fn ($i) => in_array($i->status, ['completed', 'cancelled'], true));
+
+        // 1. Scaduti: pianificati con data passata + ordinari in ritardo (is_overdue).
+        $scaduti = $active->filter(function ($i) use ($today) {
             $overduePianificato = $i->tipo === 'pianificazione'
                 && $i->scheduled_date
                 && $i->scheduled_date->lt($today);
             $overdueLibero = $i->tipo !== 'pianificazione' && $i->is_overdue;
-            $highPriority = $i->priority === 'high';
 
-            return $overduePianificato || $overdueLibero || $highPriority;
-        })->sortBy(function ($i) use ($today) {
-            if ($i->tipo === 'pianificazione' && $i->scheduled_date) {
-                return $i->scheduled_date->timestamp;
+            return $overduePianificato || $overdueLibero;
+        })->sortBy(fn ($i) => $i->deadline?->timestamp ?? $i->scheduled_date?->timestamp ?? 0)->values();
+
+        $scadutiIds = $scaduti->pluck('id')->all();
+
+        // 2. Alta priorità nei prossimi 7 giorni (escluso chi è già in scaduti).
+        $altaPriorita = $active->filter(function ($i) use ($scadutiIds, $weekEnd) {
+            if (in_array($i->id, $scadutiIds, true)) return false;
+            if ($i->priority !== 'high') return false;
+
+            return $i->deadline && $i->deadline->lte($weekEnd);
+        })->sortBy(fn ($i) => $i->deadline?->timestamp ?? 0)->values();
+
+        $altaIds = $altaPriorita->pluck('id')->all();
+
+        // 3. Pianificati nei prossimi 7 giorni (tipo=pianificazione oppure priorità=fixed_date).
+        $pianificati = $active->filter(function ($i) use ($scadutiIds, $altaIds, $today, $weekAhead) {
+            if (in_array($i->id, $scadutiIds, true) || in_array($i->id, $altaIds, true)) return false;
+            $isPianificato = $i->tipo === 'pianificazione' || $i->priority === 'fixed_date';
+            if (! $isPianificato || ! $i->scheduled_date) return false;
+
+            return $i->scheduled_date->gte($today) && $i->scheduled_date->lte($weekAhead);
+        })->sortBy(fn ($i) => $i->scheduled_date->timestamp)->values();
+
+        $pianificatiIds = $pianificati->pluck('id')->all();
+
+        // 4. Bassa priorità nei prossimi 7 giorni.
+        $bassaPriorita = $active->filter(function ($i) use ($scadutiIds, $altaIds, $pianificatiIds, $weekEnd) {
+            if (in_array($i->id, $scadutiIds, true)
+                || in_array($i->id, $altaIds, true)
+                || in_array($i->id, $pianificatiIds, true)) {
+                return false;
             }
+            if ($i->priority !== 'low') return false;
 
-            return $i->deadline?->timestamp ?? $today->timestamp;
-        })->values();
-
-        // Pianificate nei prossimi 7 giorni (oggi incluso, esclusi gli urgenti già mostrati sopra).
-        $urgentiIds = $urgenti->pluck('id')->all();
-        $pianificate7gg = $interventions->filter(fn ($i) => $i->tipo === 'pianificazione'
-            && $i->scheduled_date
-            && $i->scheduled_date->gte($today)
-            && $i->scheduled_date->lte($weekAhead)
-            && ! in_array($i->id, $urgentiIds, true)
-        )->sortBy(fn ($i) => $i->scheduled_date->timestamp)->values();
+            return $i->deadline && $i->deadline->lte($weekEnd);
+        })->sortBy(fn ($i) => $i->deadline?->timestamp ?? 0)->values();
 
         [$quickAreas, $quickDepartments, $quickEquipments, $quickMaintenanceRoles] = self::quickOpenScope($user);
 
         return view('manutentore.home', compact(
             'user',
-            'urgenti',
-            'pianificate7gg',
+            'scaduti',
+            'altaPriorita',
+            'pianificati',
+            'bassaPriorita',
             'quickAreas',
             'quickDepartments',
             'quickEquipments',

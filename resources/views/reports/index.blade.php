@@ -89,13 +89,23 @@
                                 {{ $report->report_date->format('d/m/Y') }}
                             </td>
                             <td>
-                                <strong>{{ $report->intervention->title }}</strong>
+                                @if($report->intervention)
+                                    <strong>{{ $report->intervention->title }}</strong>
+                                @else
+                                    <span class="badge bg-info text-dark">
+                                        <i class="bi bi-journal me-1"></i>Rapportino libero
+                                    </span>
+                                @endif
                             </td>
                             <td>
-                                @if($report->intervention->equipment)
-                                    <small><i class="bi bi-gear me-1"></i>{{ $report->intervention->equipment->name }}</small>
+                                @if($report->intervention)
+                                    @if($report->intervention->equipment)
+                                        <small><i class="bi bi-gear me-1"></i>{{ $report->intervention->equipment->name }}</small>
+                                    @else
+                                        <small><i class="bi bi-building me-1"></i>{{ $report->intervention->area?->name }} / {{ $report->intervention->department?->name }}</small>
+                                    @endif
                                 @else
-                                    <small><i class="bi bi-building me-1"></i>{{ $report->intervention->area?->name }} / {{ $report->intervention->department?->name }}</small>
+                                    <small class="text-muted">—</small>
                                 @endif
                             </td>
                             <td>

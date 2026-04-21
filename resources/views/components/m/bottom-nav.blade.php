@@ -1,7 +1,7 @@
 @php
     $active = request()->route()?->getName() ?? '';
     $tabs = [
-        ['name' => 'm.home',           'label' => 'Oggi',    'icon' => 'home',   'match' => ['m.home']],
+        ['name' => 'm.home',           'label' => 'Dashboard', 'icon' => 'home',   'match' => ['m.home']],
         ['name' => 'm.schedule',       'label' => 'Piano',   'icon' => 'clock',  'match' => ['m.schedule']],
         ['name' => 'm.profile',        'label' => 'Profilo', 'icon' => 'user',   'match' => ['m.profile']],
     ];
