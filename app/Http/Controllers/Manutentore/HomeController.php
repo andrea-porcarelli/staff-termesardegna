@@ -66,7 +66,21 @@ class HomeController extends Controller
         $weekAhead = today()->copy()->addDays(7);
         $weekEnd = $weekAhead->copy()->endOfDay();
 
-        $active = $interventions->reject(fn ($i) => in_array($i->status, ['completed', 'cancelled'], true));
+        $active = $interventions
+            ->reject(fn ($i) => in_array($i->status, ['completed', 'cancelled'], true))
+            ->reject(function ($i) use ($today) {
+                // L'utente ha già concluso definitivamente il suo lavoro sul ticket
+                if ($i->reports->contains('is_final', true)) {
+                    return true;
+                }
+                // L'ultimo rapportino dell'utente rinvia il ticket a una data futura
+                $last = $i->reports->sortByDesc('created_at')->first();
+                if ($last && $last->next_work_date && $last->next_work_date->gt($today)) {
+                    return true;
+                }
+
+                return false;
+            });
 
         // 1. Scaduti: pianificati con data passata + ordinari in ritardo (is_overdue).
         $scaduti = $active->filter(function ($i) use ($today) {

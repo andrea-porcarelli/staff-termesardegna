@@ -453,6 +453,7 @@
                         id:    this.ticket.id,
                         code:  this.ticket.code,
                         title: this.ticket.title,
+                        existing_next_work_date: this.ticket.my_next_work_date || null,
                     });
                 },
 

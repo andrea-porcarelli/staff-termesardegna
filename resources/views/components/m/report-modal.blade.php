@@ -155,6 +155,16 @@
                                 <label class="block text-xs font-semibold uppercase tracking-wide text-amber-800">
                                     Quando torni sul ticket? <span class="text-red-500">*</span>
                                 </label>
+                                <template x-if="existingNextDate">
+                                    <div class="rounded-lg bg-white border border-amber-300 px-3 py-2 text-xs text-amber-900 flex items-start gap-1.5">
+                                        <svg class="w-4 h-4 text-amber-700 shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                                        </svg>
+                                        <div>
+                                            Hai già programmato il rientro per <span class="font-semibold" x-text="existingNextDate"></span>. Se confermi una nuova data, la programmazione verrà aggiornata.
+                                        </div>
+                                    </div>
+                                </template>
                                 <div class="grid grid-cols-2 gap-2">
                                     <button type="button" @click="pickTomorrow()"
                                             class="h-11 rounded-xl border-2 font-semibold text-sm transition-colors"
@@ -204,6 +214,7 @@
                 nowLabel: '',
                 todayStr: '',
                 tomorrowStr: '',
+                existingNextDate: null,
                 whenChoice: null, // null | 'tomorrow' | 'custom'
                 form: {
                     duration: '',
@@ -236,6 +247,7 @@
                         code:  detail.code  || '#' + detail.id,
                         title: detail.title || '',
                     };
+                    this.existingNextDate = detail.existing_next_work_date || null;
                     this.isOpen = true;
                     document.body.style.overflow = 'hidden';
 
