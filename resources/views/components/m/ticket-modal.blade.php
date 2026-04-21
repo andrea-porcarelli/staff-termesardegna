@@ -239,12 +239,13 @@
             <div class="border-t border-gray-200 p-3 space-y-2 bg-white pb-[env(safe-area-inset-bottom)]" x-show="!loading && ticket">
 
                 <template x-if="ticket?.actions?.can_take_charge">
-                    <form :action="ticket.urls.take_charge" method="POST">
-                        @csrf
-                        <x-m.btn type="submit" variant="primary" size="lg" :block="true">
-                            Prendi in carico
-                        </x-m.btn>
-                    </form>
+                    <button type="button"
+                            @click="takeCharge()"
+                            :disabled="submitting"
+                            class="inline-flex items-center justify-center gap-2 w-full h-12 px-5 text-base font-semibold rounded-xl bg-brand-600 text-white active:bg-brand-700 disabled:opacity-50">
+                        <span x-show="!submitting">Prendi in carico</span>
+                        <span x-show="submitting">Attendere…</span>
+                    </button>
                 </template>
 
                 <template x-if="ticket?.actions?.can_create_report">
@@ -453,6 +454,32 @@
                         code:  this.ticket.code,
                         title: this.ticket.title,
                     });
+                },
+
+                async takeCharge() {
+                    if (!this.ticket || this.submitting) return;
+                    this.submitting = true;
+                    const body = new FormData();
+                    body.append('_token', this.csrf);
+                    try {
+                        const res = await fetch(this.ticket.urls.take_charge, {
+                            method: 'POST',
+                            body,
+                            credentials: 'same-origin',
+                            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': this.csrf },
+                        });
+                        const payload = await res.json().catch(() => ({}));
+                        if (res.ok && payload.ok) {
+                            this.$store.toasts.push(payload.message || 'Ticket preso in carico.', 'success');
+                            await this.refresh();
+                        } else {
+                            this.$store.toasts.push(payload.message || 'Errore durante la presa in carico.', 'error');
+                        }
+                    } catch (_) {
+                        this.$store.toasts.push('Errore di rete.', 'error');
+                    } finally {
+                        this.submitting = false;
+                    }
                 },
 
                 async openSub(kind) {

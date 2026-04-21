@@ -143,7 +143,7 @@
                                 </label>
                                 <label class="h-11 rounded-xl border-2 flex items-center justify-center gap-2 cursor-pointer font-semibold text-sm transition-colors"
                                        :class="form.is_final === false ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-gray-300 bg-white text-gray-700 active:bg-gray-50'">
-                                    <input type="radio" :value="false" x-model="form.is_final" class="sr-only">
+                                    <input type="radio" :value="false" x-model="form.is_final" @change="onNo()" class="sr-only">
                                     No
                                 </label>
                             </div>
@@ -358,6 +358,19 @@
                         return;
                     }
                     this.submit();
+                },
+
+                // Click radio "No" → vai subito al prossimo step per scegliere la data.
+                onNo() {
+                    if (!this.form.duration) {
+                        this.$store.toasts.push('Indica il tempo impiegato.', 'error');
+                        return;
+                    }
+                    if (!this.form.activities || !this.form.activities.trim()) {
+                        this.$store.toasts.push('Descrivi le attività svolte.', 'error');
+                        return;
+                    }
+                    this.step = 'when_q';
                 },
 
                 // Submit del form: se "No" → passa allo step di scelta data, altrimenti invia.
