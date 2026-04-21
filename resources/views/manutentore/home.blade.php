@@ -32,6 +32,16 @@
             @endif
         </header>
 
+        {{-- Bottone + Nuovo ticket --}}
+        <button type="button"
+                @click="$store.quickOpen.show()"
+                class="w-full h-11 rounded-xl bg-gray-100 text-gray-700 font-semibold text-sm flex items-center justify-center gap-1.5 active:bg-gray-200">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
+            </svg>
+            Nuovo ticket
+        </button>
+
         {{-- ─── URGENTI ────────────────────────────────────────────── --}}
         @if ($urgenti->isNotEmpty())
             <section>
