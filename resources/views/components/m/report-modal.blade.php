@@ -101,6 +101,37 @@
                                       placeholder="Annotazioni, parti sostituite, segnalazioni…"></textarea>
                         </div>
 
+                        {{-- Hai finito il lavoro? --}}
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                                Hai terminato il tuo lavoro sul ticket? <span class="text-red-500">*</span>
+                            </label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="h-11 rounded-xl border-2 flex items-center justify-center gap-2 cursor-pointer font-semibold text-sm transition-colors"
+                                       :class="form.is_final === true ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-300 bg-white text-gray-700 active:bg-gray-50'">
+                                    <input type="radio" :value="true" x-model="form.is_final" class="sr-only">
+                                    Sì, ho finito
+                                </label>
+                                <label class="h-11 rounded-xl border-2 flex items-center justify-center gap-2 cursor-pointer font-semibold text-sm transition-colors"
+                                       :class="form.is_final === false ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-gray-300 bg-white text-gray-700 active:bg-gray-50'">
+                                    <input type="radio" :value="false" x-model="form.is_final" class="sr-only">
+                                    No, rientro
+                                </label>
+                            </div>
+                        </div>
+
+                        {{-- Prossima data (solo se non finale) --}}
+                        <template x-if="form.is_final === false">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                                    Quando tornerai a lavorare sul ticket? <span class="text-red-500">*</span>
+                                </label>
+                                <input type="date" x-model="form.next_work_date" :min="todayStr"
+                                       class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
+                                <div class="text-[11px] text-gray-500 mt-1">Il ticket tornerà nella tua lista a partire da questa data.</div>
+                            </div>
+                        </template>
+
                         {{-- Allegati --}}
                         <div>
                             <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Allegati</label>
@@ -159,90 +190,6 @@
                 </form>
             </template>
 
-            {{-- ─── STEP 2: VUOI CHIUDERE IL TICKET? ────────────────── --}}
-            <template x-if="step === 'close_q'">
-                <div class="flex-1 overflow-y-auto p-5 pb-[env(safe-area-inset-bottom)]">
-                    <div class="py-2 text-center">
-                        <div class="w-14 h-14 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-3">
-                            <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7"/>
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-bold text-gray-900">Vuoi chiudere il ticket?</h3>
-                        <p class="text-sm text-gray-600 mt-1">Una volta chiuso non sarà più riaperto.</p>
-
-                        <template x-if="result && !result.can_close_ticket">
-                            <div class="mt-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm">
-                                Per chiudere il ticket serve che <span class="font-semibold">tutti i collaboratori</span> abbiano scritto il loro rapportino di chiusura.
-                            </div>
-                        </template>
-                    </div>
-
-                    <div class="mt-6 space-y-2">
-                        <button type="button"
-                                @click="confirmClose()"
-                                :disabled="submitting || !(result?.can_close_ticket)"
-                                class="w-full h-12 rounded-xl bg-emerald-600 text-white font-semibold disabled:opacity-50 active:bg-emerald-700">
-                            Sì, chiudi il ticket
-                        </button>
-                        <button type="button" @click="step = 'suspend_q'"
-                                class="w-full h-12 rounded-xl bg-white border border-gray-300 text-gray-800 font-semibold active:bg-gray-50">
-                            No, non ancora
-                        </button>
-                    </div>
-                </div>
-            </template>
-
-            {{-- ─── STEP 3: VUOI SOSPENDERLO? ─────────────────────────── --}}
-            <template x-if="step === 'suspend_q'">
-                <div class="flex-1 overflow-y-auto p-5 pb-[env(safe-area-inset-bottom)]">
-                    <div class="py-2 text-center">
-                        <div class="w-14 h-14 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center mx-auto mb-3">
-                            <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <rect x="6" y="5" width="4" height="14" rx="1" stroke-linecap="round"/>
-                                <rect x="14" y="5" width="4" height="14" rx="1" stroke-linecap="round"/>
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-bold text-gray-900">Vuoi sospenderlo?</h3>
-                        <p class="text-sm text-gray-600 mt-1">Scegli una data di ripresa oppure lascialo in lavorazione (ricompare domani).</p>
-                    </div>
-
-                    <div class="mt-6 space-y-2">
-                        <button type="button" @click="step = 'suspend_date'"
-                                class="w-full h-12 rounded-xl bg-sky-600 text-white font-semibold active:bg-sky-700">
-                            Sì, scegli una data
-                        </button>
-                        <button type="button" @click="confirmDefer()" :disabled="submitting"
-                                class="w-full h-12 rounded-xl bg-white border border-gray-300 text-gray-800 font-semibold disabled:opacity-50 active:bg-gray-50">
-                            No, lascia in lavorazione
-                        </button>
-                    </div>
-                </div>
-            </template>
-
-            {{-- ─── STEP 4: SCEGLI DATA SOSPENSIONE ────────────────── --}}
-            <template x-if="step === 'suspend_date'">
-                <div class="flex-1 overflow-y-auto p-5 pb-[env(safe-area-inset-bottom)]">
-                    <h3 class="text-lg font-bold text-gray-900 mb-1">Quando riprendere?</h3>
-                    <p class="text-sm text-gray-600 mb-4">Il ticket tornerà in elenco a partire dalla data scelta.</p>
-
-                    <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Data di ripresa</label>
-                    <input type="date" x-model="suspendUntil" :min="tomorrowStr"
-                           class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
-
-                    <div class="mt-6 space-y-2">
-                        <button type="button" @click="confirmSuspend()"
-                                :disabled="submitting || !suspendUntil"
-                                class="w-full h-12 rounded-xl bg-sky-600 text-white font-semibold disabled:opacity-50 active:bg-sky-700">
-                            Conferma sospensione
-                        </button>
-                        <button type="button" @click="step = 'suspend_q'"
-                                class="w-full h-12 rounded-xl bg-white border border-gray-300 text-gray-800 font-semibold active:bg-gray-50">
-                            Indietro
-                        </button>
-                    </div>
-                </div>
-            </template>
         </div>
     </div>
 </div>
@@ -258,24 +205,20 @@
                 step: 'form',
                 result: null,
                 nowLabel: '',
-                tomorrowStr: '',
-                suspendUntil: '',
+                todayStr: '',
                 form: {
                     hours: 0,
                     minutes: 0,
                     activities: '',
                     notes: '',
+                    is_final: null,
+                    next_work_date: '',
                 },
                 files: [],
                 csrf: document.querySelector('meta[name="csrf-token"]')?.content || '',
 
                 stepTitle() {
-                    return {
-                        form:          'Nuovo rapportino',
-                        close_q:       'Chiusura ticket',
-                        suspend_q:     'Sospensione ticket',
-                        suspend_date:  'Scegli data',
-                    }[this.step] || 'Rapportino';
+                    return 'Nuovo rapportino';
                 },
 
                 get totalLabel() {
@@ -298,18 +241,21 @@
 
                     this.step = 'form';
                     this.result = null;
-                    this.form = { hours: 0, minutes: 0, activities: '', notes: '' };
+                    this.form = {
+                        hours: 0,
+                        minutes: 0,
+                        activities: '',
+                        notes: '',
+                        is_final: null,
+                        next_work_date: '',
+                    };
                     this.files = [];
 
                     const now = new Date();
                     this.nowLabel = now.toLocaleString('it-IT', {
                         day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
                     });
-
-                    const tomorrow = new Date();
-                    tomorrow.setDate(tomorrow.getDate() + 1);
-                    this.tomorrowStr = tomorrow.toISOString().slice(0, 10);
-                    this.suspendUntil = this.tomorrowStr;
+                    this.todayStr = now.toISOString().slice(0, 10);
                 },
 
                 close() {
@@ -363,6 +309,14 @@
                         this.$store.toasts.push('Indica un tempo impiegato maggiore di 0.', 'error');
                         return;
                     }
+                    if (this.form.is_final === null) {
+                        this.$store.toasts.push('Indica se hai terminato il lavoro.', 'error');
+                        return;
+                    }
+                    if (this.form.is_final === false && !this.form.next_work_date) {
+                        this.$store.toasts.push('Indica quando tornerai a lavorare sul ticket.', 'error');
+                        return;
+                    }
 
                     this.submitting = true;
 
@@ -372,7 +326,10 @@
                     fd.append('minutes', String(this.form.minutes ?? 0));
                     fd.append('activities', this.form.activities);
                     fd.append('notes', this.form.notes || '');
-                    fd.append('status', 'completed');
+                    fd.append('is_final', this.form.is_final ? '1' : '0');
+                    if (!this.form.is_final && this.form.next_work_date) {
+                        fd.append('next_work_date', this.form.next_work_date);
+                    }
                     this.files.forEach((f) => fd.append('files[]', f.file));
 
                     try {
@@ -394,82 +351,9 @@
                         if (res.ok && payload.ok) {
                             this.$store.toasts.push(payload.message || 'Rapportino salvato.', 'success');
                             this.result = payload;
-                            // Solo se il rapportino è "completed" (di chiusura) apriamo il flusso close/suspend.
-                            if (payload.should_prompt_close) {
-                                this.step = 'close_q';
-                            } else {
-                                this.close();
-                            }
+                            this.close();
                         } else {
                             this.$store.toasts.push(payload.message || 'Errore durante il salvataggio.', 'error');
-                        }
-                    } catch (_) {
-                        this.$store.toasts.push('Errore di rete.', 'error');
-                    } finally {
-                        this.submitting = false;
-                    }
-                },
-
-                async postJSON(url, body = {}) {
-                    const fd = new FormData();
-                    fd.append('_token', this.csrf);
-                    Object.entries(body).forEach(([k, v]) => fd.append(k, v));
-                    const res = await fetch(url, {
-                        method: 'POST', body: fd, credentials: 'same-origin',
-                        headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': this.csrf },
-                    });
-                    return [res, await res.json().catch(() => ({}))];
-                },
-
-                async confirmClose() {
-                    if (this.submitting) return;
-                    this.submitting = true;
-                    try {
-                        const url = `/m/interventions/${this.context.id}/close`;
-                        const [res, payload] = await this.postJSON(url);
-                        if (res.ok && payload.ok) {
-                            this.$store.toasts.push(payload.message || 'Ticket chiuso.', 'success');
-                            this.close();
-                        } else {
-                            this.$store.toasts.push(payload.message || 'Errore.', 'error');
-                        }
-                    } catch (_) {
-                        this.$store.toasts.push('Errore di rete.', 'error');
-                    } finally {
-                        this.submitting = false;
-                    }
-                },
-
-                async confirmDefer() {
-                    if (this.submitting) return;
-                    this.submitting = true;
-                    try {
-                        const url = `/m/interventions/${this.context.id}/defer`;
-                        const [res, payload] = await this.postJSON(url);
-                        if (res.ok && payload.ok) {
-                            this.$store.toasts.push(payload.message || 'Ticket rinviato a domani.', 'success');
-                            this.close();
-                        } else {
-                            this.$store.toasts.push(payload.message || 'Errore.', 'error');
-                        }
-                    } catch (_) {
-                        this.$store.toasts.push('Errore di rete.', 'error');
-                    } finally {
-                        this.submitting = false;
-                    }
-                },
-
-                async confirmSuspend() {
-                    if (this.submitting || !this.suspendUntil) return;
-                    this.submitting = true;
-                    try {
-                        const url = `/m/interventions/${this.context.id}/suspend`;
-                        const [res, payload] = await this.postJSON(url, { until: this.suspendUntil });
-                        if (res.ok && payload.ok) {
-                            this.$store.toasts.push(payload.message || 'Ticket sospeso.', 'success');
-                            this.close();
-                        } else {
-                            this.$store.toasts.push(payload.message || 'Errore.', 'error');
                         }
                     } catch (_) {
                         this.$store.toasts.push('Errore di rete.', 'error');

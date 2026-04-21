@@ -134,6 +134,21 @@ class InterventionController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        $today = today();
+        $interventions = $interventions->reject(function ($i) use ($today) {
+            // L'utente ha già concluso definitivamente il suo lavoro sul ticket
+            if ($i->reports->contains('is_final', true)) {
+                return true;
+            }
+            // L'ultimo rapportino dell'utente rinvia il ticket a una data futura
+            $last = $i->reports->sortByDesc('created_at')->first();
+            if ($last && $last->next_work_date && $last->next_work_date->gt($today)) {
+                return true;
+            }
+
+            return false;
+        })->values();
+
         if ($filter === 'overdue') {
             $interventions = $interventions->filter(function ($i) {
                 if ($i->tipo === 'pianificazione'
@@ -147,8 +162,8 @@ class InterventionController extends Controller
             })->values();
         }
 
-        $quickAreas = Area::where('active', true)->orderBy('name')->get();
-        $quickDepartments = Department::where('active', true)->orderBy('name')->get(['id', 'name', 'area_id']);
+        [$quickAreas, $quickDepartments, $quickEquipments, $quickMaintenanceRoles]
+            = HomeController::quickOpenScope($user);
 
         return view('manutentore.tickets.index', [
             'interventions' => $interventions,
@@ -157,6 +172,8 @@ class InterventionController extends Controller
             'chips' => self::CHIPS,
             'quickAreas' => $quickAreas,
             'quickDepartments' => $quickDepartments,
+            'quickEquipments' => $quickEquipments,
+            'quickMaintenanceRoles' => $quickMaintenanceRoles,
         ]);
     }
 
@@ -192,8 +209,10 @@ class InterventionController extends Controller
         $pendingCollabForMe = $intervention->collaborations
             ->firstWhere(fn ($c) => $c->user_id === $me->id && $c->status === InterventionCollaboration::STATUS_PENDING);
 
-        $myReport = $intervention->reports->firstWhere('user_id', $me->id);
-        $hasMyReport = (bool) $myReport;
+        $myReports = $intervention->reports->where('user_id', $me->id);
+        $myFinalReport = $myReports->firstWhere('is_final', true);
+        $myLastReport = $myReports->sortByDesc('created_at')->first();
+        $iHaveFinal = (bool) $myFinalReport;
 
         // Chi deve ancora scrivere il rapportino: assegnatario + collaboratori accettati
         $requiredReporterIds = collect([$intervention->assigned_user_id])
@@ -204,21 +223,24 @@ class InterventionController extends Controller
             ->unique()
             ->values();
 
-        $reportsByUser = $intervention->reports->keyBy('user_id');
+        $reportsByUser = $intervention->reports->groupBy('user_id');
 
         $reportStatuses = $requiredReporterIds->map(function ($userId) use ($reportsByUser, $intervention) {
             $user = $userId === $intervention->assigned_user_id
                 ? $intervention->assignedUser
                 : $intervention->collaborations->firstWhere('user_id', $userId)?->user;
-            $report = $reportsByUser->get($userId);
+            $userReports = $reportsByUser->get($userId, collect());
+            $finalReport = $userReports->firstWhere('is_final', true);
+            $lastReport = $userReports->sortByDesc('created_at')->first();
 
             return [
                 'user_id' => $userId,
                 'name' => $user?->name,
                 'initials' => $this->initials($user?->name ?? ''),
                 'role' => $userId === $intervention->assigned_user_id ? 'Assegnatario' : 'Collaboratore',
-                'has_report' => (bool) $report,
-                'status' => $report?->status,
+                'count' => $userReports->count(),
+                'has_final' => (bool) $finalReport,
+                'next_work_date' => $finalReport ? null : $lastReport?->next_work_date?->isoFormat('D MMM YYYY'),
             ];
         })->values();
 
@@ -311,6 +333,8 @@ class InterventionController extends Controller
                     ['initials' => $this->initials($intervention->assignedUser->name)])
                 : null,
             'mine' => $mine,
+            'i_have_final' => $iHaveFinal,
+            'my_next_work_date' => $myFinalReport ? null : $myLastReport?->next_work_date?->isoFormat('D MMM YYYY'),
             'unassigned' => $unassigned,
             'is_overdue' => $isOverdue,
             'overdue_since' => $isOverdue && $deadline
@@ -320,8 +344,7 @@ class InterventionController extends Controller
             'notes' => $intervention->notes,
             'collaborators' => $collaborators,
             'report_statuses' => $reportStatuses,
-            'has_my_report' => $hasMyReport,
-            'my_report_id' => $myReport?->id,
+            'my_reports_count' => $myReports->count(),
             'history' => $history,
             'pending_request' => $pendingCollabForMe ? [
                 'id' => $pendingCollabForMe->id,
@@ -338,9 +361,6 @@ class InterventionController extends Controller
                 'collaboration' => route('m.interventions.collaboration', $intervention),
                 'candidates' => route('m.interventions.candidates', $intervention),
                 'report_store' => route('m.reports.store', $intervention),
-                'close' => route('m.interventions.close', $intervention),
-                'suspend' => route('m.interventions.suspend', $intervention),
-                'defer' => route('m.interventions.defer', $intervention),
             ],
             'actions' => [
                 'can_take_charge' => ($unassigned || $mine)
@@ -348,12 +368,9 @@ class InterventionController extends Controller
                                         && ! in_array($intervention->status, ['completed', 'cancelled']),
                 'can_create_report' => ($mine || $iAmAcceptedCollaborator)
                                         && $intervention->status === 'in_progress'
-                                        && ! $hasMyReport,
-                'can_edit_report' => $hasMyReport && $myReport?->status !== 'chiuso',
-                'can_transfer' => $mine && ! $hasMyReport && ! in_array($intervention->status, ['completed', 'cancelled']),
-                'can_collaborate' => $mine && ! $hasMyReport && ! in_array($intervention->status, ['completed', 'cancelled']),
-                'can_close_ticket' => $mine && $intervention->status === 'in_progress'
-                                        && $this->allRequiredReportsCompleted($intervention),
+                                        && ! $iHaveFinal,
+                'can_transfer' => $mine && ! $iHaveFinal && ! in_array($intervention->status, ['completed', 'cancelled']),
+                'can_collaborate' => $mine && ! $iHaveFinal && ! in_array($intervention->status, ['completed', 'cancelled']),
             ],
         ]);
     }
@@ -531,58 +548,6 @@ class InterventionController extends Controller
         ]);
     }
 
-    public function close(Intervention $intervention): JsonResponse
-    {
-        $me = Auth::user();
-
-        if ($intervention->assigned_user_id !== $me->id && $me->role !== 'admin') {
-            return response()->json(['ok' => false, 'message' => 'Solo l\'assegnatario può chiudere il ticket.'], 403);
-        }
-
-        if (in_array($intervention->status, ['completed', 'cancelled'])) {
-            return response()->json(['ok' => false, 'message' => 'Ticket già chiuso.'], 422);
-        }
-
-        $intervention->load(['collaborations', 'reports']);
-
-        // Verifica che tutti gli utenti richiesti abbiano scritto un rapportino di chiusura (status=completed)
-        $requiredIds = collect([$intervention->assigned_user_id])
-            ->merge(
-                $intervention->collaborations
-                    ->where('status', InterventionCollaboration::STATUS_ACCEPTED)
-                    ->pluck('user_id')
-            )
-            ->filter()
-            ->unique()
-            ->values();
-
-        $completedIds = $intervention->reports
-            ->where('status', 'completed')
-            ->pluck('user_id')
-            ->unique();
-
-        $missing = $requiredIds->diff($completedIds);
-        if ($missing->isNotEmpty()) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Per chiudere il ticket serve il rapportino di chiusura di tutti i collaboratori.',
-            ], 422);
-        }
-
-        $intervention->update([
-            'status' => 'completed',
-            'completed_at' => now(),
-            'suspended_until' => null,
-        ]);
-
-        InterventionActivityLogger::log($intervention, InterventionLogActions::COMPLETED);
-
-        return response()->json([
-            'ok' => true,
-            'message' => 'Ticket chiuso.',
-        ]);
-    }
-
     public function suspend(Request $request, Intervention $intervention): JsonResponse
     {
         $me = Auth::user();
@@ -647,28 +612,75 @@ class InterventionController extends Controller
 
     public function quickStore(Request $request): RedirectResponse
     {
+        $user = Auth::user();
+        $userDeptIds = $user->departments()->pluck('departments.id')->all();
+        $userAreaIds = $user->assignedAreaIds()->all();
+
         $request->validate([
-            'area_id' => 'required|exists:areas,id',
-            'department_id' => 'required|exists:departments,id',
-            'description' => 'nullable|string',
+            'maintenance_role_id' => 'required|exists:maintenance_roles,id',
+            'priority' => 'required|in:high,low,fixed_date',
+            'scheduled_date' => 'nullable|date|after_or_equal:today|required_if:priority,fixed_date',
+            'scheduled_start_time' => 'nullable|date_format:H:i',
+            'area_id' => ['nullable', \Illuminate\Validation\Rule::in($userAreaIds)],
+            'department_id' => ['nullable', \Illuminate\Validation\Rule::in($userDeptIds)],
+            'equipment_id' => [
+                'nullable',
+                \Illuminate\Validation\Rule::exists('equipments', 'id')
+                    ->where('active', true)
+                    ->whereIn('department_id', $userDeptIds ?: [-1]),
+            ],
+            'description' => 'nullable|string|max:2000',
         ], [
-            'area_id.required' => 'Seleziona un\'area.',
-            'department_id.required' => 'Seleziona una zona.',
+            'maintenance_role_id.required' => 'Seleziona una specializzazione.',
+            'priority.required' => 'Seleziona una priorità.',
+            'priority.in' => 'Priorità non valida.',
+            'scheduled_date.required_if' => 'Seleziona una data per il ticket a data fissa.',
+            'scheduled_date.after_or_equal' => 'La data deve essere oggi o successiva.',
+            'area_id.in' => 'Area non disponibile.',
+            'department_id.in' => 'Zona non disponibile.',
+            'equipment_id.exists' => 'Impianto non disponibile.',
         ]);
 
-        $area = Area::find($request->area_id);
-        $department = Department::find($request->department_id);
+        // L'impianto, se presente, vincola area e zona.
+        $equipmentId = $request->equipment_id ?: null;
+        $areaId = $request->area_id ?: null;
+        $deptId = $request->department_id ?: null;
+        $equipment = null;
+
+        if ($equipmentId) {
+            $equipment = \App\Models\Equipment::with('department')->find($equipmentId);
+            if ($equipment && $equipment->department) {
+                $deptId = $equipment->department_id;
+                $areaId = $equipment->department->area_id;
+            }
+        }
+
+        $area = $areaId ? Area::find($areaId) : null;
+        $department = $deptId ? Department::find($deptId) : null;
+
+        $title = match (true) {
+            (bool) $equipment => 'Ticket - '.$equipment->name,
+            $area && $department => 'Ticket - '.$area->name.' / '.$department->name,
+            (bool) $area => 'Ticket - '.$area->name,
+            $request->filled('description') => 'Ticket - '.mb_strimwidth((string) $request->description, 0, 60, '…'),
+            default => 'Ticket',
+        };
+
+        $isFixedDate = $request->priority === 'fixed_date';
 
         Intervention::create([
             'tipo' => 'ordinario',
-            'area_id' => $request->area_id,
-            'department_id' => $request->department_id,
-            'assigned_user_id' => Auth::id(),
-            'title' => 'Intervento - '.$area->name.' / '.$department->name,
+            'area_id' => $areaId,
+            'department_id' => $deptId,
+            'equipment_id' => $equipmentId,
+            'maintenance_role_id' => $request->maintenance_role_id,
+            'assigned_user_id' => $user->role === 'manutentore' ? $user->id : null,
+            'title' => $title,
             'description' => $request->description,
-            'scheduled_date' => today(),
+            'scheduled_date' => $isFixedDate ? $request->scheduled_date : today(),
+            'scheduled_start_time' => $isFixedDate ? ($request->scheduled_start_time ?: null) : null,
             'status' => 'open',
-            'priority' => 'low',
+            'priority' => $request->priority,
         ]);
 
         $referer = $request->headers->get('referer');
@@ -717,30 +729,6 @@ class InterventionController extends Controller
                 ->take(2)
                 ->implode('')
         );
-    }
-
-    private function allRequiredReportsCompleted(Intervention $intervention): bool
-    {
-        $requiredIds = collect([$intervention->assigned_user_id])
-            ->merge(
-                $intervention->collaborations
-                    ->where('status', InterventionCollaboration::STATUS_ACCEPTED)
-                    ->pluck('user_id')
-            )
-            ->filter()
-            ->unique()
-            ->values();
-
-        if ($requiredIds->isEmpty()) {
-            return false;
-        }
-
-        $completedIds = $intervention->reports
-            ->where('status', 'completed')
-            ->pluck('user_id')
-            ->unique();
-
-        return $requiredIds->diff($completedIds)->isEmpty();
     }
 
     private function formatDuration(int $minutes): string

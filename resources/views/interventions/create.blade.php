@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'Nuovo Intervento - Rapportini')
+@section('title', 'Nuovo Ticket - Rapportini')
 
-@section('page-title', 'Nuovo Intervento')
+@section('page-title', 'Nuovo Ticket')
 
 @section('content')
 <div class="card">
     <div class="card-header">
-        <h4><i class="bi bi-plus-circle me-2"></i>Pianifica Nuovo Intervento</h4>
+        <h4><i class="bi bi-plus-circle me-2"></i>Pianifica Nuovo Ticket</h4>
     </div>
     <div class="card-body">
         <script>
@@ -85,7 +85,7 @@
 
             {{-- Tipo intervento --}}
             <div class="mb-4" x-show="canSeePianificazione">
-                <label class="form-label fw-semibold">Tipo intervento <span class="text-danger">*</span></label>
+                <label class="form-label fw-semibold">Tipo ticket <span class="text-danger">*</span></label>
                 <div class="d-flex gap-3">
                     <div class="form-check form-check-inline">
                         <input class="form-check-input" type="radio" name="tipo" id="tipo_pianificazione"
@@ -98,7 +98,7 @@
                         <input class="form-check-input" type="radio" name="tipo" id="tipo_ordinario"
                                value="ordinario" x-model="tipo">
                         <label class="form-check-label" for="tipo_ordinario">
-                            <i class="bi bi-wrench me-1"></i>Intervento Ordinario
+                            <i class="bi bi-wrench me-1"></i>Ticket Ordinario
                         </label>
                     </div>
                 </div>
@@ -317,7 +317,7 @@
 
             {{-- ===== CAMPI COMUNI ===== --}}
             <div class="mb-3">
-                <label for="title" class="form-label">Titolo Intervento <span class="text-danger">*</span></label>
+                <label for="title" class="form-label">Titolo Ticket <span class="text-danger">*</span></label>
                 <input type="text" class="form-control @error('title') is-invalid @enderror"
                        id="title" name="title" value="{{ old('title') }}" required>
                 @error('title')
@@ -357,7 +357,7 @@
 
             <div class="d-flex gap-2">
                 <button type="submit" class="btn btn-light">
-                    <i class="bi bi-check-circle me-2"></i>Salva Intervento
+                    <i class="bi bi-check-circle me-2"></i>Salva Ticket
                 </button>
                 <a href="{{ route('interventions.index') }}" class="btn btn-secondary">
                     <i class="bi bi-x-circle me-2"></i>Annulla

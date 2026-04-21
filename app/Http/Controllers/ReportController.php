@@ -44,30 +44,6 @@ class ReportController extends Controller
         return view('reports.index', compact('reports', 'users'));
     }
 
-    public function close(Intervention $intervention, Report $report): RedirectResponse
-    {
-        abort_if(! in_array(Auth::user()->role, ['admin', 'operator']), 403);
-
-        if ($report->intervention_id !== $intervention->id) {
-            abort(404);
-        }
-
-        $report->update(['status' => 'chiuso']);
-
-        InterventionActivityLogger::log($intervention, InterventionLogActions::REPORT_CLOSED, [
-            'report_id' => $report->id,
-        ]);
-
-        $intervention->update([
-            'status' => 'completed',
-            'completed_at' => now(),
-        ]);
-
-        InterventionActivityLogger::log($intervention, InterventionLogActions::COMPLETED);
-
-        return back()->with('success', 'Rapportino chiuso e intervento segnato come completato.');
-    }
-
     public function create(Intervention $intervention): View
     {
         // Verifica che l'utente sia autorizzato

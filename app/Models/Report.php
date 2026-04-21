@@ -18,10 +18,14 @@ class Report extends Model
         'activities',
         'notes',
         'status',
+        'is_final',
+        'next_work_date',
     ];
 
     protected $casts = [
         'report_date' => 'date',
+        'is_final' => 'boolean',
+        'next_work_date' => 'date',
     ];
 
     public function intervention(): BelongsTo

@@ -74,7 +74,7 @@
                 <thead>
                     <tr>
                         <th>Data</th>
-                        <th>Intervento</th>
+                        <th>Ticket</th>
                         <th>Destinazione</th>
                         <th>Operatore</th>
                         <th>Orario</th>
@@ -118,17 +118,6 @@
                                         onclick="viewReport({{ $report->id }})">
                                     <i class="bi bi-eye"></i>
                                 </button>
-                                @if($report->status !== 'chiuso')
-                                    <form action="{{ route('interventions.reports.close', [$report->intervention, $report]) }}"
-                                          method="POST" class="d-inline"
-                                          onsubmit="return confirm('Chiudere il rapportino? L\'intervento verrà marcato come completato.')">
-                                        @csrf
-                                        @method('PATCH')
-                                        <button type="submit" class="btn btn-dark btn-sm" title="Chiudi rapportino">
-                                            <i class="bi bi-lock"></i>
-                                        </button>
-                                    </form>
-                                @endif
                             </td>
                         </tr>
                     @empty
@@ -197,7 +186,7 @@ function viewReport(reportId) {
             <div class="mb-4 p-3 rounded" style="background:#f8f9fa;border-left:4px solid ${color}">
                 <div class="row g-2">
                     <div class="col-12">
-                        <div class="text-muted small mb-1"><i class="bi bi-calendar-check me-1"></i><strong>Intervento richiesto</strong></div>
+                        <div class="text-muted small mb-1"><i class="bi bi-calendar-check me-1"></i><strong>Ticket richiesto</strong></div>
                         <div class="fw-semibold">${iv.title}</div>
                     </div>
                     <div class="col-md-6">
@@ -220,7 +209,7 @@ function viewReport(reportId) {
                     </div>` : ''}
                     ${iv.notes ? `
                     <div class="col-12">
-                        <div class="text-muted small"><i class="bi bi-sticky me-1"></i>Note intervento</div>
+                        <div class="text-muted small"><i class="bi bi-sticky me-1"></i>Note ticket</div>
                         <div>${iv.notes}</div>
                     </div>` : ''}
                 </div>

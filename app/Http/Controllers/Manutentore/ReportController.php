@@ -8,7 +8,6 @@ use App\Models\InterventionCollaboration;
 use App\Models\Media;
 use App\Models\Report;
 use App\Models\User;
-use App\Notifications\CollaboratorReportSubmittedNotification;
 use App\Services\InterventionActivityLogger;
 use App\Support\InterventionLogActions;
 use Illuminate\Http\JsonResponse;
@@ -28,14 +27,10 @@ class ReportController extends Controller
             ], 403);
         }
 
-        $alreadyWritten = Report::where('intervention_id', $intervention->id)
-            ->where('user_id', $user->id)
-            ->exists();
-
-        if ($alreadyWritten) {
+        if ($this->userHasFinalReport($intervention, $user)) {
             return response()->json([
                 'ok' => false,
-                'message' => 'Hai già scritto un rapportino per questo ticket.',
+                'message' => 'Hai già terminato il tuo lavoro su questo ticket.',
             ], 422);
         }
 
@@ -44,12 +39,16 @@ class ReportController extends Controller
             'minutes' => ['required', 'integer', 'min:0', 'max:59'],
             'activities' => ['required', 'string', 'max:4000'],
             'notes' => ['nullable', 'string', 'max:4000'],
-            'status' => ['nullable', 'in:draft,completed'],
+            'is_final' => ['required', 'boolean'],
+            'next_work_date' => ['nullable', 'date', 'after_or_equal:today', 'required_if:is_final,false'],
             'files' => ['nullable', 'array', 'max:10'],
             'files.*' => ['file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,gif,zip'],
         ], [
             'hours.required' => 'Indica le ore impiegate.',
             'minutes.required' => 'Indica i minuti impiegati.',
+            'is_final.required' => 'Indica se hai terminato il lavoro.',
+            'next_work_date.required_if' => 'Indica quando tornerai a lavorare sul ticket.',
+            'next_work_date.after_or_equal' => 'La data deve essere oggi o successiva.',
             'files.*.mimes' => 'Sono accettati solo PDF, immagini (JPG/PNG/GIF) e ZIP.',
             'files.*.max' => 'Il file non può superare 10 MB.',
         ]);
@@ -63,6 +62,8 @@ class ReportController extends Controller
             ], 422);
         }
 
+        $isFinal = (bool) $data['is_final'];
+
         $report = Report::create([
             'intervention_id' => $intervention->id,
             'user_id' => $user->id,
@@ -72,7 +73,9 @@ class ReportController extends Controller
             'duration_minutes' => $totalMinutes,
             'activities' => $data['activities'],
             'notes' => $data['notes'] ?? null,
-            'status' => $data['status'] ?? 'draft',
+            'status' => $isFinal ? 'completed' : 'draft',
+            'is_final' => $isFinal,
+            'next_work_date' => $isFinal ? null : ($data['next_work_date'] ?? null),
         ]);
 
         if ($request->hasFile('files')) {
@@ -92,26 +95,35 @@ class ReportController extends Controller
         InterventionActivityLogger::log($intervention, InterventionLogActions::REPORT_CREATED, [
             'report_id' => $report->id,
             'report_status' => $report->status,
+            'is_final' => $isFinal,
+            'next_work_date' => $report->next_work_date?->toDateString(),
         ]);
 
-        $isAssignee = $intervention->assigned_user_id === $user->id;
-
-        if (! $isAssignee && $intervention->assignedUser) {
-            $intervention->assignedUser->notify(
-                new CollaboratorReportSubmittedNotification($intervention, $report, $user)
-            );
+        $autoClosed = false;
+        if ($isFinal) {
+            $intervention->load(['collaborations', 'reports']);
+            if ($this->allRequiredUsersFinal($intervention) && ! in_array($intervention->status, ['completed', 'cancelled'], true)) {
+                $intervention->update([
+                    'status' => 'completed',
+                    'completed_at' => now(),
+                    'suspended_until' => null,
+                ]);
+                InterventionActivityLogger::log($intervention, InterventionLogActions::COMPLETED, [
+                    'auto_closed' => true,
+                    'closed_by_report_id' => $report->id,
+                ]);
+                $autoClosed = true;
+            }
         }
-
-        $intervention->load(['collaborations', 'reports']);
-        $canClose = $this->allRequiredReportsCompleted($intervention);
 
         return response()->json([
             'ok' => true,
-            'message' => 'Rapportino salvato.',
+            'message' => $autoClosed
+                ? 'Rapportino salvato. Ticket chiuso.'
+                : ($isFinal ? 'Rapportino salvato. Lavoro terminato.' : 'Rapportino salvato.'),
             'report_id' => $report->id,
-            'report_status' => $report->status,
-            'can_close_ticket' => $canClose,
-            'should_prompt_close' => $isAssignee,
+            'is_final' => $isFinal,
+            'auto_closed' => $autoClosed,
         ]);
     }
 
@@ -130,11 +142,19 @@ class ReportController extends Controller
             ->exists();
     }
 
+    private function userHasFinalReport(Intervention $intervention, User $user): bool
+    {
+        return Report::where('intervention_id', $intervention->id)
+            ->where('user_id', $user->id)
+            ->where('is_final', true)
+            ->exists();
+    }
+
     /**
-     * True se assegnatario + collaboratori accettati hanno tutti
-     * scritto un rapportino con status=completed.
+     * True se assegnatario + collaboratori accettati hanno tutti almeno
+     * un rapportino con is_final=true.
      */
-    private function allRequiredReportsCompleted(Intervention $intervention): bool
+    private function allRequiredUsersFinal(Intervention $intervention): bool
     {
         $requiredIds = collect([$intervention->assigned_user_id])
             ->merge(
@@ -150,11 +170,11 @@ class ReportController extends Controller
             return false;
         }
 
-        $completedIds = $intervention->reports
-            ->where('status', 'completed')
+        $finalIds = $intervention->reports
+            ->where('is_final', true)
             ->pluck('user_id')
             ->unique();
 
-        return $requiredIds->diff($completedIds)->isEmpty();
+        return $requiredIds->diff($finalIds)->isEmpty();
     }
 }

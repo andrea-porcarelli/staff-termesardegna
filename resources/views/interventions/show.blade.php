@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Dettagli Intervento - Rapportini')
+@section('title', 'Dettagli Ticket - Rapportini')
 
-@section('page-title', 'Dettagli Intervento')
+@section('page-title', 'Dettagli Ticket')
 
 @section('content')
     <div class="mb-3">
@@ -248,7 +248,7 @@
                         <div class="card bg-success bg-opacity-10">
                             <div class="card-body">
                                 <i class="bi bi-check-circle-fill text-success me-2"></i>
-                                Intervento completato il <strong>{{ $intervention->completed_at->format('d/m/Y H:i') }}</strong>
+                                Ticket completato il <strong>{{ $intervention->completed_at->format('d/m/Y H:i') }}</strong>
                                 <small class="text-muted">({{ $intervention->completed_at->diffForHumans() }})</small>
                             </div>
                         </div>

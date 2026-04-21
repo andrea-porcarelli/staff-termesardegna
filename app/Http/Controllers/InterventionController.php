@@ -87,17 +87,17 @@ class InterventionController extends Controller
 
         return match ($result['status'] ?? 'skipped') {
             'assigned' => $redirect
-                ->with('success', "Intervento creato e assegnato a {$result['user']->name}."),
+                ->with('success', "Ticket creato e assegnato a {$result['user']->name}."),
 
             'next_shift' => $redirect
-                ->with('success', "Intervento creato e assegnato a {$result['user']->name}.")
+                ->with('success', "Ticket creato e assegnato a {$result['user']->name}.")
                 ->with('info', "Il manutentore è disponibile dal turno del {$result['shift_start']->translatedFormat('l d/m/Y \a\l\l\e H:i')}."),
 
             'no_match' => $redirect
-                ->with('success', 'Intervento creato.')
-                ->with('warning', 'Nessun manutentore disponibile e compatibile trovato. L\'intervento rimane non assegnato.'),
+                ->with('success', 'Ticket creato.')
+                ->with('warning', 'Nessun manutentore disponibile e compatibile trovato. Il ticket rimane non assegnato.'),
 
-            default => $redirect->with('success', 'Intervento creato con successo!'),
+            default => $redirect->with('success', 'Ticket creato con successo!'),
         };
     }
 
@@ -114,7 +114,7 @@ class InterventionController extends Controller
         abort_if($user->role !== 'manutentore', 403);
 
         if ($intervention->preso_in_carico_at !== null) {
-            $message = 'Questo intervento è già stato preso in carico.';
+            $message = 'Questo ticket è già stato preso in carico.';
 
             return $request->wantsJson()
                 ? response()->json(['ok' => false, 'message' => $message], 422)
@@ -122,7 +122,7 @@ class InterventionController extends Controller
         }
 
         if (in_array($intervention->status, ['completed', 'cancelled'])) {
-            $message = 'Questo intervento non può essere preso in carico.';
+            $message = 'Questo ticket non può essere preso in carico.';
 
             return $request->wantsJson()
                 ? response()->json(['ok' => false, 'message' => $message], 422)
@@ -142,7 +142,7 @@ class InterventionController extends Controller
 
             return response()->json([
                 'ok' => true,
-                'message' => 'Intervento preso in carico con successo!',
+                'message' => 'Ticket preso in carico con successo!',
                 'intervention' => [
                     'id' => $intervention->id,
                     'status' => $intervention->status,
@@ -154,7 +154,7 @@ class InterventionController extends Controller
         }
 
         return redirect()->route('interventions.show', $intervention)
-            ->with('success', 'Intervento preso in carico con successo!');
+            ->with('success', 'Ticket preso in carico con successo!');
     }
 
     public function edit(Intervention $intervention): View
@@ -216,7 +216,7 @@ class InterventionController extends Controller
         }
 
         return redirect()->route('interventions.index')
-            ->with('success', 'Intervento aggiornato con successo!');
+            ->with('success', 'Ticket aggiornato con successo!');
     }
 
     public function destroy(Intervention $intervention): RedirectResponse
@@ -228,7 +228,7 @@ class InterventionController extends Controller
         $intervention->delete();
 
         return redirect()->route('interventions.index')
-            ->with('success', 'Intervento eliminato con successo!');
+            ->with('success', 'Ticket eliminato con successo!');
     }
 
     public function quickStore(Request $request): RedirectResponse
@@ -252,7 +252,7 @@ class InterventionController extends Controller
             'area_id' => $request->area_id,
             'department_id' => $request->department_id,
             'assigned_user_id' => Auth::id(),
-            'title' => 'Intervento - '.$area->name.' / '.$department->name,
+            'title' => 'Ticket - '.$area->name.' / '.$department->name,
             'description' => $request->description,
             'scheduled_date' => today(),
             'status' => 'open',
@@ -260,7 +260,7 @@ class InterventionController extends Controller
         ]);
 
         return redirect()->route('dashboard')
-            ->with('success', 'Intervento ordinario aperto con successo!');
+            ->with('success', 'Ticket ordinario aperto con successo!');
     }
 
     public function equipmentPlanning(Equipment $equipment): JsonResponse

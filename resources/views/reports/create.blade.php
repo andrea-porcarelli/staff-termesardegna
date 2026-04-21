@@ -95,7 +95,7 @@
             @if($intervention->description)
                 <div class="col-12">
                     <div class="p-3 rounded bg-light">
-                        <div class="text-muted small mb-1"><i class="bi bi-text-paragraph me-1"></i>Descrizione intervento</div>
+                        <div class="text-muted small mb-1"><i class="bi bi-text-paragraph me-1"></i>Descrizione ticket</div>
                         <div>{{ $intervention->description }}</div>
                     </div>
                 </div>

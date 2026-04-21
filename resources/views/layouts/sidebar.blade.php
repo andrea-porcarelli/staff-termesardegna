@@ -30,7 +30,7 @@
         @if(in_array(Auth::user()->role, ['admin', 'operator']))
             <a href="{{ route('interventions.index') }}" class="menu-item {{ request()->routeIs('interventions.index') || request()->routeIs('interventions.create') || request()->routeIs('interventions.edit') || request()->routeIs('interventions.show') ? 'active' : '' }}">
                 <i class="bi bi-calendar-check"></i>
-                <span>Interventi</span>
+                <span>Tickets</span>
             </a>
             <a href="{{ route('reports.index') }}" class="menu-item {{ request()->routeIs('reports.index') ? 'active' : '' }}">
                 <i class="bi bi-journal-text"></i>
@@ -69,7 +69,7 @@
         </a>
         <a href="{{ route('intervention_logs.index') }}" class="menu-item {{ request()->routeIs('intervention_logs.*') ? 'active' : '' }}">
             <i class="bi bi-journals"></i>
-            <span>Storia interventi</span>
+            <span>Storia tickets</span>
         </a>
         @endif
     </div>

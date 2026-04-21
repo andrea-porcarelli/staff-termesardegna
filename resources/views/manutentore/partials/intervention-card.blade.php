@@ -91,7 +91,7 @@
 
         {{-- Riga 2: titolo --}}
         <h3 class="font-semibold text-gray-900 leading-snug">
-            {{ $intervention->title ?? 'Intervento senza titolo' }}
+            {{ $intervention->title ?? 'Ticket senza titolo' }}
         </h3>
 
         {{-- Riga 3: chip info --}}

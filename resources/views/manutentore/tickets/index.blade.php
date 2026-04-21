@@ -139,5 +139,6 @@
         </div>
     </div>
 
-    <x-m.quick-open :areas="$quickAreas" :departments="$quickDepartments" />
+    <x-m.quick-open :areas="$quickAreas" :departments="$quickDepartments"
+                    :equipments="$quickEquipments" :maintenance-roles="$quickMaintenanceRoles" />
 @endsection

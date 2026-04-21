@@ -1,15 +1,15 @@
 @extends('layouts.app')
 
-@section('title', 'Gestione Interventi - Rapportini')
+@section('title', 'Gestione Tickets - Rapportini')
 
-@section('page-title', 'Gestione Interventi')
+@section('page-title', 'Gestione Tickets')
 
 @section('content')
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <h4><i class="bi bi-calendar-check me-2"></i>Lista Interventi</h4>
+        <h4><i class="bi bi-calendar-check me-2"></i>Lista Tickets</h4>
         <a href="{{ route('interventions.create') }}" class="btn btn-light">
-            <i class="bi bi-plus-circle me-2"></i>Nuovo Intervento
+            <i class="bi bi-plus-circle me-2"></i>Nuovo Ticket
         </a>
     </div>
 
@@ -21,7 +21,7 @@
                 <select id="filter_tipo" name="tipo" class="form-select form-select-sm" style="min-width: 180px;">
                     <option value="">Tutti i tipi</option>
                     <option value="pianificazione" {{ request('tipo') === 'pianificazione' ? 'selected' : '' }}>Pianificazione</option>
-                    <option value="ordinario" {{ request('tipo') === 'ordinario' ? 'selected' : '' }}>Intervento Ordinario</option>
+                    <option value="ordinario" {{ request('tipo') === 'ordinario' ? 'selected' : '' }}>Ticket Ordinario</option>
                 </select>
             </div>
             <button type="submit" class="btn btn-sm btn-secondary">
@@ -136,7 +136,7 @@
                                 <form action="{{ route('interventions.destroy', $intervention) }}"
                                       method="POST"
                                       class="d-inline"
-                                      onsubmit="return confirm('Sei sicuro di voler eliminare questo intervento?');">
+                                      onsubmit="return confirm('Sei sicuro di voler eliminare questo ticket?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-danger btn-sm" title="Elimina">
@@ -149,7 +149,7 @@
                         <tr>
                             <td colspan="8" class="text-center py-4">
                                 <i class="bi bi-inbox" style="font-size: 48px; color: #ccc;"></i>
-                                <p class="text-muted mt-2">Nessun intervento trovato</p>
+                                <p class="text-muted mt-2">Nessun ticket trovato</p>
                             </td>
                         </tr>
                     @endforelse

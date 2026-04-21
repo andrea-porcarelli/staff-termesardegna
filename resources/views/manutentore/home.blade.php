@@ -3,12 +3,7 @@
 @section('title', 'Oggi')
 
 @php
-    $overdueCount = $overduePianificati->count() + $overdueLiberi->count();
-    $totalActive  = $overdueCount
-                  + $pianificatiOggi->count()
-                  + $altaPriorita->count()
-                  + $bassaPriorita->count()
-                  + $programmatiFuturi->count();
+    $totalActive = $urgenti->count() + $pianificate7gg->count();
 @endphp
 
 @section('content')
@@ -24,21 +19,21 @@
                 </h2>
             </div>
 
-            @if ($overdueCount > 0)
+            @if ($urgenti->isNotEmpty())
                 <div class="text-right">
-                    <div class="text-2xl font-bold text-red-600 leading-none">{{ $overdueCount }}</div>
-                    <div class="text-[11px] uppercase tracking-wide text-red-600/80 mt-1">in ritardo</div>
+                    <div class="text-2xl font-bold text-red-600 leading-none">{{ $urgenti->count() }}</div>
+                    <div class="text-[11px] uppercase tracking-wide text-red-600/80 mt-1">urgenti</div>
                 </div>
             @else
                 <div class="text-right">
-                    <div class="text-2xl font-bold text-brand-600 leading-none">{{ $pianificatiOggi->count() }}</div>
-                    <div class="text-[11px] uppercase tracking-wide text-gray-500 mt-1">oggi</div>
+                    <div class="text-2xl font-bold text-brand-600 leading-none">{{ $pianificate7gg->count() }}</div>
+                    <div class="text-[11px] uppercase tracking-wide text-gray-500 mt-1">7 giorni</div>
                 </div>
             @endif
         </header>
 
-        {{-- ─── 1. SCADUTI ────────────────────────────────────────── --}}
-        @if ($overdueCount > 0)
+        {{-- ─── URGENTI ────────────────────────────────────────────── --}}
+        @if ($urgenti->isNotEmpty())
             <section>
                 <div class="flex items-center justify-between mb-2">
                     <h3 class="text-sm font-semibold uppercase tracking-wide text-red-600 flex items-center gap-1.5">
@@ -46,89 +41,27 @@
                             <path stroke-linecap="round" stroke-linejoin="round"
                                   d="M12 9v4m0 4h.01M10.3 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
                         </svg>
-                        Scaduti
+                        Urgenti
                     </h3>
-                    <span class="text-xs text-gray-400">{{ $overdueCount }}</span>
-                </div>
-
-                @if ($overduePianificati->isNotEmpty())
-                    <div class="text-xs uppercase tracking-wide text-gray-500 mb-1.5 px-1">
-                        Pianificati in ritardo
-                    </div>
-                    <div class="space-y-3 mb-3">
-                        @foreach ($overduePianificati as $intervention)
-                            @include('manutentore.partials.intervention-card', ['intervention' => $intervention])
-                        @endforeach
-                    </div>
-                @endif
-
-                @if ($overdueLiberi->isNotEmpty())
-                    <div class="text-xs uppercase tracking-wide text-gray-500 mb-1.5 px-1">
-                        Liberi in ritardo
-                    </div>
-                    <div class="space-y-3">
-                        @foreach ($overdueLiberi as $intervention)
-                            @include('manutentore.partials.intervention-card', ['intervention' => $intervention])
-                        @endforeach
-                    </div>
-                @endif
-            </section>
-        @endif
-
-        {{-- ─── 2. PIANIFICATI OGGI ────────────────────────────────── --}}
-        @if ($pianificatiOggi->isNotEmpty())
-            <section>
-                <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-900">Pianificati oggi</h3>
-                    <span class="text-xs text-gray-400">{{ $pianificatiOggi->count() }}</span>
+                    <span class="text-xs text-gray-400">{{ $urgenti->count() }}</span>
                 </div>
                 <div class="space-y-3">
-                    @foreach ($pianificatiOggi as $intervention)
+                    @foreach ($urgenti as $intervention)
                         @include('manutentore.partials.intervention-card', ['intervention' => $intervention])
                     @endforeach
                 </div>
             </section>
         @endif
 
-        {{-- ─── 3. ALTA PRIORITÀ ───────────────────────────────────── --}}
-        @if ($altaPriorita->isNotEmpty())
+        {{-- ─── PIANIFICATE NEI PROSSIMI 7 GIORNI ──────────────────── --}}
+        @if ($pianificate7gg->isNotEmpty())
             <section>
                 <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-semibold uppercase tracking-wide text-orange-600">Alta priorità</h3>
-                    <span class="text-xs text-gray-400">{{ $altaPriorita->count() }}</span>
+                    <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Pianificate (7 giorni)</h3>
+                    <span class="text-xs text-gray-400">{{ $pianificate7gg->count() }}</span>
                 </div>
                 <div class="space-y-3">
-                    @foreach ($altaPriorita as $intervention)
-                        @include('manutentore.partials.intervention-card', ['intervention' => $intervention])
-                    @endforeach
-                </div>
-            </section>
-        @endif
-
-        {{-- ─── 4. BASSA PRIORITÀ ──────────────────────────────────── --}}
-        @if ($bassaPriorita->isNotEmpty())
-            <section>
-                <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Bassa priorità</h3>
-                    <span class="text-xs text-gray-400">{{ $bassaPriorita->count() }}</span>
-                </div>
-                <div class="space-y-3">
-                    @foreach ($bassaPriorita as $intervention)
-                        @include('manutentore.partials.intervention-card', ['intervention' => $intervention])
-                    @endforeach
-                </div>
-            </section>
-        @endif
-
-        {{-- ─── 5. PROGRAMMATI FUTURI ──────────────────────────────── --}}
-        @if ($programmatiFuturi->isNotEmpty())
-            <section>
-                <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Programmati (30 gg)</h3>
-                    <span class="text-xs text-gray-400">{{ $programmatiFuturi->count() }}</span>
-                </div>
-                <div class="space-y-3">
-                    @foreach ($programmatiFuturi as $intervention)
+                    @foreach ($pianificate7gg as $intervention)
                         @include('manutentore.partials.intervention-card', ['intervention' => $intervention])
                     @endforeach
                 </div>
@@ -139,8 +72,8 @@
         @if ($totalActive === 0)
             <x-m.card class="text-center py-10">
                 <div class="text-3xl mb-2">✓</div>
-                <div class="font-medium text-gray-700">Nessun intervento attivo</div>
-                <div class="text-xs text-gray-500 mt-1">Tocca + per aprire un intervento ordinario.</div>
+                <div class="font-medium text-gray-700">Nessuna attività urgente o pianificata nei prossimi 7 giorni</div>
+                <div class="text-xs text-gray-500 mt-1">Apri l'elenco completo dei ticket dal menu.</div>
             </x-m.card>
         @endif
 
@@ -156,5 +89,6 @@
         </svg>
     </button>
 
-    <x-m.quick-open :areas="$quickAreas" :departments="$quickDepartments" />
+    <x-m.quick-open :areas="$quickAreas" :departments="$quickDepartments"
+                    :equipments="$quickEquipments" :maintenance-roles="$quickMaintenanceRoles" />
 @endsection

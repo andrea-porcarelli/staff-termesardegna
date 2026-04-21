@@ -11,11 +11,11 @@
     <h4 class="mb-1">Benvenuto, {{ explode(' ', $user->name)[0] }}!</h4>
     <p class="mb-0 text-muted">
         @if($user->role === 'admin')
-            Gestisci l'intero sistema di rapportini e interventi.
+            Gestisci l'intero sistema di rapportini e tickets.
         @elseif($user->role === 'operatore')
-            Monitora gli interventi e supervisiona i rapportini degli operatori.
+            Monitora i tickets e supervisiona i rapportini degli operatori.
         @else
-            Visualizza i tuoi interventi e crea rapportini operativi.
+            Visualizza i tuoi tickets e crea rapportini operativi.
         @endif
     </p>
 </div>
@@ -36,7 +36,7 @@
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <h3 class="mb-0">{{ $totalInterventions }}</h3>
-                            <small class="text-muted">Interventi Totali</small>
+                            <small class="text-muted">Tickets Totali</small>
                         </div>
                     </div>
                 </div>
@@ -100,7 +100,7 @@
         <div class="col-md-8">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Stato Interventi</h5>
+                    <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Stato Tickets</h5>
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
@@ -150,14 +150,14 @@
         <div class="col-lg-6">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Prossimi Interventi (7 gg)</h5>
+                    <h5 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Prossimi Tickets (7 gg)</h5>
                     <a href="{{ route('interventions.calendar') }}" class="btn btn-sm btn-light">Vedi Tutti</a>
                 </div>
                 <div class="card-body p-0">
                     @if($upcomingInterventions->isEmpty())
                         <div class="text-center py-4 text-muted">
                             <i class="bi bi-calendar-x" style="font-size: 32px;"></i>
-                            <p class="mt-2 mb-0">Nessun intervento programmato</p>
+                            <p class="mt-2 mb-0">Nessun ticket programmato</p>
                         </div>
                     @else
                         <div class="list-group list-group-flush">
@@ -231,7 +231,7 @@
                 <div class="col-md-3 col-6">
                     <a href="{{ route('interventions.create') }}" class="btn btn-light w-100 py-3">
                         <i class="bi bi-plus-circle d-block mb-2" style="font-size: 24px;"></i>
-                        <small>Nuovo Intervento</small>
+                        <small>Nuovo Ticket</small>
                     </a>
                 </div>
                 <div class="col-md-3 col-6">
@@ -272,7 +272,7 @@
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <h3 class="mb-0">{{ $totalInterventions }}</h3>
-                            <small class="text-muted">Interventi Totali</small>
+                            <small class="text-muted">Tickets Totali</small>
                         </div>
                     </div>
                 </div>
@@ -319,7 +319,7 @@
         <div class="col-md-8">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white">
-                    <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Stato Interventi</h5>
+                    <h5 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Stato Tickets</h5>
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
@@ -369,14 +369,14 @@
         <div class="col-lg-6">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Prossimi Interventi (7 gg)</h5>
+                    <h5 class="mb-0"><i class="bi bi-calendar-event me-2"></i>Prossimi Tickets (7 gg)</h5>
                     <a href="{{ route('interventions.calendar') }}" class="btn btn-sm btn-light">Vedi Tutti</a>
                 </div>
                 <div class="card-body p-0">
                     @if($upcomingInterventions->isEmpty())
                         <div class="text-center py-4 text-muted">
                             <i class="bi bi-calendar-x" style="font-size: 32px;"></i>
-                            <p class="mt-2 mb-0">Nessun intervento programmato</p>
+                            <p class="mt-2 mb-0">Nessun ticket programmato</p>
                         </div>
                     @else
                         <div class="list-group list-group-flush">
@@ -448,13 +448,13 @@
                 <div class="col-md-4 col-6">
                     <a href="{{ route('interventions.create') }}" class="btn btn-light w-100 py-3">
                         <i class="bi bi-plus-circle d-block mb-2" style="font-size: 24px;"></i>
-                        <small>Nuovo Intervento</small>
+                        <small>Nuovo Ticket</small>
                     </a>
                 </div>
                 <div class="col-md-4 col-6">
                     <a href="{{ route('interventions.index') }}" class="btn btn-light w-100 py-3">
                         <i class="bi bi-list-check d-block mb-2" style="font-size: 24px;"></i>
-                        <small>Tutti gli Interventi</small>
+                        <small>Tutti i Tickets</small>
                     </a>
                 </div>
                 <div class="col-md-4 col-6">
@@ -474,7 +474,7 @@
     <div class="mb-4">
         <button type="button" class="btn btn-warning btn-lg w-100 py-3" data-bs-toggle="modal" data-bs-target="#modalInterventoOrdinario">
             <i class="bi bi-wrench d-block mb-1" style="font-size: 28px;"></i>
-            <strong>Apri Intervento Ordinario</strong>
+            <strong>Apri Ticket Ordinario</strong>
         </button>
     </div>
 
@@ -488,14 +488,14 @@
         @endphp
         <div class="card border-primary shadow mb-4">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Interventi da Eseguire</h5>
+                <h5 class="mb-0"><i class="bi bi-clipboard-check me-2"></i>Tickets da Eseguire</h5>
                 <span class="badge bg-white text-primary fs-6">{{ $availableInterventions->count() }}</span>
             </div>
             <div class="card-body p-0">
                 @if($availableInterventions->isEmpty())
                     <div class="text-center py-5 text-muted">
                         <i class="bi bi-check-circle" style="font-size: 48px;"></i>
-                        <p class="mt-3 mb-0 fs-5">Nessun intervento disponibile al momento</p>
+                        <p class="mt-3 mb-0 fs-5">Nessun ticket disponibile al momento</p>
                     </div>
                 @else
                     @foreach($availableInterventions as $intervention)
@@ -586,7 +586,7 @@
     {{-- Interventi di Oggi --}}
     @if($todayInterventions->count() > 0)
         <div class="alert alert-info border-0 mb-4">
-            <h5 class="alert-heading"><i class="bi bi-calendar-day me-2"></i>Interventi di Oggi</h5>
+            <h5 class="alert-heading"><i class="bi bi-calendar-day me-2"></i>Tickets di Oggi</h5>
             <hr>
             @foreach($todayInterventions as $intervention)
                 <div class="d-flex justify-content-between align-items-center {{ !$loop->last ? 'mb-3' : '' }}">
@@ -626,7 +626,7 @@
                         </div>
                         <div class="flex-grow-1 ms-3">
                             <h3 class="mb-0">{{ $myInterventions }}</h3>
-                            <small class="text-muted">Miei Interventi</small>
+                            <small class="text-muted">Miei Tickets</small>
                         </div>
                     </div>
                 </div>
@@ -684,7 +684,7 @@
                 <div class="col-6">
                     <a href="{{ route('interventions.index') }}" class="btn btn-light w-100 py-3">
                         <i class="bi bi-list-check d-block mb-2" style="font-size: 24px;"></i>
-                        <small>Miei Interventi</small>
+                        <small>Miei Tickets</small>
                     </a>
                 </div>
             </div>
@@ -713,7 +713,7 @@
              }">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalInterventoOrdinarioLabel">
-                    <i class="bi bi-wrench me-2"></i>Apri Intervento Ordinario
+                    <i class="bi bi-wrench me-2"></i>Apri Ticket Ordinario
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Chiudi"></button>
             </div>
@@ -760,13 +760,13 @@
                     <div class="mb-3">
                         <label for="quick_description" class="form-label">Descrizione</label>
                         <textarea class="form-control" id="quick_description" name="description"
-                                  rows="3" placeholder="Descrivi brevemente l'intervento...">{{ old('description') }}</textarea>
+                                  rows="3" placeholder="Descrivi brevemente il ticket...">{{ old('description') }}</textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annulla</button>
                     <button type="submit" class="btn btn-warning">
-                        <i class="bi bi-wrench me-2"></i>Apri Intervento
+                        <i class="bi bi-wrench me-2"></i>Apri Ticket
                     </button>
                 </div>
             </form>

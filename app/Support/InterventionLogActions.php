@@ -52,7 +52,7 @@ class InterventionLogActions
         self::REPORT_UPDATED => 'Rapportino aggiornato',
         self::REPORT_CLOSED => 'Rapportino chiuso',
         self::REPORT_DELETED => 'Rapportino eliminato',
-        self::COMPLETED => 'Intervento completato',
+        self::COMPLETED => 'Ticket completato',
         self::SUSPENDED => 'Sospeso',
         self::DEFERRED => 'Rinviato',
         self::CANCELLED => 'Annullato',

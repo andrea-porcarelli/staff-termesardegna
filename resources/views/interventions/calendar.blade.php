@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Calendario Interventi - Rapportini')
+@section('title', 'Calendario Tickets - Rapportini')
 
-@section('page-title', 'Calendario Interventi')
+@section('page-title', 'Calendario Tickets')
 
 @section('content')
 
@@ -106,7 +106,7 @@
         <div class="card">
             <div class="card-body text-center py-5">
                 <i class="bi bi-calendar-x" style="font-size: 48px; color: #ccc;"></i>
-                <p class="text-muted mt-3">Nessun intervento pianificato per i prossimi 20 giorni</p>
+                <p class="text-muted mt-3">Nessun ticket pianificato per i prossimi 20 giorni</p>
             </div>
         </div>
     @endif
@@ -120,7 +120,7 @@
             <div>
                 @if(in_array(auth()->user()->role, ['admin', 'operator']))
                     <a href="{{ route('interventions.create') }}" class="btn btn-light btn-sm">
-                        <i class="bi bi-plus-circle me-2"></i>Nuovo Intervento
+                        <i class="bi bi-plus-circle me-2"></i>Nuovo Ticket
                     </a>
                 @endif
             </div>
@@ -157,7 +157,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header" id="eventModalHeader">
-                    <h5 class="modal-title" id="eventModalLabel">Dettagli Intervento</h5>
+                    <h5 class="modal-title" id="eventModalLabel">Dettagli Ticket</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="eventModalBody">
@@ -341,7 +341,7 @@ document.addEventListener('DOMContentLoaded', function() {
         buttonText: { today: 'Oggi', month: 'Mese', week: 'Settimana', day: 'Giorno', list: 'Lista' },
         height: 'auto',
         events: '{{ route('interventions.calendar.data') }}',
-        noEventsText: 'Nessun intervento in questo periodo',
+        noEventsText: 'Nessun ticket in questo periodo',
         eventClick: function(info) {
             info.jsEvent.preventDefault();
             openEventModal(info.event.title, info.event.extendedProps, info.event.start, info.event.end);

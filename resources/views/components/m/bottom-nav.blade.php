@@ -2,21 +2,19 @@
     $active = request()->route()?->getName() ?? '';
     $tabs = [
         ['name' => 'm.home',           'label' => 'Oggi',    'icon' => 'home',   'match' => ['m.home']],
-        ['name' => 'm.tickets.index',  'label' => 'Ticket',  'icon' => 'list',   'match' => ['m.tickets.index']],
         ['name' => 'm.schedule',       'label' => 'Piano',   'icon' => 'clock',  'match' => ['m.schedule']],
         ['name' => 'm.profile',        'label' => 'Profilo', 'icon' => 'user',   'match' => ['m.profile']],
     ];
 
     $icons = [
         'home'     => '<path stroke-linecap="round" stroke-linejoin="round" d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
-        'list'     => '<path stroke-linecap="round" stroke-linejoin="round" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
         'clock'    => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>',
         'user'     => '<path stroke-linecap="round" stroke-linejoin="round" d="M16 11a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM4 21a8 8 0 0 1 16 0"/>',
     ];
 @endphp
 
 <nav class="fixed bottom-0 inset-x-0 z-30 bg-white border-t border-gray-200 pb-[env(safe-area-inset-bottom)]">
-    <div class="mx-auto max-w-[480px] grid grid-cols-4 h-16">
+    <div class="mx-auto max-w-[480px] grid grid-cols-3 h-16">
         @foreach ($tabs as $tab)
             @php $isActive = in_array($active, $tab['match']); @endphp
             <a href="{{ route($tab['name']) }}"

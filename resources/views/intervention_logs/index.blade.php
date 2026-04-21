@@ -1,8 +1,8 @@
 @extends('layouts.app')
 
-@section('title', 'Storia interventi - Rapportini')
+@section('title', 'Storia tickets - Rapportini')
 
-@section('page-title', 'Storia interventi')
+@section('page-title', 'Storia tickets')
 
 @section('content')
 <div class="card">
@@ -31,7 +31,7 @@
                 </select>
             </div>
             <div class="col-md-2">
-                <label for="f_intervention" class="form-label form-label-sm mb-1">Intervento (ID)</label>
+                <label for="f_intervention" class="form-label form-label-sm mb-1">Ticket (ID)</label>
                 <input type="number" id="f_intervention" name="intervention_id" class="form-control form-control-sm" value="{{ request('intervention_id') }}" min="1" placeholder="es. 42">
             </div>
             <div class="col-md-2">
@@ -61,7 +61,7 @@
                 <thead>
                     <tr>
                         <th style="width: 170px;">Data / ora</th>
-                        <th>Intervento</th>
+                        <th>Ticket</th>
                         <th>Utente</th>
                         <th>Azione</th>
                         <th>Dettagli</th>

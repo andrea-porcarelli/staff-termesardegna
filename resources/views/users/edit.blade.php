@@ -113,7 +113,7 @@
                                             @if($user->id === auth()->id())
                                                 <div class="form-text text-muted">Non puoi disattivare il tuo account.</div>
                                             @else
-                                                <div class="form-text text-muted">Gli utenti disattivati non possono accedere e non vengono auto-assegnati agli interventi.</div>
+                                                <div class="form-text text-muted">Gli utenti disattivati non possono accedere e non vengono auto-assegnati ai tickets.</div>
                                             @endif
                                         </div>
                                     </div>

@@ -30,10 +30,23 @@
 
         @if ($user->departments->isNotEmpty())
             <x-m.card>
-                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Zone assegnate</div>
-                <div class="flex flex-wrap gap-2">
-                    @foreach ($user->departments as $d)
-                        <x-m.badge variant="gray">{{ $d->name }}</x-m.badge>
+                <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-3">Zone assegnate</div>
+                <div class="space-y-3">
+                    @foreach ($departmentsByArea as $group)
+                        @php $area = $group->first()?->area; @endphp
+                        <div>
+                            <div class="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-gray-600 mb-1.5">
+                                <svg class="w-3.5 h-3.5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1m-1 4h1m-1 4h1m4-8h1m-1 4h1m-1 4h1"/>
+                                </svg>
+                                {{ $area?->name ?? 'Senza area' }}
+                            </div>
+                            <div class="flex flex-wrap gap-2 pl-5">
+                                @foreach ($group as $d)
+                                    <x-m.badge variant="gray">{{ $d->name }}</x-m.badge>
+                                @endforeach
+                            </div>
+                        </div>
                     @endforeach
                 </div>
             </x-m.card>

@@ -65,7 +65,7 @@ class InterventionRequest extends FormRequest
                     $validator->errors()->add('maintenance_role_id', 'Seleziona una specializzazione.');
                 }
                 if ($this->input('priority') === 'fixed_date' && ! $this->filled('scheduled_date')) {
-                    $validator->errors()->add('scheduled_date', "Seleziona una data per l'intervento a data fissa.");
+                    $validator->errors()->add('scheduled_date', 'Seleziona una data per il ticket a data fissa.');
                 }
             }
         });
@@ -74,15 +74,15 @@ class InterventionRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'tipo.required' => 'Seleziona il tipo di intervento.',
-            'tipo.in' => 'Tipo intervento non valido.',
+            'tipo.required' => 'Seleziona il tipo di ticket.',
+            'tipo.in' => 'Tipo ticket non valido.',
             'equipment_id.exists' => "L'impianto selezionato non esiste.",
             'component_id.exists' => 'Il componente selezionato non esiste.',
             'maintenance_role_id.exists' => 'La specializzazione selezionata non esiste.',
             'area_id.exists' => "L'area selezionata non esiste.",
             'department_id.exists' => 'La zona selezionata non esiste.',
             'assigned_user_id.exists' => "L'operatore selezionato non esiste.",
-            'title.required' => "Il titolo dell'intervento è obbligatorio.",
+            'title.required' => 'Il titolo del ticket è obbligatorio.',
             'title.max' => 'Il titolo non può superare 255 caratteri.',
             'scheduled_date.date' => 'La data non è valida.',
             'scheduled_start_time.date_format' => "L'ora deve essere nel formato HH:MM.",

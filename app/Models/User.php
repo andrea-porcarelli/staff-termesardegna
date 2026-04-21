@@ -101,6 +101,20 @@ class User extends Authenticatable
         return $this->oneSignalSubscriptions()->pluck('player_id')->all();
     }
 
+    /**
+     * ID delle aree effettivamente assegnate (via departments o areas dirette).
+     */
+    public function assignedAreaIds(): \Illuminate\Support\Collection
+    {
+        $this->loadMissing(['departments', 'areas']);
+
+        return $this->departments->pluck('area_id')
+            ->merge($this->areas->pluck('id'))
+            ->unique()
+            ->filter()
+            ->values();
+    }
+
     public function collaborationRequests(): HasMany
     {
         return $this->hasMany(InterventionCollaboration::class)

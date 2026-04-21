@@ -185,7 +185,7 @@
                     </template>
                 </div>
 
-                {{-- Rapportini del ticket (chi ha scritto, chi ancora no) --}}
+                {{-- Rapportini del ticket (conteggio per utente + flag finale) --}}
                 <template x-if="ticket?.report_statuses?.length">
                     <div class="px-4 pb-4">
                         <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
@@ -197,9 +197,16 @@
                                     <span class="w-6 h-6 rounded-full bg-sky-100 text-sky-800 flex items-center justify-center text-[10px] font-bold" x-text="rs.initials"></span>
                                     <span class="text-gray-800" x-text="rs.name"></span>
                                     <span class="text-[11px] text-gray-400" x-text="'· ' + rs.role"></span>
-                                    <span class="ml-auto inline-flex h-5 px-2 items-center rounded text-[10px] font-semibold"
-                                          :class="rs.has_report ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'"
-                                          x-text="rs.has_report ? 'Scritto' : 'Mancante'"></span>
+                                    <span class="ml-auto inline-flex items-center gap-1">
+                                        <span class="inline-flex h-5 px-2 items-center rounded bg-gray-100 text-gray-600 text-[10px] font-semibold"
+                                              x-text="(rs.count ?? 0) + ' rapportin' + ((rs.count ?? 0) === 1 ? 'o' : 'i')"></span>
+                                        <template x-if="rs.has_final">
+                                            <span class="inline-flex h-5 px-2 items-center rounded bg-emerald-100 text-emerald-700 text-[10px] font-semibold">✓ finale</span>
+                                        </template>
+                                        <template x-if="!rs.has_final && rs.next_work_date">
+                                            <span class="inline-flex h-5 px-2 items-center rounded bg-amber-100 text-amber-800 text-[10px] font-semibold" x-text="'↻ ' + rs.next_work_date"></span>
+                                        </template>
+                                    </span>
                                 </li>
                             </template>
                         </ul>
@@ -248,24 +255,22 @@
                     </button>
                 </template>
 
-                <template x-if="ticket?.actions?.can_edit_report">
+                <template x-if="ticket?.i_have_final">
                     <div class="inline-flex items-center justify-center gap-2 w-full h-11 px-5 text-sm font-semibold rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7"/>
                         </svg>
-                        Hai già scritto il tuo rapportino
+                        Hai terminato il tuo lavoro su questo ticket
                     </div>
                 </template>
 
-                <template x-if="ticket?.actions?.can_close_ticket">
-                    <button type="button"
-                            @click="openCloseSheet()"
-                            class="inline-flex items-center justify-center gap-2 w-full h-12 px-5 text-base font-semibold rounded-xl bg-emerald-600 text-white active:bg-emerald-700">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7"/>
+                <template x-if="!ticket?.i_have_final && ticket?.my_next_work_date">
+                    <div class="inline-flex items-center justify-center gap-2 w-full h-11 px-5 text-sm font-semibold rounded-xl bg-amber-50 text-amber-800 border border-amber-200">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3M3 11h18M5 19h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2z"/>
                         </svg>
-                        Chiudi ticket
-                    </button>
+                        <span x-text="'Tornerai sul ticket il ' + ticket.my_next_work_date"></span>
+                    </div>
                 </template>
 
                 <template x-if="ticket?.actions?.can_transfer || ticket?.actions?.can_collaborate">
@@ -380,59 +385,6 @@
         </div>
     </div>
 
-    {{-- ─── SUB-SHEET CONFERMA CHIUSURA TICKET ─────────────────────── --}}
-    <div x-show="closeSheet"
-         x-transition.opacity
-         @click.self="closeSheet = false"
-         class="fixed inset-0 z-[60] bg-black/60 flex items-end">
-
-        <div x-show="closeSheet"
-             x-transition:enter="transition ease-out duration-200"
-             x-transition:enter-start="translate-y-full"
-             x-transition:enter-end="translate-y-0"
-             x-transition:leave="transition ease-in duration-150"
-             x-transition:leave-start="translate-y-0"
-             x-transition:leave-end="translate-y-full"
-             class="bg-white w-full mx-auto max-w-[480px] rounded-t-2xl flex flex-col">
-
-            <div class="flex items-center px-4 py-3 border-b border-gray-200">
-                <h3 class="flex-1 text-base font-semibold text-gray-900">Chiusura ticket</h3>
-                <button type="button" @click="closeSheet = false"
-                        class="w-9 h-9 flex items-center justify-center rounded-full text-gray-500 active:bg-gray-100"
-                        aria-label="Chiudi">
-                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>
-                    </svg>
-                </button>
-            </div>
-
-            <div class="p-5 text-center">
-                <div class="w-14 h-14 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-3">
-                    <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7"/>
-                    </svg>
-                </div>
-                <h4 class="text-lg font-bold text-gray-900">Vuoi chiudere il ticket?</h4>
-                <p class="text-sm text-gray-600 mt-1">Tutti gli attori hanno inviato il rapportino. Una volta chiuso non potrà essere riaperto.</p>
-            </div>
-
-            <div class="border-t border-gray-200 p-3 pb-[env(safe-area-inset-bottom)] space-y-2">
-                <button type="button"
-                        @click="submitCloseTicket()"
-                        :disabled="submitting"
-                        class="w-full h-12 rounded-xl bg-emerald-600 text-white font-semibold text-base disabled:opacity-50 active:bg-emerald-700">
-                    <span x-show="!submitting">Sì, chiudi il ticket</span>
-                    <span x-show="submitting">Chiusura…</span>
-                </button>
-                <button type="button"
-                        @click="closeSheet = false"
-                        :disabled="submitting"
-                        class="w-full h-12 rounded-xl bg-white border border-gray-300 text-gray-800 font-semibold active:bg-gray-50">
-                    Annulla
-                </button>
-            </div>
-        </div>
-    </div>
 </div>
 
 @once
@@ -446,7 +398,6 @@
                 csrf: document.querySelector('meta[name="csrf-token"]')?.content || '',
 
                 subSheet: null,
-                closeSheet: false,
                 candidates: [],
                 candidatesLoading: false,
                 selectedCandidateId: null,
@@ -491,40 +442,8 @@
                 },
 
                 handleEscape() {
-                    if (this.closeSheet) { this.closeSheet = false; }
-                    else if (this.subSheet) { this.closeSub(); }
+                    if (this.subSheet) { this.closeSub(); }
                     else { this.close(); }
-                },
-
-                openCloseSheet() {
-                    this.closeSheet = true;
-                },
-
-                async submitCloseTicket() {
-                    if (!this.ticket || this.submitting) return;
-                    this.submitting = true;
-                    const body = new FormData();
-                    body.append('_token', this.csrf);
-                    try {
-                        const res = await fetch(this.ticket.urls.close, {
-                            method: 'POST',
-                            body,
-                            credentials: 'same-origin',
-                            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': this.csrf },
-                        });
-                        const payload = await res.json();
-                        if (res.ok && payload.ok) {
-                            this.$store.toasts.push(payload.message || 'Ticket chiuso.', 'success');
-                            this.closeSheet = false;
-                            this.close();
-                        } else {
-                            this.$store.toasts.push(payload.message || 'Errore durante la chiusura.', 'error');
-                        }
-                    } catch (_) {
-                        this.$store.toasts.push('Errore di rete.', 'error');
-                    } finally {
-                        this.submitting = false;
-                    }
                 },
 
                 openReport() {

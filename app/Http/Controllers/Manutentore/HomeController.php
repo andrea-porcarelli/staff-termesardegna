@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Manutentore;
 use App\Http\Controllers\Controller;
 use App\Models\Area;
 use App\Models\Department;
+use App\Models\Equipment;
 use App\Models\Intervention;
+use App\Models\MaintenanceRole;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
@@ -61,58 +63,86 @@ class HomeController extends Controller
             ->get();
 
         $today = today();
-        $future30 = today()->copy()->addDays(30);
+        $weekAhead = today()->copy()->addDays(7);
 
-        // 1a. Pianificati scaduti (scheduled_date < oggi)
-        $overduePianificati = $interventions->filter(fn ($i) => $i->tipo === 'pianificazione'
+        // Urgenti: tutto ciò che è scaduto + tutto ciò che è a priorità alta (non scaduto).
+        $urgenti = $interventions->filter(function ($i) use ($today) {
+            if (in_array($i->status, ['completed', 'cancelled'], true)) {
+                return false;
+            }
+            $overduePianificato = $i->tipo === 'pianificazione'
+                && $i->scheduled_date
+                && $i->scheduled_date->lt($today);
+            $overdueLibero = $i->tipo !== 'pianificazione' && $i->is_overdue;
+            $highPriority = $i->priority === 'high';
+
+            return $overduePianificato || $overdueLibero || $highPriority;
+        })->sortBy(function ($i) use ($today) {
+            if ($i->tipo === 'pianificazione' && $i->scheduled_date) {
+                return $i->scheduled_date->timestamp;
+            }
+
+            return $i->deadline?->timestamp ?? $today->timestamp;
+        })->values();
+
+        // Pianificate nei prossimi 7 giorni (oggi incluso, esclusi gli urgenti già mostrati sopra).
+        $urgentiIds = $urgenti->pluck('id')->all();
+        $pianificate7gg = $interventions->filter(fn ($i) => $i->tipo === 'pianificazione'
             && $i->scheduled_date
-            && $i->scheduled_date->lt($today)
+            && $i->scheduled_date->gte($today)
+            && $i->scheduled_date->lte($weekAhead)
+            && ! in_array($i->id, $urgentiIds, true)
         )->sortBy(fn ($i) => $i->scheduled_date->timestamp)->values();
 
-        // 1b. Liberi (ordinari) in ritardo via accessor is_overdue
-        $overdueLiberi = $interventions->filter(fn ($i) => $i->tipo !== 'pianificazione' && $i->is_overdue
-        )->values();
-
-        // 2. Pianificati data di oggi
-        $pianificatiOggi = $interventions->filter(fn ($i) => $i->tipo === 'pianificazione'
-            && $i->scheduled_date
-            && $i->scheduled_date->isSameDay($today)
-        )->values();
-
-        // 5. Programmati futuri (pianificazione, data > oggi e <= +30gg), ordinati per data
-        $programmatiFuturi = $interventions->filter(fn ($i) => $i->tipo === 'pianificazione'
-            && $i->scheduled_date
-            && $i->scheduled_date->gt($today)
-            && $i->scheduled_date->lte($future30)
-        )->sortBy(fn ($i) => $i->scheduled_date->timestamp)->values();
-
-        // 3 & 4. Ordinari non scaduti, suddivisi per priorità
-        $ordinariAttivi = $interventions->filter(fn ($i) => $i->tipo !== 'pianificazione' && ! $i->is_overdue
-        )->values();
-
-        $altaPriorita = $ordinariAttivi->filter(fn ($i) => $i->priority === 'high')->values();
-
-        $bassaPriorita = $ordinariAttivi->filter(fn ($i) => in_array($i->priority, ['low', 'fixed_date'])
-        )->values();
-
-        $quickAreas = Area::where('active', true)->orderBy('name')->get();
-        $quickDepartments = Department::where('active', true)->orderBy('name')->get(['id', 'name', 'area_id']);
+        [$quickAreas, $quickDepartments, $quickEquipments, $quickMaintenanceRoles] = self::quickOpenScope($user);
 
         return view('manutentore.home', compact(
             'user',
-            'overduePianificati',
-            'overdueLiberi',
-            'pianificatiOggi',
-            'altaPriorita',
-            'bassaPriorita',
-            'programmatiFuturi',
+            'urgenti',
+            'pianificate7gg',
             'quickAreas',
-            'quickDepartments'
+            'quickDepartments',
+            'quickEquipments',
+            'quickMaintenanceRoles'
         ));
+    }
+
+    /**
+     * Aree / zone / impianti / specializzazioni limitati al perimetro dell'utente,
+     * usati dal form mobile "Nuovo ticket".
+     *
+     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection, 2: \Illuminate\Support\Collection, 3: \Illuminate\Support\Collection}
+     */
+    public static function quickOpenScope(\App\Models\User $user): array
+    {
+        $user->loadMissing(['departments', 'areas']);
+        $userDeptIds = $user->departments->pluck('id')->all();
+        $userAreaIds = $user->assignedAreaIds()->all();
+
+        $areas = Area::whereIn('id', $userAreaIds)->where('active', true)
+            ->orderBy('name')->get(['id', 'name']);
+        $departments = Department::whereIn('id', $userDeptIds)->where('active', true)
+            ->orderBy('name')->get(['id', 'name', 'area_id']);
+        $equipments = empty($userDeptIds)
+            ? collect()
+            : Equipment::whereIn('department_id', $userDeptIds)
+                ->where('active', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'code', 'department_id']);
+        $maintenanceRoles = MaintenanceRole::orderBy('name')->get(['id', 'name']);
+
+        return [$areas, $departments, $equipments, $maintenanceRoles];
     }
 
     public function profile(): View
     {
-        return view('manutentore.profile', ['user' => Auth::user()]);
+        $user = Auth::user()->load(['maintenanceRoles', 'departments.area']);
+
+        $departmentsByArea = $user->departments
+            ->sortBy('name')
+            ->groupBy(fn ($d) => $d->area?->id ?? 0)
+            ->sortBy(fn ($group) => $group->first()?->area?->name ?? '');
+
+        return view('manutentore.profile', compact('user', 'departmentsByArea'));
     }
 }

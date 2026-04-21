@@ -58,8 +58,6 @@ Route::prefix('m')->middleware(['auth', 'mobile'])->name('m.')->group(function (
         ->name('interventions.transfer');
     Route::post('/interventions/{intervention}/collaboration', [MInterventionController::class, 'requestCollaboration'])
         ->name('interventions.collaboration');
-    Route::post('/interventions/{intervention}/close', [MInterventionController::class, 'close'])
-        ->name('interventions.close');
     Route::post('/interventions/{intervention}/suspend', [MInterventionController::class, 'suspend'])
         ->name('interventions.suspend');
     Route::post('/interventions/{intervention}/defer', [MInterventionController::class, 'defer'])
@@ -104,9 +102,6 @@ Route::middleware('auth')->group(function () {
 
     // Lista rapportini (admin/operator)
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-
-    // Chiusura rapportino (admin/operator)
-    Route::patch('/interventions/{intervention}/reports/{report}/close', [ReportController::class, 'close'])->name('interventions.reports.close');
 
     // API endpoint per dettagli rapportino (per modale)
     Route::get('/api/reports/{report}', [ReportController::class, 'show'])->name('api.reports.show');
