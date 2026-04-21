@@ -148,76 +148,43 @@
                                 </label>
                             </div>
                         </div>
+
+                        {{-- Quando torni? (inline, visibile solo se No) --}}
+                        <template x-if="form.is_final === false">
+                            <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-2">
+                                <label class="block text-xs font-semibold uppercase tracking-wide text-amber-800">
+                                    Quando torni sul ticket? <span class="text-red-500">*</span>
+                                </label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button type="button" @click="pickTomorrow()"
+                                            class="h-11 rounded-xl border-2 font-semibold text-sm transition-colors"
+                                            :class="whenChoice === 'tomorrow' ? 'border-brand-500 bg-white text-brand-700' : 'border-transparent bg-white text-gray-700 active:bg-gray-50'">
+                                        A domani
+                                    </button>
+                                    <button type="button" @click="pickCustom()"
+                                            class="h-11 rounded-xl border-2 font-semibold text-sm transition-colors"
+                                            :class="whenChoice === 'custom' ? 'border-brand-500 bg-white text-brand-700' : 'border-transparent bg-white text-gray-700 active:bg-gray-50'">
+                                        Scegli data
+                                    </button>
+                                </div>
+                                <template x-if="whenChoice === 'custom'">
+                                    <input type="date" x-model="form.next_work_date" :min="tomorrowStr"
+                                           class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
+                                </template>
+                                <div class="text-[11px] text-amber-800/80">Il ticket tornerà nella tua lista a partire da questa data.</div>
+                            </div>
+                        </template>
                     </div>
 
                     <div class="border-t border-gray-200 p-3 bg-white sticky bottom-0 pb-[env(safe-area-inset-bottom)]">
-                        <button type="submit" :disabled="submitting"
+                        <button type="submit"
+                                :disabled="submitting || !canSubmit()"
                                 class="w-full h-12 rounded-xl bg-brand-600 text-white font-semibold text-base disabled:opacity-50 active:bg-brand-700">
-                            <span x-show="!submitting && form.is_final !== false">Salva rapportino</span>
-                            <span x-show="!submitting && form.is_final === false">Avanti</span>
+                            <span x-show="!submitting">Salva rapportino</span>
                             <span x-show="submitting">Salvataggio…</span>
                         </button>
                     </div>
                 </form>
-            </template>
-
-            {{-- ─── STEP 2: QUANDO TORNI? ──────────────────────────── --}}
-            <template x-if="step === 'when_q'">
-                <div class="flex-1 overflow-y-auto p-5 pb-[env(safe-area-inset-bottom)]">
-                    <div class="py-2 text-center">
-                        <div class="w-14 h-14 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center mx-auto mb-3">
-                            <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 3v3M16 3v3M4 9h16M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z"/>
-                            </svg>
-                        </div>
-                        <h3 class="text-lg font-bold text-gray-900">Quando torni sul ticket?</h3>
-                        <p class="text-sm text-gray-600 mt-1">Il ticket tornerà nella tua lista a partire da questa data.</p>
-                    </div>
-
-                    <div class="mt-6 space-y-2">
-                        <button type="button" @click="chooseTomorrow()"
-                                :disabled="submitting"
-                                class="w-full h-12 rounded-xl bg-brand-600 text-white font-semibold disabled:opacity-50 active:bg-brand-700">
-                            A domani
-                        </button>
-                        <button type="button" @click="step = 'when_date'"
-                                :disabled="submitting"
-                                class="w-full h-12 rounded-xl bg-white border border-gray-300 text-gray-800 font-semibold active:bg-gray-50">
-                            Scegli data
-                        </button>
-                        <button type="button" @click="step = 'form'"
-                                :disabled="submitting"
-                                class="w-full h-11 text-sm text-gray-500 active:text-gray-700">
-                            Indietro
-                        </button>
-                    </div>
-                </div>
-            </template>
-
-            {{-- ─── STEP 3: CALENDARIO DATA ────────────────────────── --}}
-            <template x-if="step === 'when_date'">
-                <div class="flex-1 overflow-y-auto p-5 pb-[env(safe-area-inset-bottom)]">
-                    <h3 class="text-lg font-bold text-gray-900 mb-1">Quando torni?</h3>
-                    <p class="text-sm text-gray-600 mb-4">Il ticket tornerà in elenco a partire dalla data scelta.</p>
-
-                    <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Data di rientro</label>
-                    <input type="date" x-model="form.next_work_date" :min="tomorrowStr"
-                           class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
-
-                    <div class="mt-6 space-y-2">
-                        <button type="button" @click="submit()"
-                                :disabled="submitting || !form.next_work_date"
-                                class="w-full h-12 rounded-xl bg-brand-600 text-white font-semibold disabled:opacity-50 active:bg-brand-700">
-                            <span x-show="!submitting">Conferma</span>
-                            <span x-show="submitting">Salvataggio…</span>
-                        </button>
-                        <button type="button" @click="step = 'when_q'"
-                                :disabled="submitting"
-                                class="w-full h-11 text-sm text-gray-500 active:text-gray-700">
-                            Indietro
-                        </button>
-                    </div>
-                </div>
             </template>
 
         </div>
@@ -237,6 +204,7 @@
                 nowLabel: '',
                 todayStr: '',
                 tomorrowStr: '',
+                whenChoice: null, // null | 'tomorrow' | 'custom'
                 form: {
                     duration: '',
                     activities: '',
@@ -248,11 +216,18 @@
                 csrf: document.querySelector('meta[name="csrf-token"]')?.content || '',
 
                 stepTitle() {
-                    return {
-                        form:      'Nuovo rapportino',
-                        when_q:    'Quando torni?',
-                        when_date: 'Scegli data',
-                    }[this.step] || 'Rapportino';
+                    return 'Nuovo rapportino';
+                },
+
+                canSubmit() {
+                    if (!this.form.duration) return false;
+                    if (!this.form.activities || !this.form.activities.trim()) return false;
+                    if (this.form.is_final === null) return false;
+                    if (this.form.is_final === false) {
+                        if (!this.whenChoice) return false;
+                        if (!this.form.next_work_date) return false;
+                    }
+                    return true;
                 },
 
                 open(detail) {
@@ -266,6 +241,7 @@
 
                     this.step = 'form';
                     this.result = null;
+                    this.whenChoice = null;
                     this.form = {
                         duration: '',
                         activities: '',
@@ -283,7 +259,6 @@
                     const tomorrow = new Date();
                     tomorrow.setDate(tomorrow.getDate() + 1);
                     this.tomorrowStr = tomorrow.toISOString().slice(0, 10);
-                    this.form.next_work_date = this.tomorrowStr;
                 },
 
                 close() {
@@ -350,41 +325,34 @@
                     return true;
                 },
 
-                // Click radio "Sì, ho finito" → auto-submit.
+                // Click radio "Sì, ho finito" → auto-submit se i campi base sono pronti.
                 onYes() {
-                    // Assicurati che i campi base siano compilati prima di auto-inviare.
+                    this.whenChoice = null;
+                    this.form.next_work_date = '';
                     if (!this.form.duration || !this.form.activities || !this.form.activities.trim()) {
-                        // Lascia che l'utente completi prima, verranno validati al submit.
                         return;
                     }
                     this.submit();
                 },
 
-                // Click radio "No" → vai subito al prossimo step per scegliere la data.
+                // Click radio "No": azzera la scelta "quando torni" per forzare l'utente a sceglierla.
                 onNo() {
-                    if (!this.form.duration) {
-                        this.$store.toasts.push('Indica il tempo impiegato.', 'error');
-                        return;
-                    }
-                    if (!this.form.activities || !this.form.activities.trim()) {
-                        this.$store.toasts.push('Descrivi le attività svolte.', 'error');
-                        return;
-                    }
-                    this.step = 'when_q';
+                    this.whenChoice = null;
+                    this.form.next_work_date = '';
                 },
 
-                // Submit del form: se "No" → passa allo step di scelta data, altrimenti invia.
+                pickTomorrow() {
+                    this.whenChoice = 'tomorrow';
+                    this.form.next_work_date = this.tomorrowStr;
+                },
+
+                pickCustom() {
+                    this.whenChoice = 'custom';
+                    this.form.next_work_date = '';
+                },
+
                 onFormSubmit() {
                     if (!this.validateBase()) return;
-                    if (this.form.is_final === false) {
-                        this.step = 'when_q';
-                        return;
-                    }
-                    this.submit();
-                },
-
-                chooseTomorrow() {
-                    this.form.next_work_date = this.tomorrowStr;
                     this.submit();
                 },
 
