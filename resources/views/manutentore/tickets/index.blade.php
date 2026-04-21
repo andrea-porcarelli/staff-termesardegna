@@ -45,7 +45,7 @@
 @endphp
 
 @section('content')
-    <div class="pt-3 pb-6">
+    <div x-data="ticketsListView('{{ $filter }}')" class="pt-3 pb-6">
 
         {{-- Bottone + Nuovo ticket --}}
         <div class="px-3 mb-3">
@@ -89,24 +89,30 @@
             <div class="flex gap-2 overflow-x-auto scrollbar-none -mx-3 px-3 py-1">
                 @foreach ($chips as $key => $label)
                     @php
-                        $isActive = $filter === $key;
                         $url = route('m.tickets.index', array_filter([
                             'filter' => $key === 'all' ? null : $key,
                             'q'      => $q ?: null,
                         ]));
                     @endphp
                     <a href="{{ $url }}"
-                       class="shrink-0 h-8 px-3 inline-flex items-center rounded-full text-sm font-medium border transition-colors {{ $isActive
+                       @click.prevent="switchFilter('{{ $key }}')"
+                       :class="currentFilter === '{{ $key }}'
                             ? 'bg-red-600 text-white border-red-600'
-                            : 'bg-white text-gray-700 border-gray-300 active:bg-gray-100' }}">
+                            : 'bg-white text-gray-700 border-gray-300 active:bg-gray-100'"
+                       class="shrink-0 h-8 px-3 inline-flex items-center rounded-full text-sm font-medium border transition-colors">
                         {{ $label }}
                     </a>
                 @endforeach
             </div>
         </div>
 
+        {{-- Loader sottile mentre si cambia filtro --}}
+        <div x-show="loading" x-transition.opacity class="px-3 pb-2 text-center text-xs text-gray-400">
+            Aggiorno…
+        </div>
+
         {{-- Lista ticket --}}
-        <div class="px-3">
+        <div class="px-3" id="ticketsListContainer">
             @if ($interventions->isEmpty())
                 <div class="py-12 text-center">
                     <div class="text-3xl mb-2">🔍</div>
@@ -141,4 +147,53 @@
 
     <x-m.quick-open :areas="$quickAreas" :departments="$quickDepartments"
                     :equipments="$quickEquipments" :maintenance-roles="$quickMaintenanceRoles" />
+
+    @push('scripts')
+    <script>
+        function ticketsListView(initialFilter) {
+            return {
+                currentFilter: initialFilter || 'all',
+                loading: false,
+
+                async switchFilter(key) {
+                    if (this.loading || this.currentFilter === key) return;
+                    this.currentFilter = key;
+                    this.loading = true;
+
+                    const params = new URLSearchParams(window.location.search);
+                    if (key === 'all') {
+                        params.delete('filter');
+                    } else {
+                        params.set('filter', key);
+                    }
+                    const qs = params.toString();
+                    const url = window.location.pathname + (qs ? '?' + qs : '');
+
+                    try {
+                        const res = await fetch(url, {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' },
+                            credentials: 'same-origin',
+                        });
+                        if (!res.ok) throw new Error('HTTP ' + res.status);
+                        const html = await res.text();
+                        const doc = new DOMParser().parseFromString(html, 'text/html');
+                        const next = doc.getElementById('ticketsListContainer');
+                        const cur  = document.getElementById('ticketsListContainer');
+                        if (next && cur) {
+                            cur.innerHTML = next.innerHTML;
+                        }
+                        history.replaceState(null, '', url);
+                    } catch (e) {
+                        this.$store.toasts?.push('Impossibile aggiornare la lista.', 'error');
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+            };
+        }
+
+        // Sincronizza il filtro quando l'utente usa back/forward del browser.
+        window.addEventListener('popstate', () => { window.location.reload(); });
+    </script>
+    @endpush
 @endsection

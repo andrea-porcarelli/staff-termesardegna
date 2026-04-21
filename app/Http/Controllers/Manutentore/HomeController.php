@@ -69,14 +69,15 @@ class HomeController extends Controller
 
         $active = $interventions
             ->reject(fn ($i) => in_array($i->status, ['completed', 'cancelled'], true))
-            ->reject(function ($i) use ($today) {
+            ->reject(function ($i) use ($weekAhead) {
                 // L'utente ha già concluso definitivamente il suo lavoro sul ticket
                 if ($i->reports->contains('is_final', true)) {
                     return true;
                 }
-                // L'ultimo rapportino dell'utente rinvia il ticket a una data futura
+                // L'ultimo rapportino dell'utente rinvia il ticket OLTRE i 7 giorni (fuori finestra dashboard).
+                // Entro 7 giorni resta visibile in Dashboard.
                 $last = $i->reports->sortByDesc('created_at')->first();
-                if ($last && $last->next_work_date && $last->next_work_date->gt($today)) {
+                if ($last && $last->next_work_date && $last->next_work_date->gt($weekAhead)) {
                     return true;
                 }
 

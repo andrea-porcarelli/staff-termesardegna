@@ -135,19 +135,10 @@ class InterventionController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $today = today();
-        $interventions = $interventions->reject(function ($i) use ($today) {
-            // L'utente ha già concluso definitivamente il suo lavoro sul ticket
-            if ($i->reports->contains('is_final', true)) {
-                return true;
-            }
-            // L'ultimo rapportino dell'utente rinvia il ticket a una data futura
-            $last = $i->reports->sortByDesc('created_at')->first();
-            if ($last && $last->next_work_date && $last->next_work_date->gt($today)) {
-                return true;
-            }
-
-            return false;
+        // In /tickets mostriamo anche i ticket con next_work_date futura (il badge "rinviato al …"
+        // già li segnala). Nascondiamo solo i ticket dove l'utente ha chiuso definitivamente il suo percorso.
+        $interventions = $interventions->reject(function ($i) {
+            return $i->reports->contains('is_final', true);
         })->values();
 
         if ($filter === 'overdue') {
