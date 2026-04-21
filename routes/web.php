@@ -8,12 +8,14 @@ use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\InterventionController;
 use App\Http\Controllers\InterventionLogController;
 use App\Http\Controllers\MaintenanceRoleController;
+use App\Http\Controllers\Manutentore\CalendarController as MCalendarController;
 use App\Http\Controllers\Manutentore\CollaborationController as MCollaborationController;
 use App\Http\Controllers\Manutentore\HomeController as MHomeController;
 use App\Http\Controllers\Manutentore\InterventionController as MInterventionController;
 use App\Http\Controllers\Manutentore\NotificationController as MNotificationController;
 use App\Http\Controllers\Manutentore\OneSignalSubscriptionController as MOneSignalSubscriptionController;
 use App\Http\Controllers\Manutentore\ReportController as MReportController;
+use App\Http\Controllers\Manutentore\ScheduleController as MScheduleController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\TeamController;
@@ -35,15 +37,9 @@ Route::prefix('m')->middleware(['auth', 'mobile'])->name('m.')->group(function (
     Route::get('/', [MHomeController::class, 'index'])->name('home');
     Route::get('/profilo', [MHomeController::class, 'profile'])->name('profile');
 
-    Route::view('/calendario', 'manutentore.placeholder', [
-        'title' => 'Calendario',
-        'message' => 'La vista calendario arriva con la prossima release.',
-    ])->name('calendar');
+    Route::get('/calendario', [MCalendarController::class, 'index'])->name('calendar');
 
-    Route::view('/piano', 'manutentore.placeholder', [
-        'title' => 'Piano orario',
-        'message' => 'Il piano orario mobile arriva con la prossima release.',
-    ])->name('schedule');
+    Route::get('/piano', [MScheduleController::class, 'index'])->name('schedule');
 
     Route::get('/tickets', [MInterventionController::class, 'index'])
         ->name('tickets.index');
@@ -80,6 +76,7 @@ Route::prefix('m')->middleware(['auth', 'mobile'])->name('m.')->group(function (
         ->name('interventions.quick-open');
 
     // Rapportino inline (mobile)
+    Route::get('/rapportini', [MReportController::class, 'index'])->name('reports.index');
     Route::post('/interventions/{intervention}/reports', [MReportController::class, 'store'])
         ->name('reports.store');
     Route::post('/reports', [MReportController::class, 'storeStandalone'])

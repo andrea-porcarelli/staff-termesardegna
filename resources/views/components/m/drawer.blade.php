@@ -5,6 +5,7 @@
     $items = [
         ['name' => 'm.home',          'label' => 'Dashboard',     'icon' => 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z'],
         ['name' => 'm.tickets.index', 'label' => 'Elenco ticket', 'icon' => 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01'],
+        ['name' => 'm.reports.index', 'label' => 'Rapportini',    'icon' => 'M9 12h6m-6 4h4m2-12H7a2 2 0 0 0-2 2v14l3-3h9a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM11 0v4m2-4v4'],
         ['name' => 'm.calendar',      'label' => 'Calendario',    'icon' => 'M8 3v3M16 3v3M4 9h16M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z'],
         ['name' => 'm.schedule',      'label' => 'Piano orario',  'icon' => 'M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z'],
         ['name' => 'm.profile',       'label' => 'Profilo',       'icon' => 'M16 11a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM4 21a8 8 0 0 1 16 0'],

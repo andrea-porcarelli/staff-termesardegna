@@ -21,6 +21,37 @@ use Illuminate\Validation\Rule;
 
 class ReportController extends Controller
 {
+    public function index(): \Illuminate\View\View
+    {
+        $user = Auth::user();
+
+        $query = Report::with(['intervention.area', 'intervention.department', 'intervention.equipment', 'user'])
+            ->orderByDesc('report_date')
+            ->orderByDesc('created_at');
+
+        if ($user->role === 'manutentore') {
+            $query->where('user_id', $user->id);
+        } elseif ($user->role === 'operator') {
+            $deptIds = $user->departments()->pluck('departments.id')->all();
+            $areaIds = $user->assignedAreaIds()->all();
+
+            $query->whereHas('intervention', function ($q) use ($deptIds, $areaIds) {
+                $q->whereIn('department_id', $deptIds ?: [-1])
+                    ->orWhereIn('area_id', $areaIds ?: [-1])
+                    ->orWhereHas('equipment', fn ($eq) => $eq->whereIn('department_id', $deptIds ?: [-1]));
+            });
+        } elseif ($user->role !== 'admin') {
+            abort(403);
+        }
+
+        $reports = $query->paginate(30);
+
+        return view('manutentore.reports.index', [
+            'reports' => $reports,
+            'isManutentore' => $user->role === 'manutentore',
+        ]);
+    }
+
     public function store(Request $request, Intervention $intervention): JsonResponse
     {
         $user = Auth::user();

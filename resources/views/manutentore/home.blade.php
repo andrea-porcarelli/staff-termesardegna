@@ -133,16 +133,6 @@
 
     </div>
 
-    {{-- FAB --}}
-    <button type="button"
-            @click="$store.quickOpen.show()"
-            class="fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full bg-brand-600 text-white shadow-lg active:bg-brand-700 flex items-center justify-center"
-            aria-label="Nuovo ticket">
-        <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14M5 12h14"/>
-        </svg>
-    </button>
-
     <x-m.quick-open :areas="$quickAreas" :departments="$quickDepartments"
                     :equipments="$quickEquipments" :maintenance-roles="$quickMaintenanceRoles" />
 
