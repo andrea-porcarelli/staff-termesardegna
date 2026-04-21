@@ -26,8 +26,17 @@
                 <div x-show="loading" class="text-sm text-gray-500">Caricamento…</div>
 
                 <template x-if="!loading && ticket">
-                    <div class="flex items-center gap-2 flex-1 min-w-0">
-                        <span class="font-mono font-semibold text-gray-500 text-sm" x-text="ticket.code"></span>
+                    <div class="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
+                        <span class="font-mono font-semibold text-gray-700 text-sm" x-text="ticket.code"></span>
+                        <template x-if="ticket.reschedule">
+                            <span class="inline-flex items-center gap-1 h-5 px-1.5 rounded bg-amber-100 text-amber-800 text-[10px] font-semibold"
+                                  :title="'Rinviato da ' + (ticket.reschedule.user_name || '—')">
+                                <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0 1 14.7-3.7L23 9M20 15a9 9 0 0 1-14.7 3.7L1 15"/>
+                                </svg>
+                                <span x-text="'rinviato al ' + ticket.reschedule.date"></span>
+                            </span>
+                        </template>
                         <span class="text-gray-300">·</span>
                         <span class="text-sm text-gray-500 truncate" x-text="ticket.created_at"></span>
                     </div>

@@ -55,6 +55,7 @@ class InterventionController extends Controller
                 ->where('user_id', $user->id)
                 ->where('status', InterventionCollaboration::STATUS_ACCEPTED),
             'reports' => fn ($q) => $q->where('user_id', $user->id),
+            'activeReschedules.user:id,name',
         ])
             ->where(function ($q) use ($user, $deptIds) {
                 $q->where('assigned_user_id', $user->id);
@@ -189,7 +190,12 @@ class InterventionController extends Controller
             'collaborations.user',
             'collaborations.requestedBy',
             'reports.user',
+            'activeReschedules.user:id,name',
         ]);
+
+        $nextReschedule = $intervention->activeReschedules
+            ->sortBy(fn ($r) => $r->next_work_date->timestamp)
+            ->first();
 
         $me = Auth::user();
         $deadline = $intervention->deadline;
@@ -335,6 +341,10 @@ class InterventionController extends Controller
             'mine' => $mine,
             'i_have_final' => $iHaveFinal,
             'my_next_work_date' => $myFinalReport ? null : $myLastReport?->next_work_date?->isoFormat('D MMM YYYY'),
+            'reschedule' => $nextReschedule ? [
+                'date' => $nextReschedule->next_work_date->isoFormat('D MMM YYYY'),
+                'user_name' => $nextReschedule->user?->name,
+            ] : null,
             'unassigned' => $unassigned,
             'is_overdue' => $isOverdue,
             'overdue_since' => $isOverdue && $deadline

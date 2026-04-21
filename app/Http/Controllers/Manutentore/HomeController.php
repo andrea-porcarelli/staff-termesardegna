@@ -30,6 +30,7 @@ class HomeController extends Controller
                 ->where('user_id', $user->id)
                 ->where('status', \App\Models\InterventionCollaboration::STATUS_ACCEPTED),
             'reports' => fn ($q) => $q->where('user_id', $user->id),
+            'activeReschedules.user:id,name',
         ])
             ->whereIn('status', ['open', 'planned', 'in_progress'])
             ->where(function ($q) {

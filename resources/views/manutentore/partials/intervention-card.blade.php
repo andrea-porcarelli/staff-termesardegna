@@ -64,10 +64,27 @@
 
     <div class="px-4 py-3 pl-5 space-y-2">
 
-        {{-- Riga 1: bullet + #ID + data --}}
+        {{-- Riga 1: bullet + #ID + badge rinvio + data --}}
+        @php
+            $rescheduleBadgeDate = null;
+            if ($intervention->relationLoaded('activeReschedules') && $intervention->activeReschedules->isNotEmpty()) {
+                $nextReschedule = $intervention->activeReschedules
+                    ->sortBy(fn ($r) => $r->next_work_date->timestamp)->first();
+                $rescheduleBadgeDate = $nextReschedule->next_work_date;
+            }
+        @endphp
         <div class="flex items-center gap-2 text-xs">
             <span class="w-1.5 h-1.5 rounded-full {{ $barClass }}"></span>
-            <span class="font-mono font-semibold text-gray-600">#{{ $intervention->id }}</span>
+            <span class="font-mono font-semibold text-gray-700">#{{ $intervention->id }}</span>
+            @if ($rescheduleBadgeDate)
+                <span class="inline-flex items-center gap-1 h-5 px-1.5 rounded bg-amber-100 text-amber-800 text-[10px] font-semibold"
+                      title="Un rapportino ha spostato la data di esecuzione">
+                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0 1 14.7-3.7L23 9M20 15a9 9 0 0 1-14.7 3.7L1 15"/>
+                    </svg>
+                    rinviato al {{ $rescheduleBadgeDate->isoFormat('D MMM') }}
+                </span>
+            @endif
             <span class="ml-auto text-gray-500">{{ $intervention->created_at?->isoFormat('D MMM') }}</span>
         </div>
 

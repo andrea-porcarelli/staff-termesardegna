@@ -120,6 +120,18 @@ class Intervention extends Model
         return $this->hasMany(Report::class);
     }
 
+    /**
+     * Rapportini (di qualsiasi utente) che spostano la data di esecuzione
+     * del ticket nel futuro tramite next_work_date.
+     */
+    public function activeReschedules(): HasMany
+    {
+        return $this->hasMany(Report::class)
+            ->where('is_final', false)
+            ->whereNotNull('next_work_date')
+            ->whereDate('next_work_date', '>', now()->toDateString());
+    }
+
     public function transfers(): HasMany
     {
         return $this->hasMany(InterventionTransfer::class)->orderByDesc('transferred_at');
