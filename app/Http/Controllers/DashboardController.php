@@ -48,6 +48,7 @@ class DashboardController extends Controller
 
             // Rapportini recenti
             $data['recentReports'] = Report::with(['intervention.equipment', 'user'])
+                ->whereHas('intervention')
                 ->orderBy('created_at', 'desc')
                 ->limit(5)
                 ->get();
@@ -122,6 +123,7 @@ class DashboardController extends Controller
 
                 // Rapportini in bozza da supervisionare nei reparti associati
                 $data['pendingReports'] = Report::with(['intervention.equipment', 'user'])
+                    ->whereHas('intervention')
                     ->whereHas('intervention.equipment', function ($query) use ($departmentIds) {
                         $query->whereIn('department_id', $departmentIds);
                     })
