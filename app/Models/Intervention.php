@@ -65,15 +65,34 @@ class Intervention extends Model
     }
 
     /**
+     * Datetime completo di pianificazione (data + ora inizio, default 08:00).
+     */
+    public function getScheduledAtAttribute(): ?\Carbon\Carbon
+    {
+        if (! $this->scheduled_date) {
+            return null;
+        }
+
+        return $this->scheduled_date
+            ->copy()
+            ->setTimeFromTimeString($this->scheduled_start_time ?? '08:00:00');
+    }
+
+    /**
      * Verifica se l'intervento è scaduto.
      */
     public function getIsOverdueAttribute(): bool
     {
-        $deadline = $this->deadline;
-        if (! $deadline) {
+        if (in_array($this->status, ['completed', 'cancelled'])) {
             return false;
         }
-        if (in_array($this->status, ['completed', 'cancelled'])) {
+
+        if ($this->tipo === 'pianificazione' && $this->scheduled_at) {
+            return now()->greaterThan($this->scheduled_at);
+        }
+
+        $deadline = $this->deadline;
+        if (! $deadline) {
             return false;
         }
 

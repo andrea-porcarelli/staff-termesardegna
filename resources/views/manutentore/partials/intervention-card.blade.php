@@ -14,11 +14,7 @@
     $canMakeReport = ($mine || $iAmCollaborator)
         && $intervention->status === 'in_progress'
         && !$hasMyReport;
-    $isOverdue = $intervention->is_overdue
-        || ($intervention->tipo === 'pianificazione'
-            && $intervention->scheduled_date
-            && $intervention->scheduled_date->isPast()
-            && !in_array($intervention->status, ['completed', 'cancelled']));
+    $isOverdue = $intervention->is_overdue;
 
     // Barra laterale colorata + bullet
     if ($isOverdue) {
@@ -92,7 +88,7 @@
         @if ($isOverdue)
             @php
                 $expiredAt = $intervention->tipo === 'pianificazione'
-                    ? ($intervention->scheduled_date ? $intervention->scheduled_date->copy()->setTimeFromTimeString($intervention->scheduled_start_time ?? '08:00:00') : null)
+                    ? $intervention->scheduled_at
                     : $intervention->deadline;
             @endphp
             @if ($expiredAt)

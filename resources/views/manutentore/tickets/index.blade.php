@@ -16,11 +16,7 @@
     ];
 
     $classify = function ($i) {
-        $isOverdue = $i->is_overdue
-            || ($i->tipo === 'pianificazione'
-                && $i->scheduled_date
-                && $i->scheduled_date->isPast()
-                && !in_array($i->status, ['completed', 'cancelled']));
+        $isOverdue = $i->is_overdue;
 
         if ($i->status === 'cancelled') return 'cancelled';
         if ($isOverdue) return 'overdue';

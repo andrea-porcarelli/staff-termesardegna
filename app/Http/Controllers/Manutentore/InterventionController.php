@@ -142,16 +142,7 @@ class InterventionController extends Controller
         })->values();
 
         if ($filter === 'overdue') {
-            $interventions = $interventions->filter(function ($i) {
-                if ($i->tipo === 'pianificazione'
-                    && $i->scheduled_date
-                    && $i->scheduled_date->isPast()
-                    && ! in_array($i->status, ['completed', 'cancelled'])) {
-                    return true;
-                }
-
-                return $i->is_overdue;
-            })->values();
+            $interventions = $interventions->filter(fn ($i) => $i->is_overdue)->values();
         }
 
         [$quickAreas, $quickDepartments, $quickEquipments, $quickMaintenanceRoles]
@@ -190,11 +181,7 @@ class InterventionController extends Controller
 
         $me = Auth::user();
         $deadline = $intervention->deadline;
-        $isOverdue = $intervention->is_overdue
-            || ($intervention->tipo === 'pianificazione'
-                && $intervention->scheduled_date
-                && $intervention->scheduled_date->isPast()
-                && ! in_array($intervention->status, ['completed', 'cancelled']));
+        $isOverdue = $intervention->is_overdue;
 
         $mine = $intervention->assigned_user_id === $me->id;
         $unassigned = is_null($intervention->assigned_user_id);
