@@ -25,7 +25,7 @@ class ReportController extends Controller
     {
         $user = Auth::user();
 
-        $query = Report::with(['intervention.area', 'intervention.department', 'intervention.equipment', 'user'])
+        $query = Report::with(['intervention.area', 'intervention.department', 'intervention.equipment', 'user', 'media'])
             ->orderByDesc('report_date')
             ->orderByDesc('created_at');
 

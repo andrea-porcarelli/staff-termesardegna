@@ -51,7 +51,7 @@
                     <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h4m2-10H7a2 2 0 0 0-2 2v14l3-3h9a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2zM11 2v4m2-4v4"/>
                     </svg>
-                    Apri rapportino
+                    Crea rapportino
                 </button>
             @endif
         </div>
