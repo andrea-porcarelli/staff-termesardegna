@@ -46,7 +46,13 @@
                             Data <span class="text-red-500">*</span>
                         </label>
                         <input type="date" x-model="form.report_date" :max="todayStr" required
-                               class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
+                               @input="errors.report_date = null"
+                               x-ref="field_report_date"
+                               class="w-full h-11 px-3 border rounded-xl bg-white text-base"
+                               :class="errors.report_date ? 'border-red-500 bg-red-50' : 'border-gray-300'">
+                        <template x-if="errors.report_date">
+                            <div class="mt-1 text-xs text-red-600" x-text="errors.report_date"></div>
+                        </template>
                     </div>
 
                     {{-- Tempo impiegato (single time input) --}}
@@ -55,7 +61,13 @@
                             Tempo impiegato <span class="text-red-500">*</span>
                         </label>
                         <input type="time" x-model="form.duration" required
-                               class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
+                               @input="errors.duration = null"
+                               x-ref="field_duration"
+                               class="w-full h-11 px-3 border rounded-xl bg-white text-base"
+                               :class="errors.duration ? 'border-red-500 bg-red-50' : 'border-gray-300'">
+                        <template x-if="errors.duration">
+                            <div class="mt-1 text-xs text-red-600" x-text="errors.duration"></div>
+                        </template>
                     </div>
 
                     {{-- Attività --}}
@@ -63,11 +75,15 @@
                         <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
                             Attività svolte <span class="text-red-500">*</span>
                         </label>
-                        <textarea x-model="form.activities" x-ref="activities"
-                                  @input="autoGrow($refs.activities)"
+                        <textarea x-model="form.activities" x-ref="field_activities"
+                                  @input="autoGrow($refs.field_activities); errors.activities = null"
                                   rows="3" required
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-xl bg-white text-base resize-none"
+                                  class="w-full px-3 py-2 border rounded-xl bg-white text-base resize-none"
+                                  :class="errors.activities ? 'border-red-500 bg-red-50' : 'border-gray-300'"
                                   placeholder="Cosa hai fatto"></textarea>
+                        <template x-if="errors.activities">
+                            <div class="mt-1 text-xs text-red-600" x-text="errors.activities"></div>
+                        </template>
                     </div>
 
                     {{-- Note --}}
@@ -221,6 +237,7 @@
                     department_id: '',
                     equipment_id: '',
                 },
+                errors: {},
                 files: [],
                 csrf: document.querySelector('meta[name="csrf-token"]')?.content || '',
 
@@ -236,6 +253,7 @@
                         department_id: '',
                         equipment_id: '',
                     };
+                    this.errors = {};
                     this.equipmentQuery = '';
                     this.equipmentMenuOpen = false;
                     this.files = [];
@@ -351,10 +369,46 @@
                     el.style.height = Math.min(el.scrollHeight, 300) + 'px';
                 },
 
+                focusFirstError() {
+                    const order = ['report_date', 'duration', 'activities'];
+                    for (const name of order) {
+                        if (this.errors[name]) {
+                            const el = this.$refs['field_' + name];
+                            if (el) {
+                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                el.focus({ preventScroll: true });
+                            }
+                            return;
+                        }
+                    }
+                },
+
+                validateForm() {
+                    const errs = {};
+                    if (!this.form.report_date) {
+                        errs.report_date = 'Indica la data del rapportino.';
+                    }
+                    if (!this.form.duration) {
+                        errs.duration = 'Indica il tempo impiegato.';
+                    } else {
+                        const [h, m] = this.form.duration.split(':').map((v) => Number(v) || 0);
+                        if ((h * 60 + m) <= 0) {
+                            errs.duration = 'Il tempo impiegato deve essere maggiore di 0.';
+                        }
+                    }
+                    if (!this.form.activities || !this.form.activities.trim()) {
+                        errs.activities = 'Descrivi le attività svolte.';
+                    }
+                    this.errors = errs;
+                    return Object.keys(errs).length === 0;
+                },
+
                 async submit() {
                     if (this.submitting) return;
-                    if (!this.form.duration) {
-                        this.$store.toasts.push('Indica il tempo impiegato.', 'error');
+                    if (!this.validateForm()) {
+                        const first = Object.values(this.errors)[0];
+                        this.$store.toasts.push(first || 'Compila i campi obbligatori.', 'error');
+                        this.$nextTick(() => this.focusFirstError());
                         return;
                     }
                     this.submitting = true;
@@ -379,6 +433,12 @@
                         });
                         if (res.status === 422) {
                             const payload = await res.json();
+                            if (payload.errors) {
+                                this.errors = Object.fromEntries(
+                                    Object.entries(payload.errors).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])
+                                );
+                                this.$nextTick(() => this.focusFirstError());
+                            }
                             const first = payload.errors ? Object.values(payload.errors).flat()[0] : payload.message;
                             this.$store.toasts.push(first || 'Dati non validi.', 'error');
                             return;

@@ -58,7 +58,13 @@
                                 Tempo impiegato <span class="text-red-500">*</span>
                             </label>
                             <input type="time" x-model="form.duration" required
-                                   class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
+                                   @input="errors.duration = null"
+                                   x-ref="field_duration"
+                                   class="w-full h-11 px-3 border rounded-xl bg-white text-base"
+                                   :class="errors.duration ? 'border-red-500 bg-red-50' : 'border-gray-300'">
+                            <template x-if="errors.duration">
+                                <div class="mt-1 text-xs text-red-600" x-text="errors.duration"></div>
+                            </template>
                         </div>
 
                         {{-- Attività --}}
@@ -66,11 +72,15 @@
                             <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
                                 Attività svolte <span class="text-red-500">*</span>
                             </label>
-                            <textarea x-model="form.activities" x-ref="activities"
-                                      @input="autoGrow($refs.activities)"
+                            <textarea x-model="form.activities" x-ref="field_activities"
+                                      @input="autoGrow($refs.field_activities); errors.activities = null"
                                       rows="3" required
-                                      class="w-full px-3 py-2 border border-gray-300 rounded-xl bg-white text-base resize-none"
+                                      class="w-full px-3 py-2 border rounded-xl bg-white text-base resize-none"
+                                      :class="errors.activities ? 'border-red-500 bg-red-50' : 'border-gray-300'"
                                       placeholder="Cosa hai fatto sul ticket"></textarea>
+                            <template x-if="errors.activities">
+                                <div class="mt-1 text-xs text-red-600" x-text="errors.activities"></div>
+                            </template>
                         </div>
 
                         {{-- Note --}}
@@ -131,11 +141,13 @@
                         </div>
 
                         {{-- Hai finito il lavoro? --}}
-                        <div>
-                            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                        <div x-ref="field_is_final">
+                            <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2"
+                                   :class="errors.is_final ? 'text-red-600' : ''">
                                 Hai terminato il tuo lavoro sul ticket? <span class="text-red-500">*</span>
                             </label>
-                            <div class="grid grid-cols-2 gap-2">
+                            <div class="grid grid-cols-2 gap-2 rounded-xl"
+                                 :class="errors.is_final ? 'ring-2 ring-red-500 p-1' : ''">
                                 <button type="button" @click="chooseYes()"
                                         class="h-11 rounded-xl border-2 flex items-center justify-center gap-2 font-semibold text-sm transition-colors"
                                         :class="form.is_final === true ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-300 bg-white text-gray-700 active:bg-gray-50'">
@@ -147,11 +159,16 @@
                                     No
                                 </button>
                             </div>
+                            <template x-if="errors.is_final">
+                                <div class="mt-1 text-xs text-red-600" x-text="errors.is_final"></div>
+                            </template>
                         </div>
 
                         {{-- Quando torni? (inline, visibile solo se No) --}}
                         <template x-if="form.is_final === false">
-                            <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-2">
+                            <div class="rounded-xl bg-amber-50 border p-3 space-y-2"
+                                 x-ref="field_next_work_date"
+                                 :class="errors.next_work_date ? 'border-red-500 ring-2 ring-red-500' : 'border-amber-200'">
                                 <label class="block text-xs font-semibold uppercase tracking-wide text-amber-800">
                                     Quando torni sul ticket? <span class="text-red-500">*</span>
                                 </label>
@@ -179,7 +196,12 @@
                                 </div>
                                 <template x-if="whenChoice === 'custom'">
                                     <input type="date" x-model="form.next_work_date" :min="tomorrowStr"
-                                           class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
+                                           @input="errors.next_work_date = null"
+                                           class="w-full h-11 px-3 border rounded-xl bg-white text-base"
+                                           :class="errors.next_work_date ? 'border-red-500 bg-red-50' : 'border-gray-300'">
+                                </template>
+                                <template x-if="errors.next_work_date">
+                                    <div class="text-xs text-red-600" x-text="errors.next_work_date"></div>
                                 </template>
                                 <div class="text-[11px] text-amber-800/80">Il ticket tornerà nella tua lista a partire da questa data.</div>
                             </div>
@@ -188,7 +210,7 @@
 
                     <div class="border-t border-gray-200 p-3 bg-white sticky bottom-0 pb-[env(safe-area-inset-bottom)]">
                         <button type="submit"
-                                :disabled="submitting || !canSubmit()"
+                                :disabled="submitting"
                                 class="w-full h-12 rounded-xl bg-brand-600 text-white font-semibold text-base disabled:opacity-50 active:bg-brand-700">
                             <span x-show="!submitting">Salva rapportino</span>
                             <span x-show="submitting">Salvataggio…</span>
@@ -223,6 +245,7 @@
                     is_final: null,
                     next_work_date: '',
                 },
+                errors: {},
                 files: [],
                 csrf: document.querySelector('meta[name="csrf-token"]')?.content || '',
 
@@ -239,6 +262,43 @@
                         if (!this.form.next_work_date) return false;
                     }
                     return true;
+                },
+
+                focusFirstError() {
+                    const order = ['duration', 'activities', 'is_final', 'next_work_date'];
+                    for (const name of order) {
+                        if (this.errors[name]) {
+                            const el = this.$refs['field_' + name];
+                            if (el) {
+                                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                if (typeof el.focus === 'function') el.focus({ preventScroll: true });
+                            }
+                            return;
+                        }
+                    }
+                },
+
+                validateForm() {
+                    const errs = {};
+                    if (!this.form.duration) {
+                        errs.duration = 'Indica il tempo impiegato.';
+                    } else {
+                        const [h, m] = this.form.duration.split(':').map((v) => Number(v) || 0);
+                        if ((h * 60 + m) <= 0) {
+                            errs.duration = 'Il tempo impiegato deve essere maggiore di 0.';
+                        }
+                    }
+                    if (!this.form.activities || !this.form.activities.trim()) {
+                        errs.activities = 'Descrivi le attività svolte.';
+                    }
+                    if (this.form.is_final === null) {
+                        errs.is_final = 'Indica se hai terminato il lavoro.';
+                    }
+                    if (this.form.is_final === false && !this.form.next_work_date) {
+                        errs.next_work_date = 'Indica quando tornerai a lavorare sul ticket.';
+                    }
+                    this.errors = errs;
+                    return Object.keys(errs).length === 0;
                 },
 
                 open(detail) {
@@ -261,6 +321,7 @@
                         is_final: null,
                         next_work_date: '',
                     };
+                    this.errors = {};
                     this.files = [];
 
                     const now = new Date();
@@ -317,32 +378,12 @@
                     el.style.height = Math.min(el.scrollHeight, 300) + 'px';
                 },
 
-                validateBase() {
-                    if (!this.form.duration) {
-                        this.$store.toasts.push('Indica il tempo impiegato.', 'error');
-                        return false;
-                    }
-                    const [h, m] = this.form.duration.split(':').map((v) => Number(v) || 0);
-                    if ((h * 60 + m) <= 0) {
-                        this.$store.toasts.push('Il tempo impiegato deve essere maggiore di 0.', 'error');
-                        return false;
-                    }
-                    if (!this.form.activities || !this.form.activities.trim()) {
-                        this.$store.toasts.push('Descrivi le attività svolte.', 'error');
-                        return false;
-                    }
-                    if (this.form.is_final === null) {
-                        this.$store.toasts.push('Indica se hai terminato il lavoro.', 'error');
-                        return false;
-                    }
-                    return true;
-                },
-
                 // Click "Sì, ho finito" → imposta is_final=true e prova auto-submit.
                 chooseYes() {
                     this.form.is_final = true;
                     this.whenChoice = null;
                     this.form.next_work_date = '';
+                    this.errors.is_final = null;
                     if (!this.form.duration || !this.form.activities || !this.form.activities.trim()) {
                         return;
                     }
@@ -354,11 +395,13 @@
                     this.form.is_final = false;
                     this.whenChoice = null;
                     this.form.next_work_date = '';
+                    this.errors.is_final = null;
                 },
 
                 pickTomorrow() {
                     this.whenChoice = 'tomorrow';
                     this.form.next_work_date = this.tomorrowStr;
+                    this.errors.next_work_date = null;
                 },
 
                 pickCustom() {
@@ -367,15 +410,15 @@
                 },
 
                 onFormSubmit() {
-                    if (!this.validateBase()) return;
                     this.submit();
                 },
 
                 async submit() {
                     if (this.submitting || !this.context.id) return;
-                    if (!this.validateBase()) return;
-                    if (this.form.is_final === false && !this.form.next_work_date) {
-                        this.$store.toasts.push('Indica quando tornerai a lavorare sul ticket.', 'error');
+                    if (!this.validateForm()) {
+                        const first = Object.values(this.errors)[0];
+                        this.$store.toasts.push(first || 'Compila i campi obbligatori.', 'error');
+                        this.$nextTick(() => this.focusFirstError());
                         return;
                     }
 
@@ -402,6 +445,12 @@
 
                         if (res.status === 422) {
                             const payload = await res.json();
+                            if (payload.errors) {
+                                this.errors = Object.fromEntries(
+                                    Object.entries(payload.errors).map(([k, v]) => [k, Array.isArray(v) ? v[0] : v])
+                                );
+                                this.$nextTick(() => this.focusFirstError());
+                            }
                             const first = payload.errors ? Object.values(payload.errors).flat()[0] : payload.message;
                             this.$store.toasts.push(first || 'Dati non validi.', 'error');
                             return;
