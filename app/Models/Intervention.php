@@ -161,6 +161,19 @@ class Intervention extends Model
         return $this->hasMany(InterventionCollaboration::class)->orderByDesc('created_at');
     }
 
+    /**
+     * Collaborazioni visibili sulla card (pending + accepted), per mostrare
+     * circolini iniziali e badge "richiesta inviata".
+     */
+    public function activeCollaborations(): HasMany
+    {
+        return $this->hasMany(InterventionCollaboration::class)
+            ->whereIn('status', [
+                InterventionCollaboration::STATUS_PENDING,
+                InterventionCollaboration::STATUS_ACCEPTED,
+            ]);
+    }
+
     public function logs(): HasMany
     {
         return $this->hasMany(InterventionLog::class)->latest('created_at');

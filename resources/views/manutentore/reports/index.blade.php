@@ -38,8 +38,8 @@
                         ->filter()->implode(' · ')
                     : null;
             @endphp
-            <article @if ($intervention) @click="$dispatch('open-ticket', { id: {{ $intervention->id }} })" role="button" @endif
-                     @if ($isStandalone) x-data="{ expanded: false }" @click="expanded = !expanded" role="button" @endif
+            <article x-data="{ expanded: false }"
+                     @click="expanded = !expanded" role="button"
                      class="rounded-xl border border-gray-200 bg-white p-3 space-y-2 active:bg-gray-50 cursor-pointer">
                 <div class="flex items-start gap-2">
                     <div class="flex-1 min-w-0">
@@ -77,44 +77,52 @@
                 </div>
 
                 @if ($report->activities)
-                    <p class="text-[13px] text-gray-700 whitespace-pre-line {{ $isStandalone ? '' : 'line-clamp-3' }}"
-                       @if ($isStandalone) :class="expanded ? '' : 'line-clamp-3'" @endif>{{ $report->activities }}</p>
+                    <p class="text-[13px] text-gray-700 whitespace-pre-line"
+                       :class="expanded ? '' : 'line-clamp-3'">{{ $report->activities }}</p>
                 @endif
 
-                @if ($isStandalone)
-                    <div x-show="expanded" x-cloak class="space-y-2 pt-1 border-t border-gray-100" @click.stop>
-                        @if ($report->notes)
-                            <div>
-                                <div class="text-[11px] uppercase tracking-wide text-gray-500 mb-0.5">Note</div>
-                                <p class="text-[13px] text-gray-700 whitespace-pre-line">{{ $report->notes }}</p>
+                <div x-show="expanded" x-cloak class="space-y-2 pt-1 border-t border-gray-100" @click.stop>
+                    @if ($report->notes)
+                        <div>
+                            <div class="text-[11px] uppercase tracking-wide text-gray-500 mb-0.5">Note</div>
+                            <p class="text-[13px] text-gray-700 whitespace-pre-line">{{ $report->notes }}</p>
+                        </div>
+                    @endif
+                    @if ($report->media->isNotEmpty())
+                        <div>
+                            <div class="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Allegati</div>
+                            <div class="grid grid-cols-2 gap-2">
+                                @foreach ($report->media as $m)
+                                    @php $isImage = str_contains($m->file_type ?? '', 'image'); @endphp
+                                    <a href="{{ \Illuminate\Support\Facades\Storage::url($m->file_path) }}" target="_blank" rel="noopener"
+                                       class="block rounded-lg border border-gray-200 overflow-hidden bg-gray-50">
+                                        @if ($isImage)
+                                            <img src="{{ \Illuminate\Support\Facades\Storage::url($m->file_path) }}" alt=""
+                                                 class="w-full h-24 object-cover">
+                                        @else
+                                            <div class="h-24 flex items-center justify-center text-gray-400">
+                                                <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 2v6h6"/>
+                                                </svg>
+                                            </div>
+                                        @endif
+                                        <div class="px-2 py-1 text-[11px] text-gray-600 truncate">{{ $m->file_name }}</div>
+                                    </a>
+                                @endforeach
                             </div>
-                        @endif
-                        @if ($report->media->isNotEmpty())
-                            <div>
-                                <div class="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Allegati</div>
-                                <div class="grid grid-cols-2 gap-2">
-                                    @foreach ($report->media as $m)
-                                        @php $isImage = str_contains($m->file_type ?? '', 'image'); @endphp
-                                        <a href="{{ \Illuminate\Support\Facades\Storage::url($m->file_path) }}" target="_blank" rel="noopener"
-                                           class="block rounded-lg border border-gray-200 overflow-hidden bg-gray-50">
-                                            @if ($isImage)
-                                                <img src="{{ \Illuminate\Support\Facades\Storage::url($m->file_path) }}" alt=""
-                                                     class="w-full h-24 object-cover">
-                                            @else
-                                                <div class="h-24 flex items-center justify-center text-gray-400">
-                                                    <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 2v6h6"/>
-                                                    </svg>
-                                                </div>
-                                            @endif
-                                            <div class="px-2 py-1 text-[11px] text-gray-600 truncate">{{ $m->file_name }}</div>
-                                        </a>
-                                    @endforeach
-                                </div>
-                            </div>
-                        @endif
-                    </div>
-                @endif
+                        </div>
+                    @endif
+                    @if ($intervention)
+                        <button type="button"
+                                @click.stop="$dispatch('open-ticket', { id: {{ $intervention->id }} })"
+                                class="w-full h-10 rounded-lg bg-gray-100 text-gray-800 font-semibold text-[13px] active:bg-gray-200 inline-flex items-center justify-center gap-1.5">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14m0 0-5-5m5 5-5 5"/>
+                            </svg>
+                            Vai al ticket
+                        </button>
+                    @endif
+                </div>
 
                 @if (! $isManutentore)
                     <div class="text-[11px] text-gray-500 inline-flex items-center gap-1">

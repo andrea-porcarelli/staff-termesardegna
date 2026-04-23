@@ -29,6 +29,7 @@ class HomeController extends Controller
             'collaborations' => fn ($q) => $q
                 ->where('user_id', $user->id)
                 ->where('status', \App\Models\InterventionCollaboration::STATUS_ACCEPTED),
+            'activeCollaborations.user:id,name',
             'reports' => fn ($q) => $q->where('user_id', $user->id),
             'activeReschedules.user:id,name',
         ])

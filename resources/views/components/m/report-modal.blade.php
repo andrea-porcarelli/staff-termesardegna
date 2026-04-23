@@ -278,7 +278,8 @@
                     document.body.style.overflow = '';
                     this.files.forEach((f) => f.preview && URL.revokeObjectURL(f.preview));
                     if (this.result) {
-                        window.dispatchEvent(new CustomEvent('ticket-refresh', { detail: { id: this.context.id } }));
+                        window.dispatchEvent(new CustomEvent('close-ticket'));
+                        setTimeout(() => window.location.reload(), 250);
                     }
                 },
 

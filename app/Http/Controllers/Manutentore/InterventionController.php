@@ -54,6 +54,7 @@ class InterventionController extends Controller
             'collaborations' => fn ($q) => $q
                 ->where('user_id', $user->id)
                 ->where('status', InterventionCollaboration::STATUS_ACCEPTED),
+            'activeCollaborations.user:id,name',
             'reports' => fn ($q) => $q->where('user_id', $user->id),
             'activeReschedules.user:id,name',
         ])
@@ -357,8 +358,8 @@ class InterventionController extends Controller
                 'can_create_report' => ($mine || $iAmAcceptedCollaborator)
                                         && $intervention->status === 'in_progress'
                                         && ! $iHaveFinal,
-                'can_transfer' => $mine && ! $iHaveFinal && ! in_array($intervention->status, ['completed', 'cancelled']),
-                'can_collaborate' => $mine && ! $iHaveFinal && ! in_array($intervention->status, ['completed', 'cancelled']),
+                'can_transfer' => $mine && ! $iHaveFinal && $intervention->preso_in_carico_at !== null && ! in_array($intervention->status, ['completed', 'cancelled']),
+                'can_collaborate' => $mine && ! $iHaveFinal && $intervention->preso_in_carico_at !== null && ! in_array($intervention->status, ['completed', 'cancelled']),
             ],
         ]);
     }

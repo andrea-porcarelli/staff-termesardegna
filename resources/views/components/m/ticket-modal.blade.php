@@ -4,6 +4,7 @@
      x-cloak
      @open-ticket.window="open($event.detail.id)"
      @ticket-refresh.window="if (isOpen && ticket) refresh()"
+     @close-ticket.window="if (isOpen) close()"
      @keydown.escape.window="handleEscape()">
 
     {{-- ─── MAIN SHEET ──────────────────────────────────────────────── --}}
@@ -481,7 +482,8 @@
                         const payload = await res.json().catch(() => ({}));
                         if (res.ok && payload.ok) {
                             this.$store.toasts.push(payload.message || 'Ticket preso in carico.', 'success');
-                            await this.refresh();
+                            this.close();
+                            setTimeout(() => window.location.reload(), 250);
                         } else {
                             this.$store.toasts.push(payload.message || 'Errore durante la presa in carico.', 'error');
                         }

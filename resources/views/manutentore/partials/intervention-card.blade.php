@@ -63,10 +63,16 @@
         {{-- Riga 1: bullet + #ID + badge rinvio + data --}}
         @php
             $rescheduleBadgeDate = null;
+            $rescheduledFromPast = false;
             if ($intervention->relationLoaded('activeReschedules') && $intervention->activeReschedules->isNotEmpty()) {
                 $nextReschedule = $intervention->activeReschedules
                     ->sortBy(fn ($r) => $r->next_work_date->timestamp)->first();
                 $rescheduleBadgeDate = $nextReschedule->next_work_date;
+            } elseif ($intervention->relationLoaded('reports')) {
+                $myLast = $intervention->reports->sortByDesc('created_at')->first();
+                if ($myLast && ! $myLast->is_final && $myLast->next_work_date && $myLast->next_work_date->lte(today())) {
+                    $rescheduledFromPast = true;
+                }
             }
         @endphp
         <div class="flex items-center gap-2 text-xs">
@@ -79,6 +85,14 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0 1 14.7-3.7L23 9M20 15a9 9 0 0 1-14.7 3.7L1 15"/>
                     </svg>
                     rinviato al {{ $rescheduleBadgeDate->isoFormat('D MMM') }}
+                </span>
+            @elseif ($rescheduledFromPast)
+                <span class="inline-flex items-center gap-1 h-5 px-1.5 rounded bg-amber-100 text-amber-800 text-[10px] font-semibold"
+                      title="Ticket rimandato dai giorni scorsi">
+                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0 1 14.7-3.7L23 9M20 15a9 9 0 0 1-14.7 3.7L1 15"/>
+                    </svg>
+                    rimandato
                 </span>
             @endif
             <span class="ml-auto text-gray-500">{{ $intervention->created_at?->isoFormat('D MMM') }}</span>
@@ -135,19 +149,35 @@
             </span>
         </div>
 
-        {{-- Riga 4: stato + assegnatario --}}
+        @php
+            $teamCollabs = $intervention->relationLoaded('activeCollaborations')
+                ? $intervention->activeCollaborations
+                : collect();
+            $pendingByMe = $teamCollabs->first(fn ($c) => $c->status === 'pending' && $c->requested_by_user_id === $me);
+            $collabInitials = fn ($name) => mb_strtoupper(collect(explode(' ', (string) $name))
+                ->filter()->map(fn ($n) => mb_substr($n, 0, 1))->take(2)->implode(''));
+        @endphp
+
+        {{-- Riga 4: stato + richiesta inviata + assegnatario + collaboratori --}}
         <div class="flex items-center gap-2 pt-0.5">
             <span class="inline-flex items-center h-6 px-2 rounded-md border text-[11px] font-semibold {{ $statusChip['class'] }}">
                 {{ $statusChip['label'] }}
             </span>
+            @if ($mine && $pendingByMe)
+                <span class="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-[11px] font-semibold"
+                      title="Hai chiesto collaborazione a {{ $pendingByMe->user?->name ?? '—' }}">
+                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/>
+                    </svg>
+                    richiesta inviata
+                </span>
+            @endif
 
             <div class="ml-auto flex items-center gap-1.5">
                 @if ($assignedName)
-                    <span class="w-6 h-6 rounded-full bg-sky-100 text-sky-800 flex items-center justify-center text-[10px] font-bold">
+                    <span class="w-6 h-6 rounded-full bg-sky-100 text-sky-800 flex items-center justify-center text-[10px] font-bold"
+                          title="{{ $assignedName }}">
                         {{ $initials }}
-                    </span>
-                    <span class="text-xs text-gray-700 font-medium truncate max-w-[120px]">
-                        @if ($mine) A te @else {{ \Illuminate\Support\Str::words($assignedName, 1, '.') }} @endif
                     </span>
                 @else
                     <span class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center">
@@ -155,6 +185,23 @@
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 12h12"/>
                         </svg>
                     </span>
+                @endif
+
+                @foreach ($teamCollabs as $c)
+                    <span class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold
+                                 {{ $c->status === 'accepted'
+                                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                    : 'bg-amber-50 text-amber-800 border border-amber-300 border-dashed' }}"
+                          title="{{ $c->user?->name }} · {{ $c->status === 'accepted' ? 'collabora' : 'richiesta inviata' }}">
+                        {{ $collabInitials($c->user?->name ?? '?') }}
+                    </span>
+                @endforeach
+
+                @if ($assignedName && $teamCollabs->isEmpty())
+                    <span class="text-xs text-gray-700 font-medium truncate max-w-[120px]">
+                        @if ($mine) A te @else {{ \Illuminate\Support\Str::words($assignedName, 1, '.') }} @endif
+                    </span>
+                @elseif (! $assignedName)
                     <span class="text-xs text-gray-500 italic">Non assegnato</span>
                 @endif
             </div>
