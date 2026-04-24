@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -204,6 +205,31 @@ class UserController extends Controller
             $user->active
                 ? "Utente {$user->name} riattivato."
                 : "Utente {$user->name} disattivato."
+        );
+    }
+
+    public function sendPasswordLink(User $user): RedirectResponse
+    {
+        if (! in_array($user->role, ['manutentore', 'operator'], true)) {
+            return back()->with('error', 'Invio link password disponibile solo per manutentori e operatori.');
+        }
+
+        if (empty($user->email)) {
+            return back()->with('error', "L'utente {$user->name} non ha un indirizzo email.");
+        }
+
+        $status = Password::sendResetLink(['email' => $user->email]);
+
+        $message = match ($status) {
+            Password::RESET_LINK_SENT => "Email inviata a {$user->email}.",
+            Password::RESET_THROTTLED => 'Email già inviata di recente. Riprova fra qualche secondo.',
+            Password::INVALID_USER => "Utente {$user->email} non trovato.",
+            default => 'Impossibile inviare l\'email. Verifica la configurazione SMTP.',
+        };
+
+        return back()->with(
+            $status === Password::RESET_LINK_SENT ? 'success' : 'error',
+            $message
         );
     }
 

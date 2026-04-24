@@ -77,6 +77,19 @@
                                 <a href="{{ route('users.edit', $user) }}" class="btn btn-warning btn-sm">
                                     <i class="bi bi-pencil"></i>
                                 </a>
+                                @if(in_array($user->role, ['manutentore','operator']) && $user->email)
+                                    <form action="{{ route('users.send-password-link', $user) }}"
+                                          method="POST"
+                                          class="d-inline"
+                                          onsubmit="return confirm('Inviare a {{ $user->email }} il link per impostare la password?');">
+                                        @csrf
+                                        <button type="submit"
+                                                class="btn btn-primary btn-sm"
+                                                title="Invia link impostazione password">
+                                            <i class="bi bi-envelope-paper"></i>
+                                        </button>
+                                    </form>
+                                @endif
                                 @if($user->id !== auth()->id())
                                     <form action="{{ route('users.toggle-active', $user) }}"
                                           method="POST"

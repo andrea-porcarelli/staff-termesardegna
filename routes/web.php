@@ -8,6 +8,7 @@ use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\InterventionController;
 use App\Http\Controllers\InterventionLogController;
 use App\Http\Controllers\MaintenanceRoleController;
+use App\Http\Controllers\PasswordSetController;
 use App\Http\Controllers\Manutentore\CalendarController as MCalendarController;
 use App\Http\Controllers\Manutentore\CollaborationController as MCollaborationController;
 use App\Http\Controllers\Manutentore\HomeController as MHomeController;
@@ -29,6 +30,10 @@ Route::get('/', function () {
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+// Imposta/resetta password tramite link inviato dall'admin
+Route::get('/password/set/{token}', [PasswordSetController::class, 'show'])->name('password.set');
+Route::post('/password/set/{token}', [PasswordSetController::class, 'store'])->name('password.set.store');
 
 Route::impersonate();
 
@@ -123,6 +128,7 @@ Route::middleware('auth')->group(function () {
         Route::put('users/{user}/schedule', [UserController::class, 'updateSchedule'])->name('users.schedule.update');
         Route::patch('users/{user}/toggle-active', [UserController::class, 'toggleActive'])->name('users.toggle-active');
         Route::post('users/{user}/impersonate', [UserController::class, 'impersonate'])->name('users.impersonate');
+        Route::post('users/{user}/send-password-link', [UserController::class, 'sendPasswordLink'])->name('users.send-password-link');
         Route::post('users/stop-impersonating', [UserController::class, 'stopImpersonating'])->name('users.stopImpersonating');
         Route::resource('areas', AreaController::class);
         Route::resource('departments', DepartmentController::class);

@@ -101,6 +101,11 @@ class User extends Authenticatable
         return $this->oneSignalSubscriptions()->pluck('player_id')->all();
     }
 
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new \App\Notifications\SetPasswordLinkNotification($token));
+    }
+
     /**
      * ID delle aree effettivamente assegnate (via departments o areas dirette).
      */
