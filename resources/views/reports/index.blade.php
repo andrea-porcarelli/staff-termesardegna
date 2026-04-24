@@ -18,6 +18,22 @@
     </div>
     <div class="card-body">
         <form method="GET" action="{{ route('reports.index') }}">
+            <div class="row g-3 mb-2">
+                <div class="col-12">
+                    <label class="form-label">Cerca</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="search" name="q" value="{{ request('q') }}"
+                               class="form-control"
+                               placeholder="Titolo, descrizione, data, attività, note…">
+                        @if(request('q'))
+                            <a href="{{ route('reports.index', request()->except('q')) }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x"></i>
+                            </a>
+                        @endif
+                    </div>
+                </div>
+            </div>
             <div class="row g-3">
                 <div class="col-md-3">
                     <label class="form-label">Stato</label>
@@ -51,7 +67,7 @@
                     <button type="submit" class="btn btn-light w-100">
                         <i class="bi bi-search me-1"></i>Filtra
                     </button>
-                    @if(request()->hasAny(['status','user_id','date_from','date_to']))
+                    @if(request()->hasAny(['status','user_id','date_from','date_to','q']))
                         <a href="{{ route('reports.index') }}" class="btn btn-secondary">
                             <i class="bi bi-x"></i>
                         </a>

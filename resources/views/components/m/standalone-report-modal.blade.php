@@ -86,16 +86,6 @@
                         </template>
                     </div>
 
-                    {{-- Note --}}
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Note (opzionale)</label>
-                        <textarea x-model="form.notes" x-ref="notes"
-                                  @input="autoGrow($refs.notes)"
-                                  rows="2"
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-xl bg-white text-base resize-none"
-                                  placeholder="Annotazioni, parti sostituite, segnalazioni…"></textarea>
-                    </div>
-
                     {{-- Area (facoltativa) --}}
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Area</label>
@@ -232,7 +222,6 @@
                     report_date: '',
                     duration: '',
                     activities: '',
-                    notes: '',
                     area_id: '',
                     department_id: '',
                     equipment_id: '',
@@ -248,7 +237,6 @@
                         report_date: this.todayStr,
                         duration: '',
                         activities: '',
-                        notes: '',
                         area_id: '',
                         department_id: '',
                         equipment_id: '',
@@ -418,7 +406,6 @@
                     fd.append('report_date', this.form.report_date);
                     fd.append('duration', this.form.duration);
                     fd.append('activities', this.form.activities);
-                    fd.append('notes', this.form.notes || '');
                     if (this.form.area_id) fd.append('area_id', this.form.area_id);
                     if (this.form.department_id) fd.append('department_id', this.form.department_id);
                     if (this.form.equipment_id) fd.append('equipment_id', this.form.equipment_id);

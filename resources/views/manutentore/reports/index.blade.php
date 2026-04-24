@@ -29,6 +29,27 @@
             </p>
         </header>
 
+        <form method="GET" action="{{ route('m.reports.index') }}">
+            <div class="relative">
+                <svg class="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="7" stroke-linecap="round"/>
+                    <path stroke-linecap="round" d="m20 20-3.5-3.5"/>
+                </svg>
+                <input type="search" name="q" value="{{ $q ?? '' }}"
+                       placeholder="Cerca titolo, descrizione, data, attività…"
+                       class="w-full h-10 pl-9 pr-3 rounded-xl bg-gray-100 border border-gray-200 text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white">
+                @if (! empty($q))
+                    <a href="{{ route('m.reports.index') }}"
+                       class="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full text-gray-500 active:bg-gray-200"
+                       aria-label="Pulisci">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>
+                        </svg>
+                    </a>
+                @endif
+            </div>
+        </form>
+
         @forelse ($reports as $report)
             @php
                 $intervention = $report->intervention;

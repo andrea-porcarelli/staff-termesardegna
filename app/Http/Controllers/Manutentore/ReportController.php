@@ -21,9 +21,10 @@ use Illuminate\Validation\Rule;
 
 class ReportController extends Controller
 {
-    public function index(): \Illuminate\View\View
+    public function index(Request $request): \Illuminate\View\View
     {
         $user = Auth::user();
+        $q = trim((string) $request->get('q', ''));
 
         $query = Report::with(['intervention.area', 'intervention.department', 'intervention.equipment', 'user', 'media'])
             ->orderByDesc('report_date')
@@ -44,11 +45,25 @@ class ReportController extends Controller
             abort(403);
         }
 
-        $reports = $query->paginate(30);
+        if ($q !== '') {
+            $like = '%'.$q.'%';
+            $query->where(function ($qq) use ($like) {
+                $qq->where('activities', 'like', $like)
+                    ->orWhere('notes', 'like', $like)
+                    ->orWhere('report_date', 'like', $like)
+                    ->orWhereHas('intervention', function ($i) use ($like) {
+                        $i->where('title', 'like', $like)
+                            ->orWhere('description', 'like', $like);
+                    });
+            });
+        }
+
+        $reports = $query->paginate(30)->withQueryString();
 
         return view('manutentore.reports.index', [
             'reports' => $reports,
             'isManutentore' => $user->role === 'manutentore',
+            'q' => $q,
         ]);
     }
 
@@ -184,7 +199,6 @@ class ReportController extends Controller
             'report_date' => ['required', 'date', 'before_or_equal:today'],
             'duration' => ['required', 'date_format:H:i'],
             'activities' => ['required', 'string', 'max:4000'],
-            'notes' => ['nullable', 'string', 'max:4000'],
             'area_id' => ['nullable', Rule::in($userAreaIds)],
             'department_id' => ['nullable', Rule::in($userDeptIds)],
             'equipment_id' => [
@@ -229,6 +243,14 @@ class ReportController extends Controller
             }
         }
 
+        // Area/zona/impianto non hanno colonne dedicate su reports: li teniamo
+        // nelle note di testa per preservarne la tracciabilità visiva in admin.
+        $locationLine = collect([
+            $areaId ? (Area::find($areaId)?->name) : null,
+            $deptId ? (Department::find($deptId)?->name) : null,
+            $equipmentId ? (Equipment::find($equipmentId)?->name) : null,
+        ])->filter()->implode(' / ');
+
         $report = Report::create([
             'intervention_id' => null,
             'user_id' => $user->id,
@@ -237,23 +259,11 @@ class ReportController extends Controller
             'end_time' => null,
             'duration_minutes' => $totalMinutes,
             'activities' => $data['activities'],
-            'notes' => $data['notes'] ?? null,
+            'notes' => $locationLine !== '' ? $locationLine : null,
             'status' => 'completed',
             'is_final' => true,
             'next_work_date' => null,
         ]);
-
-        // Area/zona/impianto non hanno colonne dedicate su reports: li teniamo
-        // nelle note di testa per preservarne la tracciabilità visiva in admin.
-        $locationLine = collect([
-            $areaId ? (Area::find($areaId)?->name) : null,
-            $deptId ? (Department::find($deptId)?->name) : null,
-            $equipmentId ? (Equipment::find($equipmentId)?->name) : null,
-        ])->filter()->implode(' / ');
-        if ($locationLine !== '') {
-            $report->notes = trim($locationLine.($report->notes ? "\n\n".$report->notes : ''));
-            $report->save();
-        }
 
         if ($request->hasFile('files')) {
             foreach ($request->file('files') as $file) {

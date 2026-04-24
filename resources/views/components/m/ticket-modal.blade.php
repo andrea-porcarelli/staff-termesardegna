@@ -482,8 +482,7 @@
                         const payload = await res.json().catch(() => ({}));
                         if (res.ok && payload.ok) {
                             this.$store.toasts.push(payload.message || 'Ticket preso in carico.', 'success');
-                            this.close();
-                            setTimeout(() => window.location.reload(), 250);
+                            await this.refresh();
                         } else {
                             this.$store.toasts.push(payload.message || 'Errore durante la presa in carico.', 'error');
                         }

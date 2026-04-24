@@ -17,6 +17,7 @@ class Intervention extends Model
         'area_id',
         'department_id',
         'assigned_user_id',
+        'created_by',
         'title',
         'description',
         'scheduled_date',
@@ -40,6 +41,45 @@ class Intervention extends Model
     public function getIsPresoInCaricoAttribute(): bool
     {
         return $this->preso_in_carico_at !== null;
+    }
+
+    /**
+     * Regole di modifica: admin sempre, operator solo sul proprio ticket prima
+     * della presa in carico, manutentore mai.
+     */
+    public function canBeEditedBy(?User $user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+        if ($user->role === 'admin') {
+            return true;
+        }
+        if ($user->role === 'operator') {
+            return $this->created_by === $user->id && $this->preso_in_carico_at === null;
+        }
+
+        return false;
+    }
+
+    /**
+     * Titolo di fallback quando chi crea il ticket non ne fornisce uno.
+     * Context accetta istanze di Equipment/Area/Department e/o string 'description'.
+     */
+    public static function generateFallbackTitle(array $context): string
+    {
+        $equipment = $context['equipment'] ?? null;
+        $area = $context['area'] ?? null;
+        $department = $context['department'] ?? null;
+        $description = $context['description'] ?? null;
+
+        return match (true) {
+            (bool) $equipment => 'Ticket - '.$equipment->name,
+            $area && $department => 'Ticket - '.$area->name.' / '.$department->name,
+            (bool) $area => 'Ticket - '.$area->name,
+            ! empty($description) => 'Ticket - '.mb_strimwidth((string) $description, 0, 60, '…'),
+            default => 'Ticket',
+        };
     }
 
     /**
@@ -127,6 +167,11 @@ class Intervention extends Model
     public function assignedUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_user_id');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function media(): MorphMany

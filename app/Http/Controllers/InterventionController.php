@@ -62,15 +62,29 @@ class InterventionController extends Controller
         $priority = $isPianificazione ? 'low' : ($request->priority ?? 'low');
         $isFixedDate = ! $isPianificazione && $priority === 'fixed_date';
 
+        $equipmentId = $isPianificazione ? $request->equipment_id : null;
+        $areaId = ! $isPianificazione ? $request->area_id : null;
+        $deptId = ! $isPianificazione ? $request->department_id : null;
+
+        $title = $request->filled('title')
+            ? $request->title
+            : Intervention::generateFallbackTitle([
+                'equipment' => $equipmentId ? Equipment::find($equipmentId) : null,
+                'area' => $areaId ? Area::find($areaId) : null,
+                'department' => $deptId ? Department::find($deptId) : null,
+                'description' => $request->description,
+            ]);
+
         $data = [
             'tipo' => $request->tipo,
-            'equipment_id' => $isPianificazione ? $request->equipment_id : null,
+            'equipment_id' => $equipmentId,
             'component_id' => $isPianificazione ? ($request->component_id ?: null) : null,
             'maintenance_role_id' => $request->filled('maintenance_role_id') ? $request->maintenance_role_id : null,
-            'area_id' => ! $isPianificazione ? $request->area_id : null,
-            'department_id' => ! $isPianificazione ? $request->department_id : null,
+            'area_id' => $areaId,
+            'department_id' => $deptId,
             'assigned_user_id' => $isPianificazione ? ($request->assigned_user_id ?: null) : null,
-            'title' => $request->title,
+            'created_by' => Auth::id(),
+            'title' => $title,
             'description' => $request->description,
             'scheduled_date' => ($isPianificazione || $isFixedDate) ? ($request->scheduled_date ?: null) : null,
             'scheduled_start_time' => ($isPianificazione || $isFixedDate) ? ($request->scheduled_start_time ?: null) : null,
@@ -159,7 +173,7 @@ class InterventionController extends Controller
 
     public function edit(Intervention $intervention): View
     {
-        abort_if(Auth::user()->role === 'manutentore', 403);
+        abort_unless($intervention->canBeEditedBy(Auth::user()), 403);
         $equipments = Equipment::where('active', true)->orderBy('name')->get();
         $operators = User::whereIn('role', ['operator', 'manutentore'])->where('active', true)->orderBy('name')->get();
         $areas = Area::where('active', true)->orderBy('name')->get();
@@ -172,21 +186,36 @@ class InterventionController extends Controller
 
     public function update(InterventionRequest $request, Intervention $intervention): RedirectResponse
     {
+        abort_unless($intervention->canBeEditedBy(Auth::user()), 403);
+
         $isPianificazione = $request->tipo === 'pianificazione';
         $priority = $isPianificazione ? 'low' : ($request->priority ?? 'low');
         $isFixedDate = ! $isPianificazione && $priority === 'fixed_date';
 
         $previousAssignedUserId = $intervention->assigned_user_id;
 
+        $equipmentId = $isPianificazione ? $request->equipment_id : null;
+        $areaId = ! $isPianificazione ? $request->area_id : null;
+        $deptId = ! $isPianificazione ? $request->department_id : null;
+
+        $title = $request->filled('title')
+            ? $request->title
+            : Intervention::generateFallbackTitle([
+                'equipment' => $equipmentId ? Equipment::find($equipmentId) : null,
+                'area' => $areaId ? Area::find($areaId) : null,
+                'department' => $deptId ? Department::find($deptId) : null,
+                'description' => $request->description,
+            ]);
+
         $data = [
             'tipo' => $request->tipo,
-            'equipment_id' => $isPianificazione ? $request->equipment_id : null,
+            'equipment_id' => $equipmentId,
             'component_id' => $isPianificazione ? ($request->component_id ?: null) : null,
             'maintenance_role_id' => $request->filled('maintenance_role_id') ? $request->maintenance_role_id : null,
-            'area_id' => ! $isPianificazione ? $request->area_id : null,
-            'department_id' => ! $isPianificazione ? $request->department_id : null,
+            'area_id' => $areaId,
+            'department_id' => $deptId,
             'assigned_user_id' => $isPianificazione ? ($request->assigned_user_id ?: null) : null,
-            'title' => $request->title,
+            'title' => $title,
             'description' => $request->description,
             'scheduled_date' => ($isPianificazione || $isFixedDate) ? ($request->scheduled_date ?: null) : null,
             'scheduled_start_time' => ($isPianificazione || $isFixedDate) ? ($request->scheduled_start_time ?: null) : null,
@@ -252,7 +281,12 @@ class InterventionController extends Controller
             'area_id' => $request->area_id,
             'department_id' => $request->department_id,
             'assigned_user_id' => Auth::id(),
-            'title' => 'Ticket - '.$area->name.' / '.$department->name,
+            'created_by' => Auth::id(),
+            'title' => Intervention::generateFallbackTitle([
+                'area' => $area,
+                'department' => $department,
+                'description' => $request->description,
+            ]),
             'description' => $request->description,
             'scheduled_date' => today(),
             'status' => 'open',

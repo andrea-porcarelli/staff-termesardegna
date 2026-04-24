@@ -37,6 +37,18 @@ class ReportController extends Controller
         if ($request->filled('date_to')) {
             $query->where('report_date', '<=', $request->date_to);
         }
+        if ($request->filled('q')) {
+            $like = '%'.$request->q.'%';
+            $query->where(function ($qq) use ($like) {
+                $qq->where('activities', 'like', $like)
+                    ->orWhere('notes', 'like', $like)
+                    ->orWhere('report_date', 'like', $like)
+                    ->orWhereHas('intervention', function ($i) use ($like) {
+                        $i->where('title', 'like', $like)
+                            ->orWhere('description', 'like', $like);
+                    });
+            });
+        }
 
         $reports = $query->paginate(25)->withQueryString();
         $users = User::whereIn('role', ['operator', 'manutentore'])->orderBy('name')->get();

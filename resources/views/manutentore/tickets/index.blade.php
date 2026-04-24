@@ -3,41 +3,15 @@
 @section('title', 'Lista ticket')
 
 @php
-    // Raggruppamento visivo per contesto (preserva l'ordine query)
-    $groups = [
-        'overdue'     => ['label' => 'SCADUTI',           'color' => 'text-red-600'],
-        'today'       => ['label' => 'PIANIFICATI OGGI',  'color' => 'text-brand-600'],
-        'high'        => ['label' => 'ALTA PRIORITÀ',     'color' => 'text-orange-600'],
-        'low'         => ['label' => 'BASSA PRIORITÀ',    'color' => 'text-sky-700'],
-        'in_progress' => ['label' => 'IN LAVORAZIONE',    'color' => 'text-rose-600'],
-        'planned'     => ['label' => 'PROGRAMMATI',       'color' => 'text-indigo-600'],
-        'cancelled'   => ['label' => 'SOSPESI',           'color' => 'text-gray-500'],
-        'other'       => ['label' => 'ALTRI',             'color' => 'text-gray-500'],
-    ];
-
-    $classify = function ($i) {
-        $isOverdue = $i->is_overdue;
-
-        if ($i->status === 'cancelled') return 'cancelled';
-        if ($isOverdue) return 'overdue';
-        if ($i->tipo === 'pianificazione' && $i->scheduled_date?->isToday()) return 'today';
-        if ($i->status === 'in_progress') return 'in_progress';
-        if ($i->priority === 'high') return 'high';
-        if ($i->tipo === 'pianificazione' && $i->scheduled_date && $i->scheduled_date->isFuture()) return 'planned';
-        if (in_array($i->priority, ['low', 'fixed_date'])) return 'low';
-        return 'other';
-    };
-
-    // Solo raggruppo quando il filtro è "tutti"; altrimenti singolo gruppo implicito
-    if ($filter === 'all') {
-        $grouped = $interventions->groupBy($classify);
-        $orderedKeys = array_keys($groups);
-        $grouped = collect($orderedKeys)
-            ->mapWithKeys(fn ($k) => [$k => $grouped->get($k, collect())])
-            ->filter(fn ($c) => $c->isNotEmpty());
-    } else {
-        $grouped = collect(['_' => $interventions])->filter(fn ($c) => $c->isNotEmpty());
-    }
+    // Con filtro "tutti" mostriamo una lista piatta (ordinata per ID desc).
+    // Con filtri specifici manteniamo un singolo gruppo implicito.
+    $isFlatAll = $filter === 'all';
+    $grouped = $isFlatAll
+        ? collect(['_' => $interventions])
+        : collect(['_' => $interventions]);
+    $grouped = $grouped->filter(fn ($c) => $c->isNotEmpty());
+    $pageSize = 25;
+    $totalCount = $interventions->count();
 @endphp
 
 @section('content')
@@ -120,29 +94,36 @@
                     @endif
                 </div>
             @else
-                @foreach ($grouped as $key => $items)
-                    @if ($filter === 'all')
-                        <div class="flex items-center gap-2 mt-5 mb-2 first:mt-1">
-                            <h3 class="text-xs font-bold uppercase tracking-wider {{ $groups[$key]['color'] }}">
-                                {{ $groups[$key]['label'] }}
-                            </h3>
-                            <div class="flex-1 h-px bg-gray-200"></div>
-                            <span class="text-xs text-gray-400">{{ $items->count() }}</span>
+                @php $ordinal = 0; @endphp
+                <div data-load-more data-page-size="{{ $pageSize }}" data-total="{{ $totalCount }}">
+                    @foreach ($grouped as $key => $items)
+                        <div class="space-y-3">
+                            @foreach ($items as $intervention)
+                                <div data-lm-item data-ordinal="{{ $ordinal }}"
+                                    @if ($ordinal >= $pageSize) style="display:none" @endif>
+                                    @include('manutentore.partials.intervention-card', ['intervention' => $intervention])
+                                </div>
+                                @php $ordinal++; @endphp
+                            @endforeach
+                        </div>
+                    @endforeach
+
+                    @if ($totalCount > $pageSize)
+                        <div class="mt-5 text-center" data-lm-footer>
+                            <button type="button" data-lm-button
+                                    class="h-10 px-5 rounded-xl bg-gray-100 text-gray-800 font-semibold text-sm active:bg-gray-200">
+                                Carica altro <span class="text-gray-500 font-normal ml-1" data-lm-count></span>
+                            </button>
                         </div>
                     @endif
-
-                    <div class="space-y-3">
-                        @foreach ($items as $intervention)
-                            @include('manutentore.partials.intervention-card', ['intervention' => $intervention])
-                        @endforeach
-                    </div>
-                @endforeach
+                </div>
             @endif
         </div>
     </div>
 
     <x-m.quick-open :areas="$quickAreas" :departments="$quickDepartments"
-                    :equipments="$quickEquipments" :maintenance-roles="$quickMaintenanceRoles" />
+                    :equipments="$quickEquipments" :maintenance-roles="$quickMaintenanceRoles"
+                    :manutentori="$quickManutentori" />
 
     @push('scripts')
     <script>
@@ -150,6 +131,39 @@
             return {
                 currentFilter: initialFilter || 'all',
                 loading: false,
+
+                init() {
+                    this.wireLoadMore();
+                },
+
+                wireLoadMore() {
+                    const root = document.querySelector('[data-load-more]');
+                    if (!root) return;
+                    const pageSize = parseInt(root.dataset.pageSize || '25', 10);
+                    const total = parseInt(root.dataset.total || '0', 10);
+                    const button = root.querySelector('[data-lm-button]');
+                    const countEl = root.querySelector('[data-lm-count]');
+                    const footer = root.querySelector('[data-lm-footer]');
+                    const updateCount = () => {
+                        if (!button || !footer) return;
+                        const hidden = root.querySelectorAll('[data-lm-item][style*="display:none"], [data-lm-item][style*="display: none"]').length;
+                        if (hidden === 0) {
+                            footer.style.display = 'none';
+                        } else {
+                            footer.style.display = '';
+                            if (countEl) countEl.textContent = '(' + Math.min(pageSize, hidden) + ')';
+                        }
+                    };
+                    updateCount();
+                    if (button) {
+                        button.addEventListener('click', () => {
+                            const hidden = Array.from(root.querySelectorAll('[data-lm-item]'))
+                                .filter(el => el.style.display === 'none');
+                            hidden.slice(0, pageSize).forEach(el => { el.style.display = ''; });
+                            updateCount();
+                        });
+                    }
+                },
 
                 async switchFilter(key) {
                     if (this.loading || this.currentFilter === key) return;
@@ -176,7 +190,8 @@
                         const next = doc.getElementById('ticketsListContainer');
                         const cur  = document.getElementById('ticketsListContainer');
                         if (next && cur) {
-                            cur.innerHTML = next.innerHTML;
+                            cur.replaceChildren(...Array.from(next.childNodes));
+                            this.wireLoadMore();
                         }
                         history.replaceState(null, '', url);
                     } catch (e) {

@@ -26,6 +26,7 @@ class HomeController extends Controller
             'department',
             'maintenanceRole',
             'assignedUser',
+            'creator:id,name',
             'collaborations' => fn ($q) => $q
                 ->where('user_id', $user->id)
                 ->where('status', \App\Models\InterventionCollaboration::STATUS_ACCEPTED),
@@ -130,7 +131,20 @@ class HomeController extends Controller
             return $i->deadline && $i->deadline->lte($weekEnd);
         })->sortBy(fn ($i) => $i->deadline?->timestamp ?? 0)->values();
 
-        [$quickAreas, $quickDepartments, $quickEquipments, $quickMaintenanceRoles] = self::quickOpenScope($user);
+        [$quickAreas, $quickDepartments, $quickEquipments, $quickMaintenanceRoles, $quickManutentori]
+            = self::quickOpenScope($user);
+
+        // Operatore: elenco dei ticket che ha aperto oggi.
+        $miei_aperti_oggi = $user->role === 'operator'
+            ? Intervention::with([
+                'equipment.department.area', 'area', 'department',
+                'maintenanceRole', 'assignedUser', 'creator:id,name',
+            ])
+                ->where('created_by', $user->id)
+                ->whereDate('created_at', today())
+                ->orderByDesc('created_at')
+                ->get()
+            : collect();
 
         return view('manutentore.home', compact(
             'user',
@@ -138,18 +152,20 @@ class HomeController extends Controller
             'altaPriorita',
             'pianificati',
             'bassaPriorita',
+            'miei_aperti_oggi',
             'quickAreas',
             'quickDepartments',
             'quickEquipments',
-            'quickMaintenanceRoles'
+            'quickMaintenanceRoles',
+            'quickManutentori'
         ));
     }
 
     /**
-     * Aree / zone / impianti / specializzazioni limitati al perimetro dell'utente,
+     * Aree / zone / impianti / specializzazioni / manutentori limitati al perimetro dell'utente,
      * usati dal form mobile "Nuovo ticket".
      *
-     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection, 2: \Illuminate\Support\Collection, 3: \Illuminate\Support\Collection}
+     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection, 2: \Illuminate\Support\Collection, 3: \Illuminate\Support\Collection, 4: \Illuminate\Support\Collection}
      */
     public static function quickOpenScope(\App\Models\User $user): array
     {
@@ -168,8 +184,12 @@ class HomeController extends Controller
                 ->orderBy('name')
                 ->get(['id', 'name', 'code', 'department_id']);
         $maintenanceRoles = MaintenanceRole::orderBy('name')->get(['id', 'name']);
+        $manutentori = \App\Models\User::where('role', 'manutentore')
+            ->where('active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
 
-        return [$areas, $departments, $equipments, $maintenanceRoles];
+        return [$areas, $departments, $equipments, $maintenanceRoles, $manutentori];
     }
 
     public function profile(): View

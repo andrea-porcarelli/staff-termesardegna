@@ -130,9 +130,11 @@
                                 <a href="{{ route('interventions.show', $intervention) }}" class="btn btn-info btn-sm" title="Visualizza">
                                     <i class="bi bi-eye"></i>
                                 </a>
-                                <a href="{{ route('interventions.edit', $intervention) }}" class="btn btn-warning btn-sm" title="Modifica">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
+                                @if($intervention->canBeEditedBy(auth()->user()))
+                                    <a href="{{ route('interventions.edit', $intervention) }}" class="btn btn-warning btn-sm" title="Modifica">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                @endif
                                 <form action="{{ route('interventions.destroy', $intervention) }}"
                                       method="POST"
                                       class="d-inline"

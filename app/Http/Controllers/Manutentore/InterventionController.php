@@ -29,6 +29,7 @@ class InterventionController extends Controller
         'high' => 'Alta priorità',
         'low' => 'Bassa priorità',
         'in_progress' => 'In lavorazione',
+        'completed' => 'Chiusi',
         'cancelled' => 'Sospesi',
         'planned' => 'Programmati',
         'assigned' => 'Presi in carico',
@@ -51,6 +52,7 @@ class InterventionController extends Controller
             'department',
             'maintenanceRole',
             'assignedUser',
+            'creator:id,name',
             'collaborations' => fn ($q) => $q
                 ->where('user_id', $user->id)
                 ->where('status', InterventionCollaboration::STATUS_ACCEPTED),
@@ -102,6 +104,10 @@ class InterventionController extends Controller
                 $query->where('status', 'in_progress');
                 break;
 
+            case 'completed':
+                $query->where('status', 'completed');
+                break;
+
             case 'cancelled':
                 $query->where('status', 'cancelled');
                 break;
@@ -130,11 +136,16 @@ class InterventionController extends Controller
             });
         }
 
-        $interventions = $query
-            ->orderByRaw("FIELD(status, 'in_progress', 'open', 'planned', 'completed', 'cancelled')")
-            ->orderByRaw("FIELD(priority, 'high', 'fixed_date', 'low')")
-            ->orderBy('created_at', 'desc')
-            ->get();
+        if ($filter === 'all') {
+            // Richiesta: "Tutti" ordina per ID desc, niente priorità.
+            $interventions = $query->orderBy('id', 'desc')->get();
+        } else {
+            $interventions = $query
+                ->orderByRaw("FIELD(status, 'in_progress', 'open', 'planned', 'completed', 'cancelled')")
+                ->orderByRaw("FIELD(priority, 'high', 'fixed_date', 'low')")
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
 
         // In /tickets mostriamo anche i ticket con next_work_date futura (il badge "rinviato al …"
         // già li segnala). Nascondiamo solo i ticket dove l'utente ha chiuso definitivamente il suo percorso.
@@ -146,7 +157,7 @@ class InterventionController extends Controller
             $interventions = $interventions->filter(fn ($i) => $i->is_overdue)->values();
         }
 
-        [$quickAreas, $quickDepartments, $quickEquipments, $quickMaintenanceRoles]
+        [$quickAreas, $quickDepartments, $quickEquipments, $quickMaintenanceRoles, $quickManutentori]
             = HomeController::quickOpenScope($user);
 
         return view('manutentore.tickets.index', [
@@ -158,6 +169,7 @@ class InterventionController extends Controller
             'quickDepartments' => $quickDepartments,
             'quickEquipments' => $quickEquipments,
             'quickMaintenanceRoles' => $quickMaintenanceRoles,
+            'quickManutentori' => $quickManutentori,
         ]);
     }
 
@@ -369,19 +381,11 @@ class InterventionController extends Controller
         $this->authorizeVisibility($intervention);
         $purpose = $request->get('purpose', 'transfer');
 
+        // Su richiesta: trasferisci/collabora può scegliere fra tutti i manutentori
+        // (indipendenti da specializzazione e zona), ordinati alfabeticamente.
         $query = User::where('role', 'manutentore')
             ->where('active', true)
             ->where('id', '!=', Auth::id());
-
-        if ($intervention->maintenance_role_id) {
-            $query->whereHas('maintenanceRoles', fn ($q) => $q->where('maintenance_roles.id', $intervention->maintenance_role_id));
-        }
-
-        $deptId = $intervention->department_id ?? $intervention->equipment?->department_id;
-        if ($deptId) {
-            $query->whereHas('departments', fn ($q) => $q->where('departments.id', $deptId)
-            );
-        }
 
         if ($purpose === 'transfer' && $intervention->assigned_user_id) {
             $query->where('id', '!=', $intervention->assigned_user_id);
@@ -604,9 +608,9 @@ class InterventionController extends Controller
         $user = Auth::user();
         $userDeptIds = $user->departments()->pluck('departments.id')->all();
         $userAreaIds = $user->assignedAreaIds()->all();
+        $isManutentoreCreator = $user->role === 'manutentore';
 
-        $request->validate([
-            'maintenance_role_id' => 'required|exists:maintenance_roles,id',
+        $rules = [
             'priority' => 'required|in:high,low,fixed_date',
             'scheduled_date' => 'nullable|date|after_or_equal:today|required_if:priority,fixed_date',
             'scheduled_start_time' => 'nullable|date_format:H:i',
@@ -618,9 +622,25 @@ class InterventionController extends Controller
                     ->where('active', true)
                     ->whereIn('department_id', $userDeptIds ?: [-1]),
             ],
+            'title' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:2000',
-        ], [
+        ];
+
+        if ($isManutentoreCreator) {
+            $rules['maintenance_role_id'] = 'required|exists:maintenance_roles,id';
+        } else {
+            $rules['assigned_user_id'] = [
+                'required',
+                \Illuminate\Validation\Rule::exists('users', 'id')
+                    ->where('role', 'manutentore')
+                    ->where('active', true),
+            ];
+        }
+
+        $request->validate($rules, [
             'maintenance_role_id.required' => 'Seleziona una specializzazione.',
+            'assigned_user_id.required' => 'Seleziona un manutentore.',
+            'assigned_user_id.exists' => 'Manutentore non valido.',
             'priority.required' => 'Seleziona una priorità.',
             'priority.in' => 'Priorità non valida.',
             'scheduled_date.required_if' => 'Seleziona una data per il ticket a data fissa.',
@@ -647,13 +667,14 @@ class InterventionController extends Controller
         $area = $areaId ? Area::find($areaId) : null;
         $department = $deptId ? Department::find($deptId) : null;
 
-        $title = match (true) {
-            (bool) $equipment => 'Ticket - '.$equipment->name,
-            $area && $department => 'Ticket - '.$area->name.' / '.$department->name,
-            (bool) $area => 'Ticket - '.$area->name,
-            $request->filled('description') => 'Ticket - '.mb_strimwidth((string) $request->description, 0, 60, '…'),
-            default => 'Ticket',
-        };
+        $title = $request->filled('title')
+            ? $request->title
+            : Intervention::generateFallbackTitle([
+                'equipment' => $equipment,
+                'area' => $area,
+                'department' => $department,
+                'description' => $request->description,
+            ]);
 
         $isFixedDate = $request->priority === 'fixed_date';
 
@@ -662,8 +683,9 @@ class InterventionController extends Controller
             'area_id' => $areaId,
             'department_id' => $deptId,
             'equipment_id' => $equipmentId,
-            'maintenance_role_id' => $request->maintenance_role_id,
-            'assigned_user_id' => $user->role === 'manutentore' ? $user->id : null,
+            'maintenance_role_id' => $isManutentoreCreator ? $request->maintenance_role_id : null,
+            'assigned_user_id' => $isManutentoreCreator ? null : $request->assigned_user_id,
+            'created_by' => $user->id,
             'title' => $title,
             'description' => $request->description,
             'scheduled_date' => $isFixedDate ? $request->scheduled_date : today(),

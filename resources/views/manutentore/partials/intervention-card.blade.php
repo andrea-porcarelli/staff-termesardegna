@@ -46,10 +46,11 @@
     $area = $intervention->area ?? $equipment?->department?->area;
     $department = $intervention->department ?? $equipment?->department;
 
-    // "Pianificato" chip con pin / "Libero" chip grigio
-    $tipoChip = $intervention->tipo === 'pianificazione'
-        ? ['label' => 'pianificato', 'class' => 'bg-red-50 text-red-600 border-red-200', 'pin' => true]
-        : ['label' => 'libero',      'class' => 'bg-gray-100 text-gray-600 border-gray-200', 'pin' => false];
+    // Chi ha generato il ticket: per i pianificati il nome dell'impianto,
+    // altrimenti il nome dell'operatore/manutentore che l'ha aperto.
+    $creatorLabel = $intervention->tipo === 'pianificazione'
+        ? ($equipment?->name ?? 'Pianificazione')
+        : ($intervention->creator?->name);
 @endphp
 
 <button type="button"
@@ -121,7 +122,7 @@
             {{ $intervention->title ?? 'Ticket senza titolo' }}
         </h3>
 
-        {{-- Riga 3: chip info --}}
+        {{-- Riga 3: chip info (area/zona · impianto · specializzazione · creatore) --}}
         <div class="flex flex-wrap gap-1.5">
             @if ($area && $department)
                 <span class="inline-flex items-center h-6 px-2 rounded-md bg-gray-100 text-gray-700 text-[11px] font-medium">
@@ -133,20 +134,31 @@
                 </span>
             @endif
 
+            @if ($equipment)
+                <span class="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-gray-100 text-gray-700 text-[11px] font-medium"
+                      title="Impianto">
+                    <svg class="w-3 h-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 3h4m-4 18h4m-6-9h8M5 7h14a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/>
+                    </svg>
+                    {{ $equipment->name }}
+                </span>
+            @endif
+
             @if ($intervention->maintenanceRole)
                 <span class="inline-flex items-center h-6 px-2 rounded-md bg-gray-100 text-gray-700 text-[11px] font-medium">
                     {{ $intervention->maintenanceRole->name }}
                 </span>
             @endif
 
-            <span class="inline-flex items-center gap-1 h-6 px-2 rounded-md border text-[11px] font-medium {{ $tipoChip['class'] }}">
-                @if ($tipoChip['pin'])
-                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M16 4a1 1 0 0 0-1 1v3H9V5a1 1 0 1 0-2 0v4a1 1 0 0 0 1 1h3v8a1 1 0 1 0 2 0v-8h3a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1z"/>
+            @if ($creatorLabel)
+                <span class="inline-flex items-center gap-1 h-6 px-2 rounded-md bg-gray-100 text-gray-700 text-[11px] font-medium"
+                      title="Creato da">
+                    <svg class="w-3 h-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>
                     </svg>
-                @endif
-                {{ $tipoChip['label'] }}
-            </span>
+                    {{ $creatorLabel }}
+                </span>
+            @endif
         </div>
 
         @php

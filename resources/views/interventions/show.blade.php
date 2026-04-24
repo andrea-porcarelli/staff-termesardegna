@@ -51,7 +51,7 @@
                 @endif
             </h4>
             <div>
-                @if(in_array(auth()->user()->role, ['admin', 'operator']))
+                @if($intervention->canBeEditedBy(auth()->user()))
                     <a href="{{ route('interventions.edit', $intervention) }}" class="btn btn-warning btn-sm">
                         <i class="bi bi-pencil me-2"></i>Modifica
                     </a>
