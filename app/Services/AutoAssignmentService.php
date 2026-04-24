@@ -16,7 +16,7 @@ use Illuminate\Support\Collection;
  * - Esclude chi ha interventi in_progress (sempre) o planned (se priorità > low)
  * - Preferisce chi è in turno nella finestra [ora → deadline priorità]
  * - Se nessuno è in turno, prende il prossimo turno disponibile
- * - A parità di disponibilità, ordina per level nel pivot (1 = massimo), poi random
+ * - A parità di disponibilità, ordina per level nel pivot (5 = massimo), poi random
  * - Risultato: array ['status', 'user', 'shift_start']
  *   status: 'assigned' | 'next_shift' | 'no_match' | 'skipped'
  */
@@ -272,16 +272,16 @@ class AutoAssignmentService
     // ─── Selezione del candidato migliore ────────────────────────────────────
 
     /**
-     * Ordina per level nel pivot (1 = massimo) e sceglie random tra i pari.
+     * Ordina per level nel pivot (5 = massimo) e sceglie random tra i pari.
      */
     private function pickBest(Collection $candidates, int $roleId): User
     {
         $ranked = $candidates
             ->map(fn (User $u) => [
                 'user' => $u,
-                'level' => $u->maintenanceRoles->firstWhere('id', $roleId)?->pivot->level ?? 999,
+                'level' => $u->maintenanceRoles->firstWhere('id', $roleId)?->pivot->level ?? 0,
             ])
-            ->sortBy('level');
+            ->sortByDesc('level');
 
         $best = $ranked->first()['level'];
         $group = $ranked->filter(fn ($r) => $r['level'] === $best)->map(fn ($r) => $r['user']);
