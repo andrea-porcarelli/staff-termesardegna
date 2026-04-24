@@ -712,11 +712,20 @@ class InterventionController extends Controller
             return;
         }
 
-        $isAcceptedCollaborator = $intervention->collaborations()
+        if ($intervention->created_by === $user->id) {
+            return;
+        }
+
+        // Anche le collaborazioni "pending" devono poter aprire il modal,
+        // altrimenti il destinatario non riesce ad accettare/rifiutare la richiesta.
+        $hasCollab = $intervention->collaborations()
             ->where('user_id', $user->id)
-            ->where('status', InterventionCollaboration::STATUS_ACCEPTED)
+            ->whereIn('status', [
+                InterventionCollaboration::STATUS_PENDING,
+                InterventionCollaboration::STATUS_ACCEPTED,
+            ])
             ->exists();
-        if ($isAcceptedCollaborator) {
+        if ($hasCollab) {
             return;
         }
 
