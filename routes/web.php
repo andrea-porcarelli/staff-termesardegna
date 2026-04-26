@@ -9,6 +9,7 @@ use App\Http\Controllers\InterventionController;
 use App\Http\Controllers\InterventionLogController;
 use App\Http\Controllers\MaintenanceRoleController;
 use App\Http\Controllers\PasswordSetController;
+use App\Http\Controllers\Manutentore\AuthController as MAuthController;
 use App\Http\Controllers\Manutentore\CalendarController as MCalendarController;
 use App\Http\Controllers\Manutentore\CollaborationController as MCollaborationController;
 use App\Http\Controllers\Manutentore\HomeController as MHomeController;
@@ -36,6 +37,16 @@ Route::get('/password/set/{token}', [PasswordSetController::class, 'show'])->nam
 Route::post('/password/set/{token}', [PasswordSetController::class, 'store'])->name('password.set.store');
 
 Route::impersonate();
+
+// ─── Login dedicato area mobile (/m) — 2 step: email + password ──────────────
+Route::prefix('m')->name('m.')->group(function () {
+    Route::get('/login', [MAuthController::class, 'showEmail'])->name('login');
+    Route::post('/login', [MAuthController::class, 'submitEmail']);
+    Route::get('/login/password', [MAuthController::class, 'showPassword'])->name('login.password');
+    Route::post('/login/password', [MAuthController::class, 'submitPassword']);
+    Route::get('/login/imposta', [MAuthController::class, 'showSet'])->name('login.set');
+    Route::post('/login/imposta', [MAuthController::class, 'submitSet']);
+});
 
 // ─── Area manutentore (layout mobile dedicato) ──────────────────────────────
 Route::prefix('m')->middleware(['auth', 'mobile'])->name('m.')->group(function () {

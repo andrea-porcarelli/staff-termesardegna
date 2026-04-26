@@ -34,6 +34,7 @@ class HomeController extends Controller
             'reports' => fn ($q) => $q->where('user_id', $user->id),
             'activeReschedules.user:id,name',
         ])
+            ->withCount('transfers')
             ->whereIn('status', ['open', 'planned', 'in_progress'])
             ->where(function ($q) {
                 // Nasconde ticket sospesi/rinviati finché non arriva la data.
@@ -94,7 +95,7 @@ class HomeController extends Controller
             $overdueLibero = $i->tipo !== 'pianificazione' && $i->is_overdue;
 
             return $overduePianificato || $overdueLibero;
-        })->sortBy(fn ($i) => $i->deadline?->timestamp ?? $i->scheduled_date?->timestamp ?? 0)->values();
+        })->sortByDesc('id')->values();
 
         $scadutiIds = $scaduti->pluck('id')->all();
 
@@ -104,7 +105,7 @@ class HomeController extends Controller
             if ($i->priority !== 'high') return false;
 
             return $i->deadline && $i->deadline->lte($weekEnd);
-        })->sortBy(fn ($i) => $i->deadline?->timestamp ?? 0)->values();
+        })->sortByDesc('id')->values();
 
         $altaIds = $altaPriorita->pluck('id')->all();
 
@@ -115,7 +116,7 @@ class HomeController extends Controller
             if (! $isPianificato || ! $i->scheduled_date) return false;
 
             return $i->scheduled_date->gte($today) && $i->scheduled_date->lte($weekAhead);
-        })->sortBy(fn ($i) => $i->scheduled_date->timestamp)->values();
+        })->sortByDesc('id')->values();
 
         $pianificatiIds = $pianificati->pluck('id')->all();
 
@@ -129,20 +130,24 @@ class HomeController extends Controller
             if ($i->priority !== 'low') return false;
 
             return $i->deadline && $i->deadline->lte($weekEnd);
-        })->sortBy(fn ($i) => $i->deadline?->timestamp ?? 0)->values();
+        })->sortByDesc('id')->values();
 
         [$quickAreas, $quickDepartments, $quickEquipments, $quickMaintenanceRoles, $quickManutentori]
             = self::quickOpenScope($user);
 
-        // Operatore: elenco dei ticket che ha aperto oggi.
-        $miei_aperti_oggi = $user->role === 'operator'
+        // Operatore: ticket aperti da lui ancora attivi (aperti o presi in carico).
+        // I chiusi vivono solo nella lista ticket.
+        $miei_aperti = $user->role === 'operator'
             ? Intervention::with([
                 'equipment.department.area', 'area', 'department',
                 'maintenanceRole', 'assignedUser', 'creator:id,name',
+                'activeCollaborations.user:id,name',
+                'activeReschedules.user:id,name',
             ])
+                ->withCount('transfers')
                 ->where('created_by', $user->id)
-                ->whereDate('created_at', today())
-                ->orderByDesc('created_at')
+                ->whereIn('status', ['open', 'in_progress'])
+                ->orderByDesc('id')
                 ->get()
             : collect();
 
@@ -152,7 +157,7 @@ class HomeController extends Controller
             'altaPriorita',
             'pianificati',
             'bassaPriorita',
-            'miei_aperti_oggi',
+            'miei_aperti',
             'quickAreas',
             'quickDepartments',
             'quickEquipments',

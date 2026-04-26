@@ -28,7 +28,7 @@ class InterventionController extends Controller
         'today' => 'Oggi',
         'high' => 'Alta priorità',
         'low' => 'Bassa priorità',
-        'in_progress' => 'In lavorazione',
+        'in_progress' => 'In carico',
         'completed' => 'Chiusi',
         'cancelled' => 'Sospesi',
         'planned' => 'Programmati',
@@ -60,6 +60,7 @@ class InterventionController extends Controller
             'reports' => fn ($q) => $q->where('user_id', $user->id),
             'activeReschedules.user:id,name',
         ])
+            ->withCount('transfers')
             ->where(function ($q) use ($user, $deptIds) {
                 $q->where('assigned_user_id', $user->id);
 
@@ -86,8 +87,11 @@ class InterventionController extends Controller
 
         switch ($filter) {
             case 'today':
-                $query->where('tipo', 'pianificazione')
-                    ->whereDate('scheduled_date', today());
+                // Aperti oggi e/o presi in carico oggi.
+                $query->where(function ($q) {
+                    $q->whereDate('created_at', today())
+                        ->orWhereDate('preso_in_carico_at', today());
+                });
                 break;
 
             case 'high':
@@ -105,11 +109,27 @@ class InterventionController extends Controller
                 break;
 
             case 'completed':
-                $query->where('status', 'completed');
+                // "Chiusi" = solo i ticket su cui l'utente è davvero coinvolto:
+                // assegnatario, collaboratore accettato o autore di un rapportino.
+                // Senza questo scope un manutentore vedrebbe tutti i chiusi del suo
+                // dipartimento (e per via del reject finale, non vedrebbe i propri).
+                $query->where('status', 'completed')
+                    ->where(function ($q) use ($user) {
+                        $q->where('assigned_user_id', $user->id)
+                            ->orWhereHas('collaborations', fn ($c) => $c
+                                ->where('user_id', $user->id)
+                                ->where('status', InterventionCollaboration::STATUS_ACCEPTED))
+                            ->orWhereHas('reports', fn ($r) => $r->where('user_id', $user->id));
+                    });
                 break;
 
             case 'cancelled':
-                $query->where('status', 'cancelled');
+                // "Sospesi" = ticket rinviati: con suspended_until futura
+                // o con un rapportino non finale che sposta next_work_date oltre oggi.
+                $query->where(function ($q) {
+                    $q->where('suspended_until', '>', today())
+                        ->orWhereHas('activeReschedules');
+                });
                 break;
 
             case 'planned':
@@ -148,10 +168,13 @@ class InterventionController extends Controller
         }
 
         // In /tickets mostriamo anche i ticket con next_work_date futura (il badge "rinviato al …"
-        // già li segnala). Nascondiamo solo i ticket dove l'utente ha chiuso definitivamente il suo percorso.
-        $interventions = $interventions->reject(function ($i) {
-            return $i->reports->contains('is_final', true);
-        })->values();
+        // già li segnala). Nascondiamo solo i ticket dove l'utente ha chiuso definitivamente il suo
+        // percorso — tranne nel filtro "Chiusi", dove devono comparire proprio quelli.
+        if ($filter !== 'completed') {
+            $interventions = $interventions->reject(function ($i) {
+                return $i->reports->contains('is_final', true);
+            })->values();
+        }
 
         if ($filter === 'overdue') {
             $interventions = $interventions->filter(fn ($i) => $i->is_overdue)->values();
@@ -185,6 +208,7 @@ class InterventionController extends Controller
             'collaborations.user',
             'collaborations.requestedBy',
             'reports.user',
+            'reports.media',
             'activeReschedules.user:id,name',
         ]);
 
@@ -275,6 +299,16 @@ class InterventionController extends Controller
                 ? $this->formatDuration((int) $r->duration_minutes)
                 : null,
             'activities' => $r->activities,
+            'notes' => $r->notes,
+            'report_date' => $r->report_date?->isoFormat('D MMM YYYY'),
+            'is_final' => (bool) $r->is_final,
+            'next_work_date' => $r->next_work_date?->isoFormat('D MMM YYYY'),
+            'media' => $r->media->map(fn ($m) => [
+                'name' => $m->file_name,
+                'type' => $m->file_type,
+                'is_image' => str_contains((string) $m->file_type, 'image'),
+                'url' => \Illuminate\Support\Facades\Storage::disk('public')->url($m->file_path),
+            ])->values(),
             'at' => $r->created_at?->isoFormat('D MMM YYYY · HH:mm'),
             'at_sort' => $r->created_at?->timestamp,
         ]);
@@ -627,14 +661,16 @@ class InterventionController extends Controller
         ];
 
         if ($isManutentoreCreator) {
-            $rules['maintenance_role_id'] = 'required|exists:maintenance_roles,id';
-        } else {
+            // Manutentore creatore → assegnazione diretta a un collega manutentore
             $rules['assigned_user_id'] = [
                 'required',
                 \Illuminate\Validation\Rule::exists('users', 'id')
                     ->where('role', 'manutentore')
                     ->where('active', true),
             ];
+        } else {
+            // Operatore → sceglie la specializzazione, auto-assegnazione via servizio
+            $rules['maintenance_role_id'] = 'required|exists:maintenance_roles,id';
         }
 
         $request->validate($rules, [
@@ -683,8 +719,8 @@ class InterventionController extends Controller
             'area_id' => $areaId,
             'department_id' => $deptId,
             'equipment_id' => $equipmentId,
-            'maintenance_role_id' => $isManutentoreCreator ? $request->maintenance_role_id : null,
-            'assigned_user_id' => $isManutentoreCreator ? null : $request->assigned_user_id,
+            'maintenance_role_id' => $isManutentoreCreator ? null : $request->maintenance_role_id,
+            'assigned_user_id' => $isManutentoreCreator ? $request->assigned_user_id : null,
             'created_by' => $user->id,
             'title' => $title,
             'description' => $request->description,

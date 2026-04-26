@@ -1,5 +1,6 @@
 @php
     $me = auth()->id();
+    $viewerIsOperator = auth()->user()?->role === 'operator';
     $mine = $intervention->assigned_user_id === $me;
     $unassigned = is_null($intervention->assigned_user_id);
     $isOpenToTake = $intervention->status === 'open' && $unassigned;
@@ -61,10 +62,10 @@
 
     <div class="px-4 py-3 pl-5 space-y-2">
 
-        {{-- Riga 1: bullet + #ID + badge rinvio + data --}}
+        {{-- Riga 1: bullet + #ID + badge rinvio + badge collab/trasferito + data --}}
         @php
             $rescheduleBadgeDate = null;
-            $rescheduledFromPast = false;
+            $rescheduledFromPastDate = null;
             if ($intervention->relationLoaded('activeReschedules') && $intervention->activeReschedules->isNotEmpty()) {
                 $nextReschedule = $intervention->activeReschedules
                     ->sortBy(fn ($r) => $r->next_work_date->timestamp)->first();
@@ -72,9 +73,15 @@
             } elseif ($intervention->relationLoaded('reports')) {
                 $myLast = $intervention->reports->sortByDesc('created_at')->first();
                 if ($myLast && ! $myLast->is_final && $myLast->next_work_date && $myLast->next_work_date->lte(today())) {
-                    $rescheduledFromPast = true;
+                    // Data in cui è stato impostato il rinvio (report_date o created_at).
+                    $rescheduledFromPastDate = $myLast->report_date ?? $myLast->created_at;
                 }
             }
+
+            $hasActiveCollab = $intervention->relationLoaded('activeCollaborations')
+                && $intervention->activeCollaborations->isNotEmpty();
+            $hasTransfer = ($intervention->transfers_count ?? null) > 0
+                || ($intervention->relationLoaded('transfers') && $intervention->transfers->isNotEmpty());
         @endphp
         <div class="flex items-center gap-2 text-xs">
             <span class="w-1.5 h-1.5 rounded-full {{ $barClass }}"></span>
@@ -87,13 +94,30 @@
                     </svg>
                     rinviato al {{ $rescheduleBadgeDate->isoFormat('D MMM') }}
                 </span>
-            @elseif ($rescheduledFromPast)
+            @elseif ($rescheduledFromPastDate)
                 <span class="inline-flex items-center gap-1 h-5 px-1.5 rounded bg-amber-100 text-amber-800 text-[10px] font-semibold"
-                      title="Ticket rimandato dai giorni scorsi">
+                      title="Ticket rinviato dal {{ $rescheduledFromPastDate->isoFormat('D MMM YYYY') }}">
                     <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M4 9a9 9 0 0 1 14.7-3.7L23 9M20 15a9 9 0 0 1-14.7 3.7L1 15"/>
                     </svg>
-                    rimandato
+                    rinviato dal {{ $rescheduledFromPastDate->isoFormat('D MMM') }}
+                </span>
+            @endif
+            @if ($hasActiveCollab)
+                <span class="inline-flex items-center gap-1 h-5 px-1.5 rounded bg-violet-100 text-violet-800 text-[10px] font-semibold"
+                      title="Ticket con collaborazione attiva">
+                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 20v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 20v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                    in collaborazione
+                </span>
+            @elseif ($hasTransfer)
+                <span class="inline-flex items-center gap-1 h-5 px-1.5 rounded bg-violet-100 text-violet-800 text-[10px] font-semibold"
+                      title="Ticket trasferito">
+                    <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 17l-4-4 4-4M3 13h14M17 7l4 4-4 4"/>
+                    </svg>
+                    trasferito
                 </span>
             @endif
             <span class="ml-auto text-gray-500">{{ $intervention->created_at?->isoFormat('D MMM') }}</span>
@@ -186,17 +210,19 @@
             @endif
 
             <div class="ml-auto flex items-center gap-1.5">
-                @if ($assignedName)
-                    <span class="w-6 h-6 rounded-full bg-sky-100 text-sky-800 flex items-center justify-center text-[10px] font-bold"
-                          title="{{ $assignedName }}">
-                        {{ $initials }}
-                    </span>
-                @else
-                    <span class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center">
-                        <svg class="w-3 h-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 12h12"/>
-                        </svg>
-                    </span>
+                @if ($viewerIsOperator)
+                    @if ($assignedName)
+                        <span class="w-6 h-6 rounded-full bg-sky-100 text-sky-800 flex items-center justify-center text-[10px] font-bold"
+                              title="{{ $assignedName }}">
+                            {{ $initials }}
+                        </span>
+                    @else
+                        <span class="w-5 h-5 rounded-full bg-gray-200 flex items-center justify-center">
+                            <svg class="w-3 h-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 12h12"/>
+                            </svg>
+                        </span>
+                    @endif
                 @endif
 
                 @foreach ($teamCollabs as $c)
@@ -209,12 +235,14 @@
                     </span>
                 @endforeach
 
-                @if ($assignedName && $teamCollabs->isEmpty())
-                    <span class="text-xs text-gray-700 font-medium truncate max-w-[120px]">
-                        @if ($mine) A te @else {{ \Illuminate\Support\Str::words($assignedName, 1, '.') }} @endif
-                    </span>
-                @elseif (! $assignedName)
-                    <span class="text-xs text-gray-500 italic">Non assegnato</span>
+                @if ($viewerIsOperator)
+                    @if ($assignedName && $teamCollabs->isEmpty())
+                        <span class="text-xs text-gray-700 font-medium truncate max-w-[120px]">
+                            @if ($mine) A te @else {{ \Illuminate\Support\Str::words($assignedName, 1, '.') }} @endif
+                        </span>
+                    @elseif (! $assignedName)
+                        <span class="text-xs text-gray-500 italic">Non assegnato</span>
+                    @endif
                 @endif
             </div>
         </div>

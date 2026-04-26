@@ -25,11 +25,6 @@
                     <div class="text-2xl font-bold text-red-600 leading-none">{{ $scaduti->count() }}</div>
                     <div class="text-[11px] uppercase tracking-wide text-red-600/80 mt-1">scaduti</div>
                 </div>
-            @else
-                <div class="text-right">
-                    <div class="text-2xl font-bold text-brand-600 leading-none">{{ $totalActive }}</div>
-                    <div class="text-[11px] uppercase tracking-wide text-gray-500 mt-1">7 giorni</div>
-                </div>
             @endif
         </header>
 
@@ -56,20 +51,20 @@
             @endif
         </div>
 
-        {{-- ─── Operatore: ticket aperti oggi ──────────────────────── --}}
-        @if (! $isManutentore && $miei_aperti_oggi->isNotEmpty())
+        {{-- ─── Operatore: ticket aperti / in carico ───────────────── --}}
+        @if (! $isManutentore && $miei_aperti->isNotEmpty())
             <section>
                 <div class="flex items-center justify-between mb-2">
                     <h3 class="text-sm font-semibold uppercase tracking-wide text-brand-700 flex items-center gap-1.5">
                         <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
                         </svg>
-                        Aperti oggi
+                        I miei ticket
                     </h3>
-                    <span class="text-xs text-gray-400">{{ $miei_aperti_oggi->count() }}</span>
+                    <span class="text-xs text-gray-400">{{ $miei_aperti->count() }}</span>
                 </div>
                 <div class="space-y-3">
-                    @foreach ($miei_aperti_oggi as $intervention)
+                    @foreach ($miei_aperti as $intervention)
                         @include('manutentore.partials.intervention-card', ['intervention' => $intervention])
                     @endforeach
                 </div>
@@ -101,7 +96,7 @@
         @if ($altaPriorita->isNotEmpty())
             <section>
                 <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-semibold uppercase tracking-wide text-orange-600">Alta priorità (7 giorni)</h3>
+                    <h3 class="text-sm font-semibold uppercase tracking-wide text-orange-600">Alta priorità </h3>
                     <span class="text-xs text-gray-400">{{ $altaPriorita->count() }}</span>
                 </div>
                 <div class="space-y-3">
@@ -116,7 +111,7 @@
         @if ($pianificati->isNotEmpty())
             <section>
                 <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Pianificati (7 giorni)</h3>
+                    <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Pianificati</h3>
                     <span class="text-xs text-gray-400">{{ $pianificati->count() }}</span>
                 </div>
                 <div class="space-y-3">
@@ -131,7 +126,7 @@
         @if ($bassaPriorita->isNotEmpty())
             <section>
                 <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Bassa priorità (7 giorni)</h3>
+                    <h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700">Bassa priorità</h3>
                     <span class="text-xs text-gray-400">{{ $bassaPriorita->count() }}</span>
                 </div>
                 <div class="space-y-3">
@@ -141,16 +136,6 @@
                 </div>
             </section>
         @endif
-
-        {{-- ─── Empty state globale ────────────────────────────────── --}}
-        @if ($totalActive === 0)
-            <x-m.card class="text-center py-10">
-                <div class="text-3xl mb-2">✓</div>
-                <div class="font-medium text-gray-700">Nessuna attività nei prossimi 7 giorni</div>
-                <div class="text-xs text-gray-500 mt-1">Apri l'elenco completo dei ticket dal menu.</div>
-            </x-m.card>
-        @endif
-
     </div>
 
     <x-m.quick-open :areas="$quickAreas" :departments="$quickDepartments"

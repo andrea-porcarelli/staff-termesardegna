@@ -53,6 +53,8 @@ class UserController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'role' => $request->role,
+            // Operator/manutentore impostano la password al primo accesso da /m
+            'set_password' => ! in_array($request->role, ['operator', 'manutentore'], true),
         ]);
 
         // Se il ruolo è manutentore, associa specializzazioni (con livello) e team

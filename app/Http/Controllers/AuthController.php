@@ -53,12 +53,15 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
+        $fromMobile = in_array(Auth::user()?->role, \App\Http\Middleware\EnsureMobileRole::ROLES, true)
+            || str_starts_with((string) $request->headers->get('referer'), url('/m'));
+
         Auth::logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()->route($fromMobile ? 'm.login' : 'login');
     }
 
     private function homeRoute(): string

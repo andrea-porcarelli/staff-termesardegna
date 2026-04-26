@@ -58,21 +58,7 @@
                 </div>
 
                 @if ($isManutentoreCreator)
-                    {{-- Specializzazione (obbligatoria per manutentore → auto-assegnazione) --}}
-                    <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
-                            Specializzazione <span class="text-red-500">*</span>
-                        </label>
-                        <select name="maintenance_role_id" x-model="maintenanceRoleId" required
-                                class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
-                            <option value="">Seleziona specializzazione</option>
-                            @foreach ($maintenanceRoles as $mr)
-                                <option value="{{ $mr->id }}">{{ $mr->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                @else
-                    {{-- Manutentore (obbligatorio per operatore → assegnazione diretta) --}}
+                    {{-- Manutentore: il manutentore creatore assegna direttamente a un collega --}}
                     <div>
                         <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
                             Manutentore <span class="text-red-500">*</span>
@@ -82,6 +68,20 @@
                             <option value="">Seleziona manutentore</option>
                             @foreach ($manutentori as $m)
                                 <option value="{{ $m->id }}">{{ $m->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @else
+                    {{-- Specializzazione: l'operatore sceglie la specializzazione → auto-assegnazione --}}
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                            Specializzazione <span class="text-red-500">*</span>
+                        </label>
+                        <select name="maintenance_role_id" x-model="maintenanceRoleId" required
+                                class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
+                            <option value="">Seleziona specializzazione</option>
+                            @foreach ($maintenanceRoles as $mr)
+                                <option value="{{ $mr->id }}">{{ $mr->name }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -95,8 +95,8 @@
                     <select name="priority" x-model="priority" required
                             class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
                         <option value="">Seleziona priorità</option>
-                        <option value="high">Alta — entro 24 ore</option>
-                        <option value="low">Bassa — entro 7 giorni</option>
+                        <option value="high">Alta</option>
+                        <option value="low">Bassa</option>
                         <option value="fixed_date">Data fissa</option>
                     </select>
                 </div>

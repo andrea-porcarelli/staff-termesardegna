@@ -227,9 +227,14 @@
                 <template x-if="ticket?.history?.length">
                     <div class="px-4 pb-6">
                         <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Storico</div>
+                        <p class="text-[11px] text-gray-400 mb-2" x-show="hasReportInHistory">
+                            Doppio tap su un rapportino per vedere il dettaglio.
+                        </p>
                         <ol class="space-y-3">
                             <template x-for="ev in ticket.history" :key="ev.event + '-' + ev.id">
-                                <li class="flex gap-3">
+                                <li class="flex gap-3"
+                                    :class="isReportEvent(ev) ? 'cursor-pointer select-none' : ''"
+                                    @dblclick="isReportEvent(ev) && toggleReportDetail(ev)">
                                     <span class="mt-1 w-2 h-2 rounded-full shrink-0"
                                           :class="historyColor(ev.event)"></span>
                                     <div class="flex-1 text-sm">
@@ -237,6 +242,57 @@
                                         <div class="text-xs text-gray-500 mt-0.5" x-text="ev.at"></div>
                                         <div class="text-xs text-gray-600 italic mt-1" x-show="ev.reason" x-text="'“' + (ev.reason || '') + '”'"></div>
                                         <div class="text-xs text-gray-600 italic mt-1" x-show="ev.message" x-text="'“' + (ev.message || '') + '”'"></div>
+
+                                        {{-- Dettaglio rapportino (doppio click) --}}
+                                        <div x-show="isReportEvent(ev) && expandedReportKey === reportKey(ev)"
+                                             x-cloak
+                                             class="mt-2 p-3 rounded-lg border border-gray-200 bg-gray-50 space-y-2">
+                                            <div class="text-[11px] uppercase tracking-wide text-gray-500 flex items-center gap-2 flex-wrap">
+                                                <span x-text="ev.report_date"></span>
+                                                <template x-if="ev.duration"><span>· <span x-text="ev.duration"></span></span></template>
+                                                <template x-if="ev.is_final">
+                                                    <span class="inline-flex h-4 px-1.5 items-center rounded bg-emerald-100 text-emerald-700 text-[10px] font-semibold">✓ finale</span>
+                                                </template>
+                                                <template x-if="!ev.is_final && ev.next_work_date">
+                                                    <span class="inline-flex h-4 px-1.5 items-center rounded bg-amber-100 text-amber-800 text-[10px] font-semibold" x-text="'↻ ' + ev.next_work_date"></span>
+                                                </template>
+                                            </div>
+                                            <template x-if="ev.activities">
+                                                <div>
+                                                    <div class="text-[11px] uppercase tracking-wide text-gray-500 mb-0.5">Attività</div>
+                                                    <p class="text-[13px] text-gray-800 whitespace-pre-line" x-text="ev.activities"></p>
+                                                </div>
+                                            </template>
+                                            <template x-if="ev.notes">
+                                                <div>
+                                                    <div class="text-[11px] uppercase tracking-wide text-gray-500 mb-0.5">Note</div>
+                                                    <p class="text-[13px] text-gray-800 whitespace-pre-line" x-text="ev.notes"></p>
+                                                </div>
+                                            </template>
+                                            <template x-if="ev.media && ev.media.length">
+                                                <div>
+                                                    <div class="text-[11px] uppercase tracking-wide text-gray-500 mb-1">Allegati</div>
+                                                    <div class="grid grid-cols-2 gap-2">
+                                                        <template x-for="m in ev.media" :key="m.url">
+                                                            <a :href="m.url" target="_blank" rel="noopener"
+                                                               class="block rounded-lg border border-gray-200 overflow-hidden bg-white">
+                                                                <template x-if="m.is_image">
+                                                                    <img :src="m.url" alt="" class="w-full h-24 object-cover">
+                                                                </template>
+                                                                <template x-if="!m.is_image">
+                                                                    <div class="h-24 flex items-center justify-center text-gray-400">
+                                                                        <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 2v6h6"/>
+                                                                        </svg>
+                                                                    </div>
+                                                                </template>
+                                                                <div class="px-2 py-1 text-[11px] text-gray-600 truncate" x-text="m.name"></div>
+                                                            </a>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
                                     </div>
                                 </li>
                             </template>
@@ -414,11 +470,28 @@
                 selectedCandidateId: null,
                 subMessage: '',
                 submitting: false,
+                expandedReportKey: null,
+
+                isReportEvent(ev) {
+                    return ev?.event === 'report_completed' || ev?.event === 'report_draft';
+                },
+                reportKey(ev) {
+                    return (ev?.event || '') + '-' + (ev?.id ?? '');
+                },
+                toggleReportDetail(ev) {
+                    const k = this.reportKey(ev);
+                    this.expandedReportKey = (this.expandedReportKey === k) ? null : k;
+                },
+                get hasReportInHistory() {
+                    return Array.isArray(this.ticket?.history)
+                        && this.ticket.history.some(ev => this.isReportEvent(ev));
+                },
 
                 async open(id) {
                     this.isOpen = true;
                     this.loading = true;
                     this.ticket = null;
+                    this.expandedReportKey = null;
                     document.body.style.overflow = 'hidden';
                     try {
                         const res = await fetch(`/m/tickets/${id}/json`, {

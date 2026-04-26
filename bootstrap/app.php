@@ -15,6 +15,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'mobile' => \App\Http\Middleware\EnsureMobileRole::class,
         ]);
+
+        // Ospiti su /m/* → login dedicato area mobile
+        $middleware->redirectGuestsTo(function ($request) {
+            return $request->is('m', 'm/*')
+                ? route('m.login')
+                : route('login');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
