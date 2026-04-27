@@ -168,11 +168,22 @@ class InterventionController extends Controller
         }
 
         // In /tickets mostriamo anche i ticket con next_work_date futura (il badge "rinviato al …"
-        // già li segnala). Nascondiamo solo i ticket dove l'utente ha chiuso definitivamente il suo
-        // percorso — tranne nel filtro "Chiusi", dove devono comparire proprio quelli.
+        // già li segnala). Nascondiamo i ticket dove l'utente ha chiuso definitivamente il suo
+        // percorso — tranne nel filtro "Chiusi" (dove devono comparire proprio quelli) e tranne
+        // nel filtro "Tutti" se la chiusura è recente, così l'utente non li perde subito dopo
+        // aver firmato il rapportino finale.
         if ($filter !== 'completed') {
-            $interventions = $interventions->reject(function ($i) {
-                return $i->reports->contains('is_final', true);
+            $recentCutoff = now()->subDays(7);
+            $interventions = $interventions->reject(function ($i) use ($filter, $recentCutoff) {
+                $finalReports = $i->reports->where('is_final', true);
+                if ($finalReports->isEmpty()) {
+                    return false;
+                }
+                if ($filter === 'all' && $finalReports->contains(fn ($r) => $r->created_at?->greaterThanOrEqualTo($recentCutoff))) {
+                    return false;
+                }
+
+                return true;
             })->values();
         }
 
