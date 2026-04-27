@@ -242,13 +242,6 @@
                         <i class="bi bi-box-arrow-in-right me-2"></i>Accedi
                     </button>
                 </form>
-
-                <div class="text-center mt-4">
-                    <small class="text-muted">
-                        <i class="bi bi-info-circle"></i>
-                        Credenziali demo: admin@rapportini.local / password
-                    </small>
-                </div>
             </div>
         </div>
     </div>
