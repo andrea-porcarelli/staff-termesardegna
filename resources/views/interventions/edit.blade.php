@@ -12,12 +12,15 @@
     <div class="card-body">
         @php
             $currentTipo = old('tipo', $intervention->tipo ?? ($intervention->equipment_id ? 'pianificazione' : 'ordinario'));
-            $currentAssignmentType = old('assignment_type', $intervention->maintenance_role_id ? 'specializzazione' : 'diretto');
+            $defaultAssignType = $intervention->assigned_user_id && ! $intervention->maintenance_role_id ? 'diretto' : 'specializzazione';
+            $currentAssignmentType = old('assignment_type', $defaultAssignType);
+            $canDirectAssignOrdinario = auth()->user()->role === 'admin';
         @endphp
         <script>
             function interventionForm() {
                 return {
                     tipo: '{{ $currentTipo }}',
+                    canDirectAssignOrdinario: {{ $canDirectAssignOrdinario ? 'true' : 'false' }},
                     selectedAreaId: '{{ old('area_id', $intervention->area_id ?? '') }}',
                     selectedEquipmentId: '{{ old('equipment_id', $intervention->equipment_id ?? '') }}',
                     assignmentType: '{{ $currentAssignmentType }}',
@@ -49,12 +52,16 @@
                     },
 
                     showMaintenanceRole() {
-                        return (this.tipo === 'pianificazione' && this.assignmentType === 'specializzazione')
-                            || this.tipo === 'ordinario';
+                        return this.assignmentType === 'specializzazione';
                     },
 
                     showAssignedUser() {
-                        return this.tipo === 'pianificazione' && this.assignmentType === 'diretto';
+                        return this.assignmentType === 'diretto'
+                            && (this.tipo === 'pianificazione' || this.canDirectAssignOrdinario);
+                    },
+
+                    showAssignmentToggle() {
+                        return this.tipo === 'pianificazione' || this.canDirectAssignOrdinario;
                     },
 
                     showDateTime() {
@@ -154,13 +161,15 @@
                     @enderror
                 </div>
 
-                {{-- Zona filtrata (solo ordinario) --}}
+                {{-- Zona filtrata (solo ordinario) — opzionale: vuoto = tutta l'area --}}
                 <div class="col-md-4 mb-3" x-show="tipo === 'ordinario'" x-cloak>
-                    <label for="department_id" class="form-label">Zona <span class="text-danger">*</span></label>
+                    <label for="department_id" class="form-label">
+                        Zona
+                        <small class="text-muted">(opzionale — vuoto = tutta l'area)</small>
+                    </label>
                     <select class="form-select @error('department_id') is-invalid @enderror"
-                            id="department_id" name="department_id"
-                            :required="tipo === 'ordinario'">
-                        <option value="">Seleziona una zona...</option>
+                            id="department_id" name="department_id">
+                        <option value="">Tutta l'area</option>
                         @foreach($departments as $dept)
                             <option value="{{ $dept->id }}"
                                     x-show="!selectedAreaId || selectedAreaId == {{ $dept->area_id }}"
@@ -191,8 +200,8 @@
                 </div>
             </div>
 
-            {{-- Tipo assegnazione (solo pianificazione) --}}
-            <div class="mb-3" x-show="tipo === 'pianificazione'" x-cloak>
+            {{-- Tipo assegnazione (pianificazione + admin sull'ordinario) --}}
+            <div class="mb-3" x-show="showAssignmentToggle()" x-cloak>
                 <label class="form-label fw-semibold">Assegnazione</label>
                 <div class="d-flex gap-3">
                     <div class="form-check form-check-inline">
@@ -235,19 +244,24 @@
                     @enderror
                 </div>
 
-                {{-- Operatore diretto: solo pianificazione+diretto --}}
+                {{-- Operatore/manutentore diretto: pianificazione+diretto OPPURE admin+ordinario+diretto --}}
                 <div class="col-md-6 mb-3" x-show="showAssignedUser()" x-cloak>
                     <label for="assigned_user_id" class="form-label">
-                        Operatore Assegnato <span class="text-danger">*</span>
+                        <span x-show="tipo === 'pianificazione'">Operatore Assegnato</span>
+                        <span x-show="tipo === 'ordinario'" x-cloak>Manutentore Assegnato</span>
+                        <span class="text-danger">*</span>
                     </label>
                     <select class="form-select @error('assigned_user_id') is-invalid @enderror"
                             id="assigned_user_id" name="assigned_user_id"
                             x-ref="assignedUser"
                             :required="showAssignedUser()">
-                        <option value="">Seleziona un operatore...</option>
+                        <option value="">Seleziona...</option>
                         @foreach($operators as $operator)
-                            <option value="{{ $operator->id }}" {{ old('assigned_user_id', $intervention->assigned_user_id) == $operator->id ? 'selected' : '' }}>
-                                {{ $operator->name }}
+                            <option value="{{ $operator->id }}"
+                                    data-role="{{ $operator->role }}"
+                                    x-show="tipo === 'pianificazione' || '{{ $operator->role }}' === 'manutentore'"
+                                    {{ old('assigned_user_id', $intervention->assigned_user_id) == $operator->id ? 'selected' : '' }}>
+                                {{ $operator->name }}{{ $operator->role === 'manutentore' ? '' : ' (operatore)' }}
                             </option>
                         @endforeach
                     </select>

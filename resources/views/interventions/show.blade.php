@@ -86,8 +86,12 @@
                                         </small>
                                     @else
                                         <span class="badge bg-primary me-1">Area/Zona</span>
-                                        <strong>{{ $intervention->area->name ?? '-' }}</strong> /
-                                        {{ $intervention->department->name ?? '-' }}
+                                        <strong>{{ $intervention->area->name ?? '-' }}</strong>
+                                        @if($intervention->department)
+                                            / {{ $intervention->department->name }}
+                                        @else
+                                            <em class="text-muted">(tutta l'area)</em>
+                                        @endif
                                     @endif
                                 </td>
                             </tr>

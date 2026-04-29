@@ -61,10 +61,12 @@ class InterventionController extends Controller
         $isPianificazione = $request->tipo === 'pianificazione';
         $priority = $isPianificazione ? 'low' : ($request->priority ?? 'low');
         $isFixedDate = ! $isPianificazione && $priority === 'fixed_date';
+        $assignType = $request->input('assignment_type', 'specializzazione');
+        $isDirectAssign = $assignType === 'diretto';
 
         $equipmentId = $isPianificazione ? $request->equipment_id : null;
-        $areaId = ! $isPianificazione ? $request->area_id : null;
-        $deptId = ! $isPianificazione ? $request->department_id : null;
+        $areaId = ! $isPianificazione ? ($request->area_id ?: null) : null;
+        $deptId = ! $isPianificazione ? ($request->department_id ?: null) : null;
 
         $title = $request->filled('title')
             ? $request->title
@@ -75,14 +77,25 @@ class InterventionController extends Controller
                 'description' => $request->description,
             ]);
 
+        $maintenanceRoleId = (! $isDirectAssign && $request->filled('maintenance_role_id'))
+            ? $request->maintenance_role_id
+            : null;
+
+        $assignedUserId = null;
+        if ($isPianificazione && $isDirectAssign) {
+            $assignedUserId = $request->assigned_user_id ?: null;
+        } elseif (! $isPianificazione && $isDirectAssign && Auth::user()->role === 'admin') {
+            $assignedUserId = $request->assigned_user_id ?: null;
+        }
+
         $data = [
             'tipo' => $request->tipo,
             'equipment_id' => $equipmentId,
             'component_id' => $isPianificazione ? ($request->component_id ?: null) : null,
-            'maintenance_role_id' => $request->filled('maintenance_role_id') ? $request->maintenance_role_id : null,
+            'maintenance_role_id' => $maintenanceRoleId,
             'area_id' => $areaId,
             'department_id' => $deptId,
-            'assigned_user_id' => $isPianificazione ? ($request->assigned_user_id ?: null) : null,
+            'assigned_user_id' => $assignedUserId,
             'created_by' => Auth::id(),
             'title' => $title,
             'description' => $request->description,
@@ -191,12 +204,14 @@ class InterventionController extends Controller
         $isPianificazione = $request->tipo === 'pianificazione';
         $priority = $isPianificazione ? 'low' : ($request->priority ?? 'low');
         $isFixedDate = ! $isPianificazione && $priority === 'fixed_date';
+        $assignType = $request->input('assignment_type', 'specializzazione');
+        $isDirectAssign = $assignType === 'diretto';
 
         $previousAssignedUserId = $intervention->assigned_user_id;
 
         $equipmentId = $isPianificazione ? $request->equipment_id : null;
-        $areaId = ! $isPianificazione ? $request->area_id : null;
-        $deptId = ! $isPianificazione ? $request->department_id : null;
+        $areaId = ! $isPianificazione ? ($request->area_id ?: null) : null;
+        $deptId = ! $isPianificazione ? ($request->department_id ?: null) : null;
 
         $title = $request->filled('title')
             ? $request->title
@@ -207,14 +222,25 @@ class InterventionController extends Controller
                 'description' => $request->description,
             ]);
 
+        $maintenanceRoleId = (! $isDirectAssign && $request->filled('maintenance_role_id'))
+            ? $request->maintenance_role_id
+            : null;
+
+        $assignedUserId = null;
+        if ($isPianificazione && $isDirectAssign) {
+            $assignedUserId = $request->assigned_user_id ?: null;
+        } elseif (! $isPianificazione && $isDirectAssign && Auth::user()->role === 'admin') {
+            $assignedUserId = $request->assigned_user_id ?: null;
+        }
+
         $data = [
             'tipo' => $request->tipo,
             'equipment_id' => $equipmentId,
             'component_id' => $isPianificazione ? ($request->component_id ?: null) : null,
-            'maintenance_role_id' => $request->filled('maintenance_role_id') ? $request->maintenance_role_id : null,
+            'maintenance_role_id' => $maintenanceRoleId,
             'area_id' => $areaId,
             'department_id' => $deptId,
-            'assigned_user_id' => $isPianificazione ? ($request->assigned_user_id ?: null) : null,
+            'assigned_user_id' => $assignedUserId,
             'title' => $title,
             'description' => $request->description,
             'scheduled_date' => ($isPianificazione || $isFixedDate) ? ($request->scheduled_date ?: null) : null,

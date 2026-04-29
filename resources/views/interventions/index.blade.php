@@ -66,7 +66,9 @@
                                     <small class="text-muted">{{ $intervention->equipment->department->area->name ?? '-' }} / {{ $intervention->equipment->department->name ?? '-' }}</small><br>
                                     <span class="badge bg-secondary">{{ $intervention->equipment->name }}</span>
                                 @else
-                                    <small class="text-muted">{{ $intervention->area->name ?? '-' }} / {{ $intervention->department->name ?? '-' }}</small>
+                                    <small class="text-muted">
+                                        {{ $intervention->area->name ?? '-' }}@if($intervention->department) / {{ $intervention->department->name }}@else <em class="text-muted">(tutta l'area)</em>@endif
+                                    </small>
                                 @endif
                             </td>
                             <td>

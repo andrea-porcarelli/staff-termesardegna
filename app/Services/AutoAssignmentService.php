@@ -135,16 +135,25 @@ class AutoAssignmentService
     {
         $deptId = $intervention->department_id
             ?? $intervention->equipment?->department_id;
+        $areaId = $intervention->area_id
+            ?? $intervention->equipment?->department?->area_id;
 
         $query = User::where('role', 'manutentore')
             ->where('active', true)
             ->whereHas('maintenanceRoles', fn ($q) => $q->where('maintenance_roles.id', $intervention->maintenance_role_id)
             );
 
-        // Zona compatibile
+        // Zona compatibile: se è specificato un department, filtra per zona,
+        // altrimenti se c'è solo l'area filtra per qualsiasi zona dell'area
+        // (oppure assegnazione diretta dell'utente all'area).
         if ($deptId) {
             $query->whereHas('departments', fn ($q) => $q->where('departments.id', $deptId)
             );
+        } elseif ($areaId) {
+            $query->where(function ($q) use ($areaId) {
+                $q->whereHas('departments', fn ($qq) => $qq->where('departments.area_id', $areaId))
+                    ->orWhereHas('areas', fn ($qq) => $qq->where('areas.id', $areaId));
+            });
         }
 
         // Escludi sempre chi è in_progress

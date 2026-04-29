@@ -58,10 +58,13 @@ class InterventionRequest extends FormRequest
                 if (! $this->filled('area_id')) {
                     $validator->errors()->add('area_id', "Seleziona un'area.");
                 }
-                if (! $this->filled('department_id')) {
-                    $validator->errors()->add('department_id', 'Seleziona una zona.');
-                }
-                if (! $this->filled('maintenance_role_id')) {
+                $assignType = $this->input('assignment_type', 'specializzazione');
+                $isAdmin = Auth::user()?->role === 'admin';
+                if ($assignType === 'diretto' && $isAdmin) {
+                    if (! $this->filled('assigned_user_id')) {
+                        $validator->errors()->add('assigned_user_id', 'Seleziona un manutentore.');
+                    }
+                } elseif (! $this->filled('maintenance_role_id')) {
                     $validator->errors()->add('maintenance_role_id', 'Seleziona una specializzazione.');
                 }
                 if ($this->input('priority') === 'fixed_date' && ! $this->filled('scheduled_date')) {
