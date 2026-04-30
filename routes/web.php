@@ -63,6 +63,14 @@ Route::prefix('m')->middleware(['auth', 'mobile'])->name('m.')->group(function (
     Route::get('/tickets/{intervention}/json', [MInterventionController::class, 'showJson'])
         ->name('tickets.json');
 
+    // Modifica/cancellazione ticket aperto da chi lo ha creato (finché non preso in carico)
+    Route::get('/tickets/{intervention}/edit', [MInterventionController::class, 'edit'])
+        ->name('tickets.edit');
+    Route::put('/tickets/{intervention}', [MInterventionController::class, 'update'])
+        ->name('tickets.update');
+    Route::delete('/tickets/{intervention}', [MInterventionController::class, 'destroy'])
+        ->name('tickets.destroy');
+
     // Azioni sul ticket
     Route::get('/interventions/{intervention}/candidates', [MInterventionController::class, 'candidatesJson'])
         ->name('interventions.candidates');

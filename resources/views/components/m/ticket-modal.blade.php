@@ -365,6 +365,33 @@
                     </div>
                 </template>
 
+                {{-- Azioni del creatore: visibili solo finché il ticket non è stato preso in carico. --}}
+                <template x-if="ticket?.actions?.can_edit || ticket?.actions?.can_delete">
+                    <div class="grid gap-2"
+                         :class="(ticket?.actions?.can_edit && ticket?.actions?.can_delete) ? 'grid-cols-2' : 'grid-cols-1'">
+                        <template x-if="ticket?.actions?.can_edit">
+                            <a :href="ticket.urls.edit"
+                               class="h-11 rounded-xl bg-gray-100 text-gray-800 font-semibold text-sm active:bg-gray-200 flex items-center justify-center gap-1.5">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M11 5h-7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                                </svg>
+                                Modifica
+                            </a>
+                        </template>
+                        <template x-if="ticket?.actions?.can_delete">
+                            <button type="button"
+                                    @click="deleteTicket()"
+                                    :disabled="submitting"
+                                    class="h-11 rounded-xl bg-red-50 text-red-700 font-semibold text-sm border border-red-200 active:bg-red-100 disabled:opacity-50 flex items-center justify-center gap-1.5">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"/>
+                                </svg>
+                                Elimina
+                            </button>
+                        </template>
+                    </div>
+                </template>
+
             </div>
         </div>
     </div>
@@ -622,6 +649,35 @@
                             this.$store.toasts.push(payload.message || 'Errore durante l\'operazione.', 'error');
                         }
                     } catch (e) {
+                        this.$store.toasts.push('Errore di rete.', 'error');
+                    } finally {
+                        this.submitting = false;
+                    }
+                },
+
+                async deleteTicket() {
+                    if (!this.ticket || this.submitting) return;
+                    if (!confirm('Eliminare definitivamente questo ticket?')) return;
+                    this.submitting = true;
+                    const body = new FormData();
+                    body.append('_token', this.csrf);
+                    body.append('_method', 'DELETE');
+                    try {
+                        const res = await fetch(this.ticket.urls.destroy, {
+                            method: 'POST',
+                            body,
+                            credentials: 'same-origin',
+                            headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': this.csrf },
+                        });
+                        const payload = await res.json().catch(() => ({}));
+                        if (res.ok && payload.ok) {
+                            this.$store.toasts.push(payload.message || 'Ticket eliminato.', 'success');
+                            this.close();
+                            window.location.href = payload.redirect || '/m/tickets';
+                        } else {
+                            this.$store.toasts.push(payload.message || 'Impossibile eliminare il ticket.', 'error');
+                        }
+                    } catch (_) {
                         this.$store.toasts.push('Errore di rete.', 'error');
                     } finally {
                         this.submitting = false;

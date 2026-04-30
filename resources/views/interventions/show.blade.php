@@ -56,9 +56,27 @@
                         <i class="bi bi-pencil me-2"></i>Modifica
                     </a>
                 @endif
-                <a href="{{ route('interventions.index') }}" class="btn btn-secondary btn-sm">
-                    <i class="bi bi-arrow-left me-2"></i>Torna alla Lista
-                </a>
+                @if($intervention->canBeDeletedBy(auth()->user()))
+                    <form action="{{ route('interventions.destroy', $intervention) }}"
+                          method="POST"
+                          class="d-inline"
+                          onsubmit="return confirm('Sei sicuro di voler eliminare questo ticket?');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger btn-sm">
+                            <i class="bi bi-trash me-2"></i>Elimina
+                        </button>
+                    </form>
+                @endif
+                @if(auth()->user()->role === 'manutentore')
+                    <a href="{{ route('m.tickets.index') }}" class="btn btn-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-2"></i>Torna alla Lista
+                    </a>
+                @else
+                    <a href="{{ route('interventions.index') }}" class="btn btn-secondary btn-sm">
+                        <i class="bi bi-arrow-left me-2"></i>Torna alla Lista
+                    </a>
+                @endif
             </div>
         </div>
         <div class="card-body">

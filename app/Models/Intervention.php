@@ -44,8 +44,8 @@ class Intervention extends Model
     }
 
     /**
-     * Regole di modifica: admin sempre, operator solo sul proprio ticket prima
-     * della presa in carico, manutentore mai.
+     * Regole di modifica: admin sempre, chi ha creato il ticket finché non è
+     * stato preso in carico (qualunque sia il suo ruolo).
      */
     public function canBeEditedBy(?User $user): bool
     {
@@ -55,11 +55,17 @@ class Intervention extends Model
         if ($user->role === 'admin') {
             return true;
         }
-        if ($user->role === 'operator') {
-            return $this->created_by === $user->id && $this->preso_in_carico_at === null;
-        }
 
-        return false;
+        return $this->created_by === $user->id && $this->preso_in_carico_at === null;
+    }
+
+    /**
+     * Regole di cancellazione: stesse della modifica — admin sempre, creatore
+     * fino a quando il ticket non è preso in carico.
+     */
+    public function canBeDeletedBy(?User $user): bool
+    {
+        return $this->canBeEditedBy($user);
     }
 
     /**

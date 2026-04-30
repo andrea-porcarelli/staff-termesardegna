@@ -45,6 +45,10 @@ class HomeController extends Controller
                 // Miei assegnati
                 $q->where('assigned_user_id', $user->id);
 
+                // Chi ha aperto il ticket lo vede sempre, anche dopo che è stato
+                // preso in carico da un altro manutentore.
+                $q->orWhere('created_by', $user->id);
+
                 // Collaborazioni accettate
                 $q->orWhereHas('collaborations', fn ($c) => $c
                     ->where('user_id', $user->id)

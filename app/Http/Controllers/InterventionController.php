@@ -270,19 +270,26 @@ class InterventionController extends Controller
             ]);
         }
 
-        return redirect()->route('interventions.index')
+        $listRoute = Auth::user()->role === 'manutentore' ? 'm.tickets.index' : 'interventions.index';
+
+        return redirect()->route($listRoute)
             ->with('success', 'Ticket aggiornato con successo!');
     }
 
     public function destroy(Intervention $intervention): RedirectResponse
     {
+        $user = Auth::user();
+        abort_unless($intervention->canBeDeletedBy($user), 403);
+
         InterventionActivityLogger::log($intervention, InterventionLogActions::CANCELLED, [
-            'reason' => 'deleted_by_admin',
+            'reason' => $user->role === 'admin' ? 'deleted_by_admin' : 'deleted_by_creator',
         ]);
 
         $intervention->delete();
 
-        return redirect()->route('interventions.index')
+        $listRoute = $user->role === 'manutentore' ? 'm.tickets.index' : 'interventions.index';
+
+        return redirect()->route($listRoute)
             ->with('success', 'Ticket eliminato con successo!');
     }
 

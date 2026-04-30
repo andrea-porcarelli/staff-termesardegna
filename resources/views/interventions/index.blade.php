@@ -137,16 +137,18 @@
                                         <i class="bi bi-pencil"></i>
                                     </a>
                                 @endif
-                                <form action="{{ route('interventions.destroy', $intervention) }}"
-                                      method="POST"
-                                      class="d-inline"
-                                      onsubmit="return confirm('Sei sicuro di voler eliminare questo ticket?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-danger btn-sm" title="Elimina">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
+                                @if($intervention->canBeDeletedBy(auth()->user()))
+                                    <form action="{{ route('interventions.destroy', $intervention) }}"
+                                          method="POST"
+                                          class="d-inline"
+                                          onsubmit="return confirm('Sei sicuro di voler eliminare questo ticket?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-danger btn-sm" title="Elimina">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @empty

@@ -64,14 +64,22 @@ class InterventionController extends Controller
             ->where(function ($q) use ($user, $deptIds) {
                 $q->where('assigned_user_id', $user->id);
 
+                // Chi ha aperto il ticket lo vede sempre.
+                $q->orWhere('created_by', $user->id);
+
                 $q->orWhereHas('collaborations', fn ($c) => $c
                     ->where('user_id', $user->id)
                     ->where('status', InterventionCollaboration::STATUS_ACCEPTED));
 
                 if ($deptIds->isNotEmpty()) {
+                    // Disponibili in zona: solo ticket non ancora assegnati,
+                    // così non si vedono i lavori di altri manutentori.
                     $q->orWhere(function ($q2) use ($deptIds) {
-                        $q2->whereIn('department_id', $deptIds)
-                            ->orWhereHas('equipment', fn ($eq) => $eq->whereIn('department_id', $deptIds));
+                        $q2->whereNull('assigned_user_id')
+                            ->where(function ($q3) use ($deptIds) {
+                                $q3->whereIn('department_id', $deptIds)
+                                    ->orWhereHas('equipment', fn ($eq) => $eq->whereIn('department_id', $deptIds));
+                            });
                     });
                 }
             });
@@ -110,12 +118,13 @@ class InterventionController extends Controller
 
             case 'completed':
                 // "Chiusi" = solo i ticket su cui l'utente è davvero coinvolto:
-                // assegnatario, collaboratore accettato o autore di un rapportino.
+                // assegnatario, creatore, collaboratore accettato o autore di un rapportino.
                 // Senza questo scope un manutentore vedrebbe tutti i chiusi del suo
                 // dipartimento (e per via del reject finale, non vedrebbe i propri).
                 $query->where('status', 'completed')
                     ->where(function ($q) use ($user) {
                         $q->where('assigned_user_id', $user->id)
+                            ->orWhere('created_by', $user->id)
                             ->orWhereHas('collaborations', fn ($c) => $c
                                 ->where('user_id', $user->id)
                                 ->where('status', InterventionCollaboration::STATUS_ACCEPTED))
@@ -407,6 +416,8 @@ class InterventionController extends Controller
                 'collaboration' => route('m.interventions.collaboration', $intervention),
                 'candidates' => route('m.interventions.candidates', $intervention),
                 'report_store' => route('m.reports.store', $intervention),
+                'edit' => route('m.tickets.edit', $intervention),
+                'destroy' => route('m.tickets.destroy', $intervention),
             ],
             'actions' => [
                 'can_take_charge' => ($unassigned || $mine)
@@ -417,6 +428,8 @@ class InterventionController extends Controller
                                         && ! $iHaveFinal,
                 'can_transfer' => $mine && ! $iHaveFinal && $intervention->preso_in_carico_at !== null && ! in_array($intervention->status, ['completed', 'cancelled']),
                 'can_collaborate' => $mine && ! $iHaveFinal && $intervention->preso_in_carico_at !== null && ! in_array($intervention->status, ['completed', 'cancelled']),
+                'can_edit' => $intervention->canBeEditedBy($me),
+                'can_delete' => $intervention->canBeDeletedBy($me),
             ],
         ]);
     }
@@ -645,6 +658,146 @@ class InterventionController extends Controller
         return response()->json([
             'ok' => true,
             'message' => 'Ticket rinviato a domani.',
+        ]);
+    }
+
+    public function edit(Intervention $intervention): View
+    {
+        $user = Auth::user();
+        abort_unless($intervention->canBeEditedBy($user), 403);
+
+        [$quickAreas, $quickDepartments, $quickEquipments, $quickMaintenanceRoles, $quickManutentori]
+            = HomeController::quickOpenScope($user);
+
+        return view('manutentore.tickets.edit', [
+            'intervention' => $intervention,
+            'quickAreas' => $quickAreas,
+            'quickDepartments' => $quickDepartments,
+            'quickEquipments' => $quickEquipments,
+            'quickMaintenanceRoles' => $quickMaintenanceRoles,
+            'quickManutentori' => $quickManutentori,
+        ]);
+    }
+
+    public function update(Request $request, Intervention $intervention): RedirectResponse
+    {
+        $user = Auth::user();
+        abort_unless($intervention->canBeEditedBy($user), 403);
+
+        $userDeptIds = $user->departments()->pluck('departments.id')->all();
+        $userAreaIds = $user->assignedAreaIds()->all();
+        $isManutentoreCreator = $user->role === 'manutentore';
+
+        $rules = [
+            'priority' => 'required|in:high,low,fixed_date',
+            'scheduled_date' => 'nullable|date|after_or_equal:today|required_if:priority,fixed_date',
+            'scheduled_start_time' => 'nullable|date_format:H:i',
+            'area_id' => ['nullable', \Illuminate\Validation\Rule::in($userAreaIds)],
+            'department_id' => ['nullable', \Illuminate\Validation\Rule::in($userDeptIds)],
+            'equipment_id' => [
+                'nullable',
+                \Illuminate\Validation\Rule::exists('equipments', 'id')
+                    ->where('active', true)
+                    ->whereIn('department_id', $userDeptIds ?: [-1]),
+            ],
+            'title' => 'nullable|string|max:255',
+            'description' => 'nullable|string|max:2000',
+        ];
+
+        if ($isManutentoreCreator) {
+            $rules['assigned_user_id'] = [
+                'required',
+                \Illuminate\Validation\Rule::exists('users', 'id')
+                    ->where('role', 'manutentore')
+                    ->where('active', true),
+            ];
+        } else {
+            $rules['maintenance_role_id'] = 'required|exists:maintenance_roles,id';
+        }
+
+        $request->validate($rules, [
+            'maintenance_role_id.required' => 'Seleziona una specializzazione.',
+            'assigned_user_id.required' => 'Seleziona un manutentore.',
+            'assigned_user_id.exists' => 'Manutentore non valido.',
+            'priority.required' => 'Seleziona una priorità.',
+            'priority.in' => 'Priorità non valida.',
+            'scheduled_date.required_if' => 'Seleziona una data per il ticket a data fissa.',
+            'scheduled_date.after_or_equal' => 'La data deve essere oggi o successiva.',
+            'area_id.in' => 'Area non disponibile.',
+            'department_id.in' => 'Zona non disponibile.',
+            'equipment_id.exists' => 'Impianto non disponibile.',
+        ]);
+
+        $equipmentId = $request->equipment_id ?: null;
+        $areaId = $request->area_id ?: null;
+        $deptId = $request->department_id ?: null;
+        $equipment = null;
+
+        if ($equipmentId) {
+            $equipment = \App\Models\Equipment::with('department')->find($equipmentId);
+            if ($equipment && $equipment->department) {
+                $deptId = $equipment->department_id;
+                $areaId = $equipment->department->area_id;
+            }
+        }
+
+        $area = $areaId ? Area::find($areaId) : null;
+        $department = $deptId ? Department::find($deptId) : null;
+
+        $title = $request->filled('title')
+            ? $request->title
+            : Intervention::generateFallbackTitle([
+                'equipment' => $equipment,
+                'area' => $area,
+                'department' => $department,
+                'description' => $request->description,
+            ]);
+
+        $isFixedDate = $request->priority === 'fixed_date';
+
+        $intervention->update([
+            'area_id' => $areaId,
+            'department_id' => $deptId,
+            'equipment_id' => $equipmentId,
+            'maintenance_role_id' => $isManutentoreCreator ? null : $request->maintenance_role_id,
+            'assigned_user_id' => $isManutentoreCreator ? $request->assigned_user_id : null,
+            'title' => $title,
+            'description' => $request->description,
+            'scheduled_date' => $isFixedDate ? $request->scheduled_date : today(),
+            'scheduled_start_time' => $isFixedDate ? ($request->scheduled_start_time ?: null) : null,
+            'priority' => $request->priority,
+        ]);
+
+        InterventionActivityLogger::log($intervention, InterventionLogActions::UPDATED, [
+            'edited_by_creator' => true,
+        ]);
+
+        return redirect()
+            ->route('m.tickets.index')
+            ->with('success', 'Ticket aggiornato.');
+    }
+
+    public function destroy(Intervention $intervention): JsonResponse
+    {
+        $user = Auth::user();
+
+        if (! $intervention->canBeDeletedBy($user)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Non puoi eliminare questo ticket.',
+            ], 403);
+        }
+
+        InterventionActivityLogger::log($intervention, InterventionLogActions::CANCELLED, [
+            'reason' => 'deleted_by_creator',
+        ]);
+
+        $intervention->delete();
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Ticket eliminato.',
+            'redirect' => route('m.tickets.index'),
         ]);
     }
 
