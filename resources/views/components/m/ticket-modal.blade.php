@@ -71,12 +71,16 @@
                         </div>
                         <div class="grid grid-cols-2 gap-2 mt-2">
                             <button @click="respondCollab('accept')"
-                                    class="h-10 rounded-lg bg-emerald-600 text-white font-semibold text-sm active:bg-emerald-700">
-                                Accetta
+                                    :disabled="submitting"
+                                    class="h-10 rounded-lg bg-emerald-600 text-white font-semibold text-sm active:bg-emerald-700 disabled:opacity-50">
+                                <span x-show="!submitting">Accetta</span>
+                                <span x-show="submitting">Attendere…</span>
                             </button>
                             <button @click="respondCollab('decline')"
-                                    class="h-10 rounded-lg bg-white border border-gray-300 text-gray-700 font-semibold text-sm active:bg-gray-50">
-                                Rifiuta
+                                    :disabled="submitting"
+                                    class="h-10 rounded-lg bg-white border border-gray-300 text-gray-700 font-semibold text-sm active:bg-gray-50 disabled:opacity-50">
+                                <span x-show="!submitting">Rifiuta</span>
+                                <span x-show="submitting">Attendere…</span>
                             </button>
                         </div>
                     </div>
@@ -685,11 +689,12 @@
                 },
 
                 async respondCollab(decision) {
-                    if (!this.ticket?.pending_request) return;
+                    if (!this.ticket?.pending_request || this.submitting) return;
                     const url = this.ticket.pending_request.respond_url;
                     const body = new FormData();
                     body.append('_token', this.csrf);
                     body.append('decision', decision);
+                    this.submitting = true;
                     try {
                         const res = await fetch(url, {
                             method: 'POST',
@@ -697,8 +702,9 @@
                             credentials: 'same-origin',
                             headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': this.csrf },
                         });
-                        const payload = await res.json();
+                        const payload = await res.json().catch(() => ({}));
                         if (res.ok && payload.ok) {
+                            this.ticket.pending_request = null;
                             this.$store.toasts.push(payload.message, 'success');
                             await this.refresh();
                             window.dispatchEvent(new CustomEvent('notifications-refresh'));
@@ -707,6 +713,8 @@
                         }
                     } catch (_) {
                         this.$store.toasts.push('Errore di rete.', 'error');
+                    } finally {
+                        this.submitting = false;
                     }
                 },
 
@@ -750,6 +758,10 @@
                     }
                     if (ev.event === 'collaboration_revoked') {
                         return `Richiesta di collaborazione a <span class="font-medium">${ev.user_name}</span> revocata`;
+                    }
+                    if (ev.event === 'collaboration_pending') {
+                        const who = ev.requested_by ? ` (richiesta da ${ev.requested_by})` : '';
+                        return `Richiesta di collaborazione a <span class="font-medium">${ev.user_name}</span> <span class="text-amber-700">in attesa di risposta</span>${who}`;
                     }
                     if (ev.event === 'report_completed') {
                         const dur = ev.duration ? ` <span class="text-gray-500">(${ev.duration})</span>` : '';
