@@ -139,29 +139,12 @@ class HomeController extends Controller
         [$quickAreas, $quickDepartments, $quickEquipments, $quickMaintenanceRoles, $quickManutentori]
             = self::quickOpenScope($user);
 
-        // Operatore: ticket aperti da lui ancora attivi (aperti o presi in carico).
-        // I chiusi vivono solo nella lista ticket.
-        $miei_aperti = $user->role === 'operator'
-            ? Intervention::with([
-                'equipment.department.area', 'area', 'department',
-                'maintenanceRole', 'assignedUser', 'creator:id,name',
-                'activeCollaborations.user:id,name',
-                'activeReschedules.user:id,name',
-            ])
-                ->withCount('transfers')
-                ->where('created_by', $user->id)
-                ->whereIn('status', ['open', 'in_progress'])
-                ->orderByDesc('id')
-                ->get()
-            : collect();
-
         return view('manutentore.home', compact(
             'user',
             'scaduti',
             'altaPriorita',
             'pianificati',
             'bassaPriorita',
-            'miei_aperti',
             'quickAreas',
             'quickDepartments',
             'quickEquipments',

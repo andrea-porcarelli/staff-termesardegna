@@ -51,26 +51,6 @@
             @endif
         </div>
 
-        {{-- ─── Operatore: ticket aperti / in carico ───────────────── --}}
-        @if (! $isManutentore && $miei_aperti->isNotEmpty())
-            <section>
-                <div class="flex items-center justify-between mb-2">
-                    <h3 class="text-sm font-semibold uppercase tracking-wide text-brand-700 flex items-center gap-1.5">
-                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/>
-                        </svg>
-                        I miei ticket
-                    </h3>
-                    <span class="text-xs text-gray-400">{{ $miei_aperti->count() }}</span>
-                </div>
-                <div class="space-y-3">
-                    @foreach ($miei_aperti as $intervention)
-                        @include('manutentore.partials.intervention-card', ['intervention' => $intervention])
-                    @endforeach
-                </div>
-            </section>
-        @endif
-
         {{-- ─── 1. SCADUTI (tutti) ─────────────────────────────────── --}}
         @if ($scaduti->isNotEmpty())
             <section>

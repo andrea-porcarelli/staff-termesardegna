@@ -49,11 +49,15 @@
 
             <div class="px-4 py-4 space-y-3 overflow-y-auto">
 
-                {{-- Titolo (facoltativo, fallback automatico) --}}
+                {{-- Titolo: obbligatorio per operatore, facoltativo (fallback) per manutentore creatore --}}
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Titolo</label>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                        Titolo
+                        @unless ($isManutentoreCreator) <span class="text-red-500">*</span> @endunless
+                    </label>
                     <input type="text" name="title" maxlength="255"
-                           placeholder="Titolo breve (facoltativo)"
+                           placeholder="{{ $isManutentoreCreator ? 'Titolo breve (facoltativo)' : 'Titolo breve' }}"
+                           @unless ($isManutentoreCreator) required @endunless
                            class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
                 </div>
 
@@ -120,24 +124,36 @@
                     </div>
                 </template>
 
-                {{-- Area (facoltativa) --}}
+                {{-- Area: obbligatoria per operatore, facoltativa per manutentore creatore --}}
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Area</label>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                        Area
+                        @unless ($isManutentoreCreator) <span class="text-red-500">*</span> @endunless
+                    </label>
                     <select name="area_id" x-model="areaId" @change="onAreaChange()"
+                            @unless ($isManutentoreCreator) required @endunless
                             class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
-                        <option value="">Tutte le mie aree</option>
+                        <option value="">{{ $isManutentoreCreator ? 'Tutte le mie aree' : 'Seleziona area' }}</option>
                         @foreach ($areas as $area)
                             <option value="{{ $area->id }}">{{ $area->name }}</option>
                         @endforeach
                     </select>
                 </div>
 
-                {{-- Zona (facoltativa, filtrata per area) --}}
+                {{-- Zona: obbligatoria per operatore, facoltativa per manutentore creatore --}}
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Zona</label>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+                        Zona
+                        @unless ($isManutentoreCreator) <span class="text-red-500">*</span> @endunless
+                    </label>
                     <select name="department_id" x-model="deptId" @change="onDeptChange()"
+                            @unless ($isManutentoreCreator) required @endunless
                             class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
-                        <option value="" x-text="areaId ? 'Tutte le zone dell\'area' : 'Tutte le mie zone'"></option>
+                        @if ($isManutentoreCreator)
+                            <option value="" x-text="areaId ? 'Tutte le zone dell\'area' : 'Tutte le mie zone'"></option>
+                        @else
+                            <option value="">Seleziona zona</option>
+                        @endif
                         <template x-for="d in filteredDepts" :key="d.id">
                             <option :value="d.id" x-text="d.name"></option>
                         </template>

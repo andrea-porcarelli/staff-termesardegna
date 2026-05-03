@@ -812,15 +812,15 @@ class InterventionController extends Controller
             'priority' => 'required|in:high,low,fixed_date',
             'scheduled_date' => 'nullable|date|after_or_equal:today|required_if:priority,fixed_date',
             'scheduled_start_time' => 'nullable|date_format:H:i',
-            'area_id' => ['nullable', \Illuminate\Validation\Rule::in($userAreaIds)],
-            'department_id' => ['nullable', \Illuminate\Validation\Rule::in($userDeptIds)],
+            'area_id' => [$isManutentoreCreator ? 'nullable' : 'required', \Illuminate\Validation\Rule::in($userAreaIds)],
+            'department_id' => [$isManutentoreCreator ? 'nullable' : 'required', \Illuminate\Validation\Rule::in($userDeptIds)],
             'equipment_id' => [
                 'nullable',
                 \Illuminate\Validation\Rule::exists('equipments', 'id')
                     ->where('active', true)
                     ->whereIn('department_id', $userDeptIds ?: [-1]),
             ],
-            'title' => 'nullable|string|max:255',
+            'title' => [$isManutentoreCreator ? 'nullable' : 'required', 'string', 'max:255'],
             'description' => 'nullable|string|max:2000',
         ];
 
@@ -845,7 +845,10 @@ class InterventionController extends Controller
             'priority.in' => 'Priorità non valida.',
             'scheduled_date.required_if' => 'Seleziona una data per il ticket a data fissa.',
             'scheduled_date.after_or_equal' => 'La data deve essere oggi o successiva.',
+            'title.required' => 'Inserisci il titolo del ticket.',
+            'area_id.required' => 'Seleziona un\'area.',
             'area_id.in' => 'Area non disponibile.',
+            'department_id.required' => 'Seleziona una zona.',
             'department_id.in' => 'Zona non disponibile.',
             'equipment_id.exists' => 'Impianto non disponibile.',
         ]);
