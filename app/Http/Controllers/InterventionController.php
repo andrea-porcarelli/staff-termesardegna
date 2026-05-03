@@ -23,9 +23,31 @@ class InterventionController extends Controller
 {
     public function index(Request $request): View
     {
-        abort_if(Auth::user()->role === 'manutentore', 403);
+        $user = Auth::user();
+        abort_if($user->role === 'manutentore', 403);
+
         $query = Intervention::with(['equipment.department.area', 'area', 'department', 'assignedUser', 'creator:id,name'])
             ->orderBy('scheduled_date', 'desc');
+
+        // Operatore: vede solo i ticket che ricadono nelle sue aree/zone (e quelli che ha aperto lui).
+        if ($user->role === 'operator') {
+            $deptIds = $user->departments()->pluck('departments.id')->all();
+            $areaIds = $user->assignedAreaIds()->all();
+
+            $query->where(function ($q) use ($user, $deptIds, $areaIds) {
+                // Sempre i ticket aperti da lui (rete di sicurezza per casi fuori perimetro).
+                $q->where('created_by', $user->id);
+
+                if (! empty($deptIds)) {
+                    $q->orWhereIn('department_id', $deptIds);
+                    $q->orWhereHas('equipment', fn ($eq) => $eq->whereIn('department_id', $deptIds));
+                }
+
+                if (! empty($areaIds)) {
+                    $q->orWhereIn('area_id', $areaIds);
+                }
+            });
+        }
 
         if ($request->filled('tipo')) {
             $query->where('tipo', $request->tipo);

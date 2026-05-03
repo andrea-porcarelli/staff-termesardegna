@@ -94,7 +94,13 @@
                             </td>
                             <td>
                                 @if(!empty($log->metadata))
-                                    <code class="small text-muted">{{ json_encode($log->metadata, JSON_UNESCAPED_UNICODE) }}</code>
+                                    @if(!empty($log->metadata['reason']))
+                                        <div class="small mb-1"><i class="bi bi-info-circle me-1 text-info"></i>{{ $log->metadata['reason'] }}</div>
+                                    @endif
+                                    <details class="small text-muted">
+                                        <summary class="text-muted" style="cursor:pointer;">dettagli</summary>
+                                        <code class="d-block mt-1">{{ json_encode($log->metadata, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) }}</code>
+                                    </details>
                                 @else
                                     <span class="text-muted">-</span>
                                 @endif

@@ -8,6 +8,8 @@ class InterventionLogActions
 
     public const AUTO_ASSIGNED = 'auto_assigned';
 
+    public const AUTO_ASSIGNMENT_FAILED = 'auto_assignment_failed';
+
     public const MANUALLY_ASSIGNED = 'manually_assigned';
 
     public const TAKEN_IN_CHARGE = 'taken_in_charge';
@@ -41,6 +43,7 @@ class InterventionLogActions
     public const LABELS = [
         self::CREATED => 'Creato',
         self::AUTO_ASSIGNED => 'Auto-assegnato',
+        self::AUTO_ASSIGNMENT_FAILED => 'Auto-assegnazione fallita',
         self::MANUALLY_ASSIGNED => 'Assegnato manualmente',
         self::TAKEN_IN_CHARGE => 'Preso in carico',
         self::UPDATED => 'Modificato',

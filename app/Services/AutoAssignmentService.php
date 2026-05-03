@@ -51,60 +51,212 @@ class AutoAssignmentService
             return ['status' => 'skipped', 'user' => null, 'shift_start' => null];
         }
 
+        $intervention->loadMissing(['maintenanceRole', 'area', 'department', 'equipment.department.area']);
+
         $isLow = $intervention->priority === 'low';
+        $scopeContext = $this->scopeContext($intervention);
 
-        // Candidati compatibili e disponibili
-        $candidates = $this->loadCandidates($intervention, $isLow);
+        // Tutti i manutentori compatibili per specializzazione + zona (senza esclusione impegno)
+        $compatible = $this->loadCompatible($intervention);
 
-        if ($candidates->isEmpty()) {
+        if ($compatible->isEmpty()) {
+            $this->logFailure($intervention, $scopeContext, $this->reasonNoCompatible($scopeContext));
+
+            return ['status' => 'no_match', 'user' => null, 'shift_start' => null];
+        }
+
+        // Filtra chi è impegnato (sempre in_progress, e planned se priority > low)
+        $busyStatuses = $isLow ? ['in_progress'] : ['in_progress', 'planned'];
+        [$eligible, $excludedBusy] = $this->splitByAvailability($compatible, $busyStatuses);
+
+        $baseContext = $scopeContext + [
+            'compatible_count' => $compatible->count(),
+            'eligible_count' => $eligible->count(),
+            'excluded_busy' => $excludedBusy,
+            'busy_statuses' => $busyStatuses,
+        ];
+
+        if ($eligible->isEmpty()) {
+            $this->logFailure($intervention, $baseContext, $this->reasonAllBusy($baseContext));
+
             return ['status' => 'no_match', 'user' => null, 'shift_start' => null];
         }
 
         if (self::SHIFT_FILTERING_ENABLED) {
             [$windowStart, $windowEnd] = $this->buildWindow($intervention);
 
-            // 1. Cerca qualcuno in turno nella finestra
-            $inShift = $candidates->filter(
+            $inShift = $eligible->filter(
                 fn (User $u) => $this->hasShiftInWindow($u, $windowStart, $windowEnd)
             );
 
             if ($inShift->isNotEmpty()) {
-                $user = $this->pickBest($inShift, $intervention->maintenance_role_id);
+                [$user, $pickContext] = $this->pickBestWithContext($inShift, $intervention->maintenance_role_id);
                 $intervention->update(['assigned_user_id' => $user->id]);
-                $this->logAutoAssigned($intervention, $user, 'assigned');
+                $this->logAutoAssigned($intervention, $user, 'assigned',
+                    $baseContext + $pickContext + ['selection_path' => 'in_shift'],
+                    $this->reasonAssigned($baseContext, $pickContext, 'in_shift', $windowStart, $windowEnd));
 
                 return ['status' => 'assigned', 'user' => $user, 'shift_start' => null];
             }
 
-            // 2. Nessuno in turno: cerca il primo turno successivo alla finestra
-            $next = $this->findNextAvailable($candidates, $windowEnd, $intervention->maintenance_role_id);
+            $next = $this->findNextAvailable($eligible, $windowEnd, $intervention->maintenance_role_id);
 
             if ($next) {
-                $intervention->update(['assigned_user_id' => $next['user']->id]);
-                $this->logAutoAssigned($intervention, $next['user'], 'next_shift', $next['shift_start']);
+                [$user, $pickContext] = $this->pickBestWithContext(collect([$next['user']]), $intervention->maintenance_role_id);
+                $intervention->update(['assigned_user_id' => $user->id]);
+                $this->logAutoAssigned($intervention, $user, 'next_shift',
+                    $baseContext + $pickContext + ['selection_path' => 'next_shift'],
+                    $this->reasonNextShift($baseContext, $pickContext, $next['shift_start']),
+                    $next['shift_start']);
 
-                return ['status' => 'next_shift', 'user' => $next['user'], 'shift_start' => $next['shift_start']];
+                return ['status' => 'next_shift', 'user' => $user, 'shift_start' => $next['shift_start']];
             }
+
+            $this->logFailure($intervention, $baseContext, 'Filtro turni attivo: nessun candidato eligibile ha turni nella finestra né turni futuri.');
 
             return ['status' => 'no_match', 'user' => null, 'shift_start' => null];
         }
 
         // ── Filtro turni DISATTIVATO: assegna direttamente al miglior candidato ──
-        $user = $this->pickBest($candidates, $intervention->maintenance_role_id);
+        [$user, $pickContext] = $this->pickBestWithContext($eligible, $intervention->maintenance_role_id);
         $intervention->update(['assigned_user_id' => $user->id]);
-        $this->logAutoAssigned($intervention, $user, 'assigned');
+        $this->logAutoAssigned($intervention, $user, 'assigned',
+            $baseContext + $pickContext + ['selection_path' => 'best_level'],
+            $this->reasonAssigned($baseContext, $pickContext, 'best_level'));
 
         return ['status' => 'assigned', 'user' => $user, 'shift_start' => null];
     }
 
-    private function logAutoAssigned(Intervention $intervention, User $user, string $status, ?Carbon $shiftStart = null): void
+    /**
+     * Logga l'esito positivo dell'auto-assegnazione.
+     */
+    private function logAutoAssigned(Intervention $intervention, User $user, string $status, array $context, string $reason, ?Carbon $shiftStart = null): void
     {
-        \App\Services\InterventionActivityLogger::system($intervention, InterventionLogActions::AUTO_ASSIGNED, array_filter([
+        InterventionActivityLogger::system($intervention, InterventionLogActions::AUTO_ASSIGNED, array_filter([
+            'reason' => $reason,
             'assigned_user_id' => $user->id,
             'assigned_user_name' => $user->name,
             'assignment_status' => $status,
             'shift_start' => $shiftStart?->toIso8601String(),
-        ], fn ($v) => $v !== null));
+        ] + $context, fn ($v) => $v !== null && $v !== []));
+    }
+
+    /**
+     * Logga il fallimento dell'auto-assegnazione (nessun candidato).
+     */
+    private function logFailure(Intervention $intervention, array $context, string $reason): void
+    {
+        InterventionActivityLogger::system($intervention, InterventionLogActions::AUTO_ASSIGNMENT_FAILED, array_filter([
+            'reason' => $reason,
+        ] + $context, fn ($v) => $v !== null && $v !== []));
+    }
+
+    /**
+     * Estrae i dati di scope (specializzazione, zona, area, priorità) per il log.
+     */
+    private function scopeContext(Intervention $intervention): array
+    {
+        $area = $intervention->area ?? $intervention->equipment?->department?->area;
+        $department = $intervention->department ?? $intervention->equipment?->department;
+
+        return array_filter([
+            'priority' => $intervention->priority,
+            'maintenance_role_id' => $intervention->maintenance_role_id,
+            'maintenance_role_name' => $intervention->maintenanceRole?->name,
+            'area_id' => $area?->id,
+            'area_name' => $area?->name,
+            'department_id' => $department?->id,
+            'department_name' => $department?->name,
+        ], fn ($v) => $v !== null);
+    }
+
+    /**
+     * Divide la collezione in [eligible, excludedBusy].
+     * `excludedBusy` è una lista di {id, name, busy_status} per il log.
+     *
+     * @param  array<string>  $busyStatuses
+     * @return array{0: Collection, 1: array<int, array{id:int, name:string, busy_with:string}>}
+     */
+    private function splitByAvailability(Collection $candidates, array $busyStatuses): array
+    {
+        $eligible = collect();
+        $excluded = [];
+
+        foreach ($candidates as $user) {
+            $busy = $user->interventions
+                ->whereIn('status', $busyStatuses)
+                ->first();
+
+            if ($busy) {
+                $excluded[] = [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'busy_with' => '#'.$busy->id.' ('.$busy->status.')',
+                ];
+                continue;
+            }
+
+            $eligible->push($user);
+        }
+
+        return [$eligible, $excluded];
+    }
+
+    private function reasonNoCompatible(array $scope): string
+    {
+        $parts = ["nessun manutentore con la specializzazione «{$scope['maintenance_role_name']}»"];
+        if (! empty($scope['department_name'])) {
+            $parts[] = "assegnato alla zona «{$scope['department_name']}»";
+        } elseif (! empty($scope['area_name'])) {
+            $parts[] = "presente nell'area «{$scope['area_name']}»";
+        }
+
+        return 'Auto-assegnazione fallita: '.implode(' ', $parts).'.';
+    }
+
+    private function reasonAllBusy(array $context): string
+    {
+        $n = (int) ($context['compatible_count'] ?? 0);
+        $statuses = implode('/', $context['busy_statuses'] ?? []);
+
+        return "Auto-assegnazione fallita: tutti i {$n} manutentori compatibili erano già impegnati ({$statuses}).";
+    }
+
+    private function reasonAssigned(array $context, array $pick, string $path, ?Carbon $windowStart = null, ?Carbon $windowEnd = null): string
+    {
+        $eligible = (int) ($context['eligible_count'] ?? 0);
+        $compatible = (int) ($context['compatible_count'] ?? 0);
+        $excluded = $compatible - $eligible;
+        $level = $pick['selected_level'] ?? 0;
+        $tied = (int) ($pick['tied_with_count'] ?? 1);
+        $name = $pick['assigned_user_name'] ?? '?';
+
+        $base = "Scelto «{$name}» (livello {$level}/5 sulla specializzazione «{$context['maintenance_role_name']}»)";
+
+        $detail = " su {$eligible} candidat".($eligible === 1 ? 'o' : 'i')." disponibil".($eligible === 1 ? 'e' : 'i');
+        if ($excluded > 0) {
+            $detail .= " ({$excluded} esclus".($excluded === 1 ? 'o' : 'i')." perché impegnat".($excluded === 1 ? 'o' : 'i').")";
+        }
+
+        $tieBreak = $tied > 1
+            ? ". {$tied} candidati a pari livello: scelta casuale fra di loro."
+            : '.';
+
+        $shift = ($path === 'in_shift' && $windowStart && $windowEnd)
+            ? " In turno nella finestra {$windowStart->format('d/m H:i')}–{$windowEnd->format('d/m H:i')}."
+            : '';
+
+        return $base.$detail.$tieBreak.$shift;
+    }
+
+    private function reasonNextShift(array $context, array $pick, Carbon $shiftStart): string
+    {
+        $name = $pick['assigned_user_name'] ?? '?';
+        $level = $pick['selected_level'] ?? 0;
+        $when = $shiftStart->locale('it')->isoFormat('dddd D MMM [alle] HH:mm');
+
+        return "Nessun candidato disponibile in turno entro la deadline. "
+            ."Scelto «{$name}» (livello {$level}/5) come primo a rientrare in servizio: {$when}.";
     }
 
     // ─── Finestra temporale ───────────────────────────────────────────────────
@@ -131,7 +283,12 @@ class AutoAssignmentService
 
     // ─── Candidati ───────────────────────────────────────────────────────────
 
-    private function loadCandidates(Intervention $intervention, bool $isLow): Collection
+    /**
+     * Carica i manutentori compatibili per specializzazione + zona/area.
+     * NON applica l'esclusione per impegno: quella è fatta in PHP da
+     * splitByAvailability() per poter loggare gli esclusi.
+     */
+    private function loadCompatible(Intervention $intervention): Collection
     {
         $deptId = $intervention->department_id
             ?? $intervention->equipment?->department_id;
@@ -156,17 +313,11 @@ class AutoAssignmentService
             });
         }
 
-        // Escludi sempre chi è in_progress
-        $query->whereDoesntHave('interventions', fn ($q) => $q->where('status', 'in_progress')
-        );
-
-        // Per priorità > low, escludi anche chi ha planned
-        if (! $isLow) {
-            $query->whereDoesntHave('interventions', fn ($q) => $q->where('status', 'planned')
-            );
-        }
-
-        return $query->with(['workScheduleSlots', 'maintenanceRoles'])->get();
+        return $query->with([
+            'workScheduleSlots',
+            'maintenanceRoles',
+            'interventions:id,assigned_user_id,status',
+        ])->get();
     }
 
     // ─── Controllo turni ─────────────────────────────────────────────────────
@@ -285,6 +436,17 @@ class AutoAssignmentService
      */
     private function pickBest(Collection $candidates, int $roleId): User
     {
+        return $this->pickBestWithContext($candidates, $roleId)[0];
+    }
+
+    /**
+     * Come pickBest, ma restituisce anche i metadati della scelta per il log:
+     * livello del candidato selezionato, numero di candidati a pari livello.
+     *
+     * @return array{0: User, 1: array{selected_level:int, tied_with_count:int, assigned_user_name:string}}
+     */
+    private function pickBestWithContext(Collection $candidates, int $roleId): array
+    {
         $ranked = $candidates
             ->map(fn (User $u) => [
                 'user' => $u,
@@ -294,8 +456,13 @@ class AutoAssignmentService
 
         $best = $ranked->first()['level'];
         $group = $ranked->filter(fn ($r) => $r['level'] === $best)->map(fn ($r) => $r['user']);
+        $picked = $group->random();
 
-        return $group->random();
+        return [$picked, [
+            'selected_level' => (int) $best,
+            'tied_with_count' => $group->count(),
+            'assigned_user_name' => $picked->name,
+        ]];
     }
 
     /**
