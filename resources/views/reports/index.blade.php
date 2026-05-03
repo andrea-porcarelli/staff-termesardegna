@@ -205,10 +205,9 @@ function viewReport(reportId) {
             header.style.background = color;
 
             document.getElementById('reportModalTitle').textContent =
-                iv.title + ' — ' + d.report_date;
+                (iv ? iv.title : 'Rapportino libero') + ' — ' + d.report_date;
 
-            let html = `
-            {{-- Richiesta dell'intervento --}}
+            const interventionBlock = iv ? `
             <div class="mb-4 p-3 rounded" style="background:#f8f9fa;border-left:4px solid ${color}">
                 <div class="row g-2">
                     <div class="col-12">
@@ -222,7 +221,7 @@ function viewReport(reportId) {
                     </div>
                     <div class="col-md-3">
                         <div class="text-muted small"><i class="bi bi-calendar3 me-1"></i>Data pianificata</div>
-                        <div>${iv.scheduled_date}${iv.scheduled_time ? ' alle ' + iv.scheduled_time : ''}</div>
+                        <div>${iv.scheduled_date || '—'}${iv.scheduled_time ? ' alle ' + iv.scheduled_time : ''}</div>
                     </div>
                     <div class="col-md-3">
                         <div class="text-muted small"><i class="bi bi-flag me-1"></i>Priorità</div>
@@ -239,7 +238,13 @@ function viewReport(reportId) {
                         <div>${iv.notes}</div>
                     </div>` : ''}
                 </div>
-            </div>
+            </div>` : `
+            <div class="mb-4 p-3 rounded" style="background:#f8f9fa;border-left:4px solid ${color}">
+                <div class="text-muted small mb-1"><i class="bi bi-journal me-1"></i><strong>Rapportino libero</strong></div>
+                <div class="text-muted small">Non collegato a un ticket.</div>
+            </div>`;
+
+            let html = interventionBlock + `
 
             {{-- Dati rapportino --}}
             <div class="row g-3">

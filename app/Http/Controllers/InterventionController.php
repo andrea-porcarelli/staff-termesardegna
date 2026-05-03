@@ -24,7 +24,7 @@ class InterventionController extends Controller
     public function index(Request $request): View
     {
         abort_if(Auth::user()->role === 'manutentore', 403);
-        $query = Intervention::with(['equipment.department.area', 'area', 'department', 'assignedUser'])
+        $query = Intervention::with(['equipment.department.area', 'area', 'department', 'assignedUser', 'creator:id,name'])
             ->orderBy('scheduled_date', 'desc');
 
         if ($request->filled('tipo')) {
@@ -130,7 +130,7 @@ class InterventionController extends Controller
 
     public function show(Intervention $intervention): View
     {
-        $intervention->load(['equipment.department.area', 'assignedUser', 'maintenanceRole', 'reports.user']);
+        $intervention->load(['equipment.department.area', 'assignedUser', 'maintenanceRole', 'reports.user', 'creator:id,name']);
 
         return view('interventions.show', compact('intervention'));
     }

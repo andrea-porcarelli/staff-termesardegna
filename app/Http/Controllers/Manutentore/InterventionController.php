@@ -8,6 +8,7 @@ use App\Models\Department;
 use App\Models\Intervention;
 use App\Models\InterventionCollaboration;
 use App\Models\InterventionTransfer;
+use App\Models\Media;
 use App\Models\User;
 use App\Notifications\CollaborationRequestedNotification;
 use App\Notifications\InterventionTransferredNotification;
@@ -822,6 +823,8 @@ class InterventionController extends Controller
             ],
             'title' => [$isManutentoreCreator ? 'nullable' : 'required', 'string', 'max:255'],
             'description' => 'nullable|string|max:2000',
+            'files' => 'nullable|array|max:10',
+            'files.*' => 'file|mimes:pdf,jpg,jpeg,png,gif,zip|max:10240',
         ];
 
         if ($isManutentoreCreator) {
@@ -851,6 +854,9 @@ class InterventionController extends Controller
             'department_id.required' => 'Seleziona una zona.',
             'department_id.in' => 'Zona non disponibile.',
             'equipment_id.exists' => 'Impianto non disponibile.',
+            'files.max' => 'Puoi allegare al massimo 10 file.',
+            'files.*.mimes' => 'Sono accettati solo PDF, immagini (JPG/PNG/GIF) e ZIP.',
+            'files.*.max' => 'Ogni file deve essere al massimo di 10 MB.',
         ]);
 
         // L'impianto, se presente, vincola area e zona.
@@ -881,7 +887,7 @@ class InterventionController extends Controller
 
         $isFixedDate = $request->priority === 'fixed_date';
 
-        Intervention::create([
+        $intervention = Intervention::create([
             'tipo' => 'ordinario',
             'area_id' => $areaId,
             'department_id' => $deptId,
@@ -896,6 +902,20 @@ class InterventionController extends Controller
             'status' => 'open',
             'priority' => $request->priority,
         ]);
+
+        if ($request->hasFile('files')) {
+            foreach ($request->file('files') as $file) {
+                $path = $file->store('media', 'public');
+                Media::create([
+                    'mediable_type' => Intervention::class,
+                    'mediable_id' => $intervention->id,
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_path' => $path,
+                    'file_type' => $file->getMimeType(),
+                    'file_size' => $file->getSize(),
+                ]);
+            }
+        }
 
         $referer = $request->headers->get('referer');
         $redirectTo = $referer && str_contains($referer, '/m/tickets')

@@ -127,6 +127,16 @@
                                     @endif
                                 </td>
                             </tr>
+                            <tr>
+                                <th>Aperto da:</th>
+                                <td>
+                                    @if($intervention->creator)
+                                        <i class="bi bi-person-plus me-1"></i>{{ $intervention->creator->name }}
+                                    @else
+                                        <span class="text-muted">—</span>
+                                    @endif
+                                </td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>

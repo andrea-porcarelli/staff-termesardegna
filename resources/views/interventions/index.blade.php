@@ -44,6 +44,7 @@
                         <th>Tipo</th>
                         <th>Destinazione</th>
                         <th>Operatore</th>
+                        <th>Aperto da</th>
                         <th>Data</th>
                         <th>Stato</th>
                         <th>Priorità</th>
@@ -76,6 +77,13 @@
                                     <i class="bi bi-person me-1"></i>{{ $intervention->assignedUser->name }}
                                 @elseif($intervention->maintenanceRole)
                                     <i class="bi bi-person-badge me-1"></i><small class="text-muted">{{ $intervention->maintenanceRole->name }}</small>
+                                @else
+                                    <span class="text-muted">-</span>
+                                @endif
+                            </td>
+                            <td>
+                                @if($intervention->creator)
+                                    <small><i class="bi bi-person-plus me-1"></i>{{ $intervention->creator->name }}</small>
                                 @else
                                     <span class="text-muted">-</span>
                                 @endif
@@ -153,7 +161,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="text-center py-4">
+                            <td colspan="9" class="text-center py-4">
                                 <i class="bi bi-inbox" style="font-size: 48px; color: #ccc;"></i>
                                 <p class="text-muted mt-2">Nessun ticket trovato</p>
                             </td>

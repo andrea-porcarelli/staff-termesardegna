@@ -25,6 +25,7 @@
 
         <form method="POST"
               action="{{ route('m.interventions.quick-open') }}"
+              enctype="multipart/form-data"
               x-show="$store.quickOpen.isOpen"
               x-transition:enter="transition ease-out duration-250"
               x-transition:enter-start="translate-y-full"
@@ -211,6 +212,19 @@
                               class="w-full px-3 py-2 border border-gray-300 rounded-xl bg-white text-base"
                               placeholder="Cosa devi fare..."></textarea>
                 </div>
+
+                {{-- Allegati (foto / PDF) — opzionali --}}
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Allegati (foto, PDF)</label>
+                    <input type="file" name="files[]" multiple
+                           accept="image/*,application/pdf,.zip"
+                           @change="onFilesChange($event)"
+                           class="w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700">
+                    <template x-if="filesSummary">
+                        <div class="text-[11px] text-gray-500 mt-1" x-text="filesSummary"></div>
+                    </template>
+                    <div class="text-[11px] text-gray-400 mt-1">Max 10 file, fino a 10&nbsp;MB ciascuno.</div>
+                </div>
             </div>
 
             <div class="px-4 py-3 border-t border-gray-100">
@@ -239,9 +253,20 @@
                 depts: allDepartments,
                 equipments: allEquipments,
                 todayStr: new Date().toISOString().slice(0, 10),
+                filesSummary: '',
 
                 init() {
                     this.autoSelectZone();
+                },
+
+                onFilesChange(event) {
+                    const files = Array.from(event.target.files || []);
+                    if (files.length === 0) { this.filesSummary = ''; return; }
+                    const totalKb = files.reduce((s, f) => s + f.size, 0) / 1024;
+                    const sizeStr = totalKb < 1024
+                        ? totalKb.toFixed(0) + ' KB'
+                        : (totalKb / 1024).toFixed(1) + ' MB';
+                    this.filesSummary = files.length + ' file selezionat' + (files.length === 1 ? 'o' : 'i') + ' (' + sizeStr + ')';
                 },
 
                 get filteredDepts() {
