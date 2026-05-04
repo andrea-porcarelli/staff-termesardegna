@@ -836,8 +836,15 @@ class InterventionController extends Controller
                     ->where('active', true),
             ];
         } else {
-            // Operatore → sceglie la specializzazione, auto-assegnazione via servizio
+            // Operatore → sceglie la specializzazione (auto-assegnazione via servizio)
+            // oppure può indicare direttamente un manutentore (override).
             $rules['maintenance_role_id'] = 'required|exists:maintenance_roles,id';
+            $rules['assigned_user_id'] = [
+                'nullable',
+                \Illuminate\Validation\Rule::exists('users', 'id')
+                    ->where('role', 'manutentore')
+                    ->where('active', true),
+            ];
         }
 
         $request->validate($rules, [
@@ -887,13 +894,21 @@ class InterventionController extends Controller
 
         $isFixedDate = $request->priority === 'fixed_date';
 
+        // L'operatore può scegliere direttamente un manutentore: in tal caso
+        // bypassa l'auto-assegnazione (l'observer la salta se assigned_user_id è già impostato).
+        $operatorPickedAssigneeId = (! $isManutentoreCreator && $request->filled('assigned_user_id'))
+            ? (int) $request->assigned_user_id
+            : null;
+
         $intervention = Intervention::create([
             'tipo' => 'ordinario',
             'area_id' => $areaId,
             'department_id' => $deptId,
             'equipment_id' => $equipmentId,
             'maintenance_role_id' => $isManutentoreCreator ? null : $request->maintenance_role_id,
-            'assigned_user_id' => $isManutentoreCreator ? $request->assigned_user_id : null,
+            'assigned_user_id' => $isManutentoreCreator
+                ? $request->assigned_user_id
+                : $operatorPickedAssigneeId,
             'created_by' => $user->id,
             'title' => $title,
             'description' => $request->description,
@@ -902,6 +917,16 @@ class InterventionController extends Controller
             'status' => 'open',
             'priority' => $request->priority,
         ]);
+
+        if ($operatorPickedAssigneeId) {
+            $picked = User::find($operatorPickedAssigneeId);
+            InterventionActivityLogger::log($intervention, InterventionLogActions::MANUALLY_ASSIGNED, [
+                'reason' => "L'operatore «{$user->name}» ha scelto direttamente «{$picked?->name}» in fase di apertura del ticket.",
+                'from_user_id' => null,
+                'to_user_id' => $operatorPickedAssigneeId,
+                'to_user_name' => $picked?->name,
+            ]);
+        }
 
         if ($request->hasFile('files')) {
             foreach ($request->file('files') as $file) {

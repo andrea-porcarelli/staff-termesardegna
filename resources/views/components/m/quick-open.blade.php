@@ -90,6 +90,19 @@
                             @endforeach
                         </select>
                     </div>
+
+                    {{-- Manutentore: opzionale. Se valorizzato bypassa l'auto-assegnazione. --}}
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Manutentore (opzionale)</label>
+                        <select name="assigned_user_id"
+                                class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
+                            <option value="">Auto-assegnazione</option>
+                            @foreach ($manutentori as $m)
+                                <option value="{{ $m->id }}">{{ $m->name }}</option>
+                            @endforeach
+                        </select>
+                        <div class="text-[11px] text-gray-400 mt-1">Lascia vuoto per far scegliere il sistema.</div>
+                    </div>
                 @endif
 
                 {{-- Priorità (obbligatoria) --}}
