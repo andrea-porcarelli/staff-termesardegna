@@ -191,6 +191,7 @@
                             x-model="selectedPriority"
                             :required="tipo === 'ordinario'">
                         <option value="low"        {{ old('priority', $intervention->priority) == 'low'        ? 'selected' : '' }}>Bassa — entro 7 giorni</option>
+                        <option value="medium"     {{ old('priority', $intervention->priority) == 'medium'     ? 'selected' : '' }}>Media — entro 48 ore</option>
                         <option value="high"       {{ old('priority', $intervention->priority) == 'high'       ? 'selected' : '' }}>Alta — entro 24 ore</option>
                         <option value="fixed_date" {{ old('priority', $intervention->priority) == 'fixed_date' ? 'selected' : '' }}>Data fissa — seleziona data e ora</option>
                     </select>

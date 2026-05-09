@@ -23,6 +23,7 @@ class NuovoTicketAssegnatoNotification extends Notification
     {
         $priorityLabel = [
             'high' => 'Alta',
+            'medium' => 'Media',
             'low' => 'Bassa',
             'fixed_date' => 'Data fissa',
         ][$this->intervention->priority] ?? $this->intervention->priority;

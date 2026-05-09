@@ -239,11 +239,13 @@
                                     @php
                                         $priorityClasses = [
                                             'low'        => 'bg-secondary',
+                                            'medium'     => 'bg-info',
                                             'high'       => 'bg-warning',
                                             'fixed_date' => 'bg-purple',
                                         ];
                                         $priorityLabels = [
                                             'low'        => 'Bassa',
+                                            'medium'     => 'Media',
                                             'high'       => 'Alta',
                                             'fixed_date' => 'Data fissa',
                                         ];

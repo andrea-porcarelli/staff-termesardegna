@@ -188,7 +188,7 @@
 @push('scripts')
 <script>
 const statusColors = { draft: '#6c757d', completed: '#198754', chiuso: '#212529' };
-const priorityBadge = { low: 'bg-secondary', high: 'bg-warning', fixed_date: 'bg-purple' };
+const priorityBadge = { low: 'bg-secondary', medium: 'bg-info', high: 'bg-warning', fixed_date: 'bg-purple' };
 
 function viewReport(reportId) {
     const modal = new bootstrap.Modal(document.getElementById('reportModal'));

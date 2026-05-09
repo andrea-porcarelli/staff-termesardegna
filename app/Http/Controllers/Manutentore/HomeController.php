@@ -106,7 +106,7 @@ class HomeController extends Controller
         // 2. Alta priorità nei prossimi 7 giorni (escluso chi è già in scaduti).
         $altaPriorita = $active->filter(function ($i) use ($scadutiIds, $weekEnd) {
             if (in_array($i->id, $scadutiIds, true)) return false;
-            if ($i->priority !== 'high') return false;
+            if (! in_array($i->priority, ['high', 'medium'], true)) return false;
 
             return $i->deadline && $i->deadline->lte($weekEnd);
         })->sortByDesc('id')->values();

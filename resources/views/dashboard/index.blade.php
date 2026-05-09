@@ -481,8 +481,8 @@
     {{-- Interventi da Eseguire (solo manutentore) --}}
     @if($user->role === 'manutentore' && isset($availableInterventions))
         @php
-            $priClasses = ['low' => 'bg-secondary', 'high' => 'bg-warning text-dark', 'fixed_date' => 'bg-purple'];
-            $priLabels  = ['low' => 'Bassa', 'high' => 'Alta', 'fixed_date' => 'Data fissa'];
+            $priClasses = ['low' => 'bg-secondary', 'medium' => 'bg-info', 'high' => 'bg-warning text-dark', 'fixed_date' => 'bg-purple'];
+            $priLabels  = ['low' => 'Bassa', 'medium' => 'Media', 'high' => 'Alta', 'fixed_date' => 'Data fissa'];
             $statusClasses = ['open' => 'bg-primary', 'planned' => 'bg-info'];
             $statusLabels  = ['open' => 'Aperto', 'planned' => 'Pianificato'];
         @endphp

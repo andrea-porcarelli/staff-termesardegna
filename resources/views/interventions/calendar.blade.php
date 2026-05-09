@@ -35,11 +35,13 @@
                                                     @php
                                                         $priorityIcons = [
                                                             'low'        => 'circle',
+                                                            'medium'     => 'arrow-up-circle',
                                                             'high'       => 'exclamation-circle',
                                                             'fixed_date' => 'calendar-event',
                                                         ];
                                                         $priorityColors = [
                                                             'low'        => 'text-secondary',
+                                                            'medium'     => 'text-info',
                                                             'high'       => 'text-warning',
                                                             'fixed_date' => 'text-purple',
                                                         ];
@@ -231,9 +233,9 @@ const userRole = '{{ auth()->user()->role }}';
 
 const statusLabels = { open: 'Aperto', planned: 'Pianificato', in_progress: 'In corso', completed: 'Completato', cancelled: 'Annullato' };
 const statusColors = { open: '#0d6efd', planned: '#0dcaf0', in_progress: '#ffc107', completed: '#198754', cancelled: '#6c757d' };
-const priorityLabels = { low: 'Bassa', high: 'Alta', fixed_date: 'Data fissa' };
-const priorityColors = { low: '#6c757d', high: '#ffc107', fixed_date: '#6f42c1' };
-const priorityBgClasses = { low: 'bg-secondary', high: 'bg-warning', fixed_date: 'bg-purple' };
+const priorityLabels = { low: 'Bassa', medium: 'Media', high: 'Alta', fixed_date: 'Data fissa' };
+const priorityColors = { low: '#6c757d', medium: '#0dcaf0', high: '#ffc107', fixed_date: '#6f42c1' };
+const priorityBgClasses = { low: 'bg-secondary', medium: 'bg-info', high: 'bg-warning', fixed_date: 'bg-purple' };
 
 function openEventModal(title, props, startDate, endDate) {
     const header = document.getElementById('eventModalHeader');

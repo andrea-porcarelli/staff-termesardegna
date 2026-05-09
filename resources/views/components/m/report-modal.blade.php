@@ -52,11 +52,21 @@
                             <span>Redatto: <span class="font-semibold text-gray-700" x-text="nowLabel"></span></span>
                         </div>
 
-                        {{-- Tempo impiegato (input time unico) --}}
+                        {{-- Tempo impiegato (badge rapidi + input time) --}}
                         <div>
                             <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
                                 Tempo impiegato <span class="text-red-500">*</span>
                             </label>
+                            <div class="grid grid-cols-4 gap-2 mb-2">
+                                <template x-for="opt in durationPresets" :key="opt.value">
+                                    <button type="button" @click="setDuration(opt.value)"
+                                            class="h-9 rounded-lg border text-sm font-semibold transition-colors"
+                                            :class="form.duration === opt.value
+                                                ? 'border-brand-500 bg-brand-50 text-brand-700'
+                                                : 'border-gray-300 bg-white text-gray-700 active:bg-gray-50'"
+                                            x-text="opt.label"></button>
+                                </template>
+                            </div>
                             <input type="time" x-model="form.duration" required
                                    @input="errors.duration = null"
                                    x-ref="field_duration"
@@ -248,6 +258,27 @@
                 errors: {},
                 files: [],
                 csrf: document.querySelector('meta[name="csrf-token"]')?.content || '',
+
+                durationPresets: [
+                    { label: '30m',    value: '00:30' },
+                    { label: '1h',     value: '01:00' },
+                    { label: '1h 30m', value: '01:30' },
+                    { label: '2h',     value: '02:00' },
+                    { label: '2h 30m', value: '02:30' },
+                    { label: '3h',     value: '03:00' },
+                    { label: '4h',     value: '04:00' },
+                    { label: '5h',     value: '05:00' },
+                    { label: '6h',     value: '06:00' },
+                    { label: '7h',     value: '07:00' },
+                    { label: '8h',     value: '08:00' },
+                    { label: '9h',     value: '09:00' },
+                    { label: '10h',    value: '10:00' },
+                ],
+
+                setDuration(value) {
+                    this.form.duration = value;
+                    this.errors.duration = null;
+                },
 
                 stepTitle() {
                     return 'Nuovo rapportino';

@@ -29,7 +29,7 @@ class InterventionRequest extends FormRequest
             'scheduled_start_time' => 'nullable|date_format:H:i',
             'estimated_duration_minutes' => 'nullable|integer|min:1',
             'status' => 'nullable|in:open,planned,in_progress,completed,cancelled',
-            'priority' => 'nullable|in:low,high,fixed_date',
+            'priority' => 'nullable|in:low,medium,high,fixed_date',
             'notes' => 'nullable|string',
         ];
     }

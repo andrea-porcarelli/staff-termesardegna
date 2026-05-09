@@ -35,6 +35,7 @@ class AutoAssignmentService
      */
     private const WINDOW_HOURS = [
         'high' => 24,
+        'medium' => 48,
         'low' => 168,
         'fixed_date' => null,
     ];

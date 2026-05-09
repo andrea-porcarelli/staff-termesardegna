@@ -160,10 +160,10 @@ class DashboardController extends Controller
                         ->orWhereHas('equipment', fn ($eq) => $eq->whereIn('department_id', $userDeptIds));
                 });
                 Utils::queryLog($availableQuery
-                    ->orderByRaw("FIELD(priority, 'high', 'fixed_date', 'low')")
+                    ->orderByRaw("FIELD(priority, 'high', 'medium', 'fixed_date', 'low')")
                     ->orderBy('created_at', 'asc'));
                 $data['availableInterventions'] = $availableQuery
-                    ->orderByRaw("FIELD(priority, 'high', 'fixed_date', 'low')")
+                    ->orderByRaw("FIELD(priority, 'high', 'medium', 'fixed_date', 'low')")
                     ->orderBy('created_at', 'asc')
                     ->get();
             }

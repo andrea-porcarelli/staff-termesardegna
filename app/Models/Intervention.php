@@ -105,6 +105,7 @@ class Intervention extends Model
 
         return match ($this->priority) {
             'high' => $base->copy()->addHours(24),
+            'medium' => $base->copy()->addHours(48),
             'low' => $base->copy()->addDays(7),
             default => null,
         };

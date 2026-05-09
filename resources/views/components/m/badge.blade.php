@@ -10,6 +10,7 @@
         'warn'    => 'bg-amber-100 text-amber-800',
         'danger'  => 'bg-red-100 text-red-700',
         'high'    => 'bg-orange-500 text-white',
+        'medium'  => 'bg-amber-100 text-amber-800',
         'low'     => 'bg-sky-100 text-sky-700',
         'fixed'   => 'bg-violet-100 text-violet-700',
     ];

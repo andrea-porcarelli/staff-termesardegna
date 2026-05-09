@@ -424,6 +424,7 @@ class InterventionController extends Controller
             // Definizione colori per priorità
             $priorityColors = [
                 'low' => '#6c757d',  // grigio
+                'medium' => '#0dcaf0',  // info
                 'high' => '#ffc107',  // warning
                 'fixed_date' => '#6f42c1',  // viola
             ];

@@ -104,7 +104,7 @@ class InterventionController extends Controller
                 break;
 
             case 'high':
-                $query->where('priority', 'high')
+                $query->whereIn('priority', ['high', 'medium'])
                     ->whereNotIn('status', ['completed', 'cancelled']);
                 break;
 
@@ -172,7 +172,7 @@ class InterventionController extends Controller
         } else {
             $interventions = $query
                 ->orderByRaw("FIELD(status, 'in_progress', 'open', 'planned', 'completed', 'cancelled')")
-                ->orderByRaw("FIELD(priority, 'high', 'fixed_date', 'low')")
+                ->orderByRaw("FIELD(priority, 'high', 'medium', 'fixed_date', 'low')")
                 ->orderBy('created_at', 'desc')
                 ->get();
         }
@@ -369,6 +369,7 @@ class InterventionController extends Controller
             'priority' => $intervention->priority,
             'priority_label' => [
                 'high' => 'Alta',
+                'medium' => 'Media',
                 'low' => 'Bassa',
                 'fixed_date' => 'Data fissa',
             ][$intervention->priority] ?? $intervention->priority,

@@ -8,6 +8,7 @@
 
     $priorityColor = [
         'high'       => 'bg-orange-500',
+        'medium'     => 'bg-amber-400',
         'fixed_date' => 'bg-violet-500',
         'low'        => 'bg-sky-500',
     ];
