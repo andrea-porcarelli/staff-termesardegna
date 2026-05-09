@@ -229,15 +229,55 @@
 
                 {{-- Allegati (foto / PDF) — opzionali --}}
                 <div>
-                    <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Allegati (foto, PDF)</label>
-                    <input type="file" name="files[]" multiple
-                           accept="image/*,application/pdf,.zip"
-                           @change="onFilesChange($event)"
-                           class="w-full text-sm text-gray-700 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700">
-                    <template x-if="filesSummary">
-                        <div class="text-[11px] text-gray-500 mt-1" x-text="filesSummary"></div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Allegati</label>
+
+                    {{-- Input nascosto realmente inviato col form. Popolato via DataTransfer da onFiles(). --}}
+                    <input type="file" name="files[]" multiple x-ref="fileInput" class="hidden">
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <label class="h-24 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-500 active:bg-gray-100 cursor-pointer">
+                            <input type="file" class="sr-only" accept="image/*" capture="environment" @change="onFiles($event)">
+                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M15 9h-6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-2M9 9l2-3h2l2 3M12 14a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/>
+                            </svg>
+                            <span class="text-xs mt-1">Foto</span>
+                        </label>
+                        <label class="h-24 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-500 active:bg-gray-100 cursor-pointer">
+                            <input type="file" class="sr-only" multiple accept="image/*,application/pdf,.zip" @change="onFiles($event)">
+                            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-6 5-5 5 5m-5-5v12"/>
+                            </svg>
+                            <span class="text-xs mt-1">Carica file</span>
+                        </label>
+                    </div>
+
+                    <template x-if="files.length > 0">
+                        <ul class="mt-3 space-y-1.5">
+                            <template x-for="(f, idx) in files" :key="idx">
+                                <li class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200">
+                                    <template x-if="f.preview">
+                                        <img :src="f.preview" alt="" class="w-8 h-8 rounded object-cover shrink-0">
+                                    </template>
+                                    <template x-if="!f.preview">
+                                        <span class="w-8 h-8 rounded bg-gray-200 text-gray-500 flex items-center justify-center text-[10px] font-bold shrink-0" x-text="f.ext"></span>
+                                    </template>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-sm text-gray-800 truncate" x-text="f.name"></div>
+                                        <div class="text-[11px] text-gray-500" x-text="f.sizeLabel"></div>
+                                    </div>
+                                    <button type="button" @click="removeFile(idx)" class="w-7 h-7 rounded-full text-gray-500 active:bg-gray-200" aria-label="Rimuovi">
+                                        <svg class="w-4 h-4 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>
+                                        </svg>
+                                    </button>
+                                </li>
+                            </template>
+                        </ul>
                     </template>
-                    <div class="text-[11px] text-gray-400 mt-1">Max 10 file, fino a 10&nbsp;MB ciascuno.</div>
+
+                    <div class="text-[11px] text-gray-400 mt-2">Max 10 file, fino a 10&nbsp;MB ciascuno.</div>
                 </div>
             </div>
 
@@ -267,20 +307,48 @@
                 depts: allDepartments,
                 equipments: allEquipments,
                 todayStr: new Date().toISOString().slice(0, 10),
-                filesSummary: '',
+                files: [],
 
                 init() {
                     this.autoSelectZone();
                 },
 
-                onFilesChange(event) {
-                    const files = Array.from(event.target.files || []);
-                    if (files.length === 0) { this.filesSummary = ''; return; }
-                    const totalKb = files.reduce((s, f) => s + f.size, 0) / 1024;
-                    const sizeStr = totalKb < 1024
-                        ? totalKb.toFixed(0) + ' KB'
-                        : (totalKb / 1024).toFixed(1) + ' MB';
-                    this.filesSummary = files.length + ' file selezionat' + (files.length === 1 ? 'o' : 'i') + ' (' + sizeStr + ')';
+                onFiles(event) {
+                    const list = Array.from(event.target.files || []);
+                    list.forEach((file) => {
+                        const isImage = file.type.startsWith('image/');
+                        this.files.push({
+                            file,
+                            name: file.name,
+                            ext: (file.name.split('.').pop() || '').toUpperCase().slice(0, 4),
+                            sizeLabel: this.formatSize(file.size),
+                            preview: isImage ? URL.createObjectURL(file) : null,
+                        });
+                    });
+                    event.target.value = '';
+                    this.syncFileInput();
+                },
+
+                removeFile(idx) {
+                    const f = this.files[idx];
+                    if (f?.preview) URL.revokeObjectURL(f.preview);
+                    this.files.splice(idx, 1);
+                    this.syncFileInput();
+                },
+
+                syncFileInput() {
+                    const dt = new DataTransfer();
+                    this.files.forEach((f) => dt.items.add(f.file));
+                    if (this.$refs.fileInput) {
+                        this.$refs.fileInput.files = dt.files;
+                    }
+                },
+
+                formatSize(bytes) {
+                    const units = ['B', 'KB', 'MB', 'GB'];
+                    let i = 0;
+                    while (bytes > 1024 && i < units.length - 1) { bytes /= 1024; i++; }
+                    return `${bytes.toFixed(bytes >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
                 },
 
                 get filteredDepts() {
