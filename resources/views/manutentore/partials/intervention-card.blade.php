@@ -120,7 +120,14 @@
                     trasferito
                 </span>
             @endif
-            <span class="ml-auto text-gray-500">{{ $intervention->created_at?->isoFormat('D MMM') }}</span>
+            @php
+                // Per i pianificati la data significativa è quella di esecuzione,
+                // non quella di apertura del ticket.
+                $cardDate = $intervention->tipo === 'pianificazione'
+                    ? $intervention->scheduled_date
+                    : $intervention->created_at;
+            @endphp
+            <span class="ml-auto text-gray-500">{{ $cardDate?->isoFormat('D MMM') }}</span>
         </div>
 
         {{-- Banner scaduto --}}

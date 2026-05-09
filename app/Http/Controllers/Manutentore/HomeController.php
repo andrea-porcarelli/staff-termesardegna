@@ -125,6 +125,8 @@ class HomeController extends Controller
         $pianificatiIds = $pianificati->pluck('id')->all();
 
         // 4. Bassa priorità nei prossimi 7 giorni.
+        // Esclude i pianificati: hanno priority='low' di default ma la loro
+        // visibilità dipende da scheduled_date (gestita nella sezione "Pianificati").
         $bassaPriorita = $active->filter(function ($i) use ($scadutiIds, $altaIds, $pianificatiIds, $weekEnd) {
             if (in_array($i->id, $scadutiIds, true)
                 || in_array($i->id, $altaIds, true)
@@ -132,6 +134,7 @@ class HomeController extends Controller
                 return false;
             }
             if ($i->priority !== 'low') return false;
+            if ($i->tipo === 'pianificazione') return false;
 
             return $i->deadline && $i->deadline->lte($weekEnd);
         })->sortByDesc('id')->values();
