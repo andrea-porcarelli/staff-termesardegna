@@ -23,6 +23,11 @@ class Equipment extends Model
         'maintenance_frequency_days',
         'last_maintenance_date',
         'next_maintenance_date',
+        'assignment_type',
+        'maintenance_role_id',
+        'assigned_user_id',
+        'intervention_title',
+        'intervention_description',
         'active',
     ];
 
@@ -51,5 +56,15 @@ class Equipment extends Model
     public function components(): HasMany
     {
         return $this->hasMany(EquipmentComponent::class);
+    }
+
+    public function maintenanceRole(): BelongsTo
+    {
+        return $this->belongsTo(MaintenanceRole::class, 'maintenance_role_id');
+    }
+
+    public function assignedUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_user_id');
     }
 }
