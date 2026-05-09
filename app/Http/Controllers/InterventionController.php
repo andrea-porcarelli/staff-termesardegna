@@ -322,10 +322,13 @@ class InterventionController extends Controller
         $request->validate([
             'area_id' => 'required|exists:areas,id',
             'department_id' => 'required|exists:departments,id',
+            'priority' => 'required|in:low,medium,high',
             'description' => 'nullable|string',
         ], [
             'area_id.required' => 'Seleziona un\'area.',
             'department_id.required' => 'Seleziona una zona.',
+            'priority.required' => 'Seleziona la priorità.',
+            'priority.in' => 'La priorità selezionata non è valida.',
         ]);
 
         $area = \App\Models\Area::find($request->area_id);
@@ -345,7 +348,7 @@ class InterventionController extends Controller
             'description' => $request->description,
             'scheduled_date' => today(),
             'status' => 'open',
-            'priority' => 'low',
+            'priority' => $request->priority,
         ]);
 
         return redirect()->route('dashboard')

@@ -758,6 +758,15 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="quick_priority" class="form-label">Priorità <span class="text-danger">*</span></label>
+                        <select class="form-select" id="quick_priority" name="priority" required>
+                            <option value="low"    {{ old('priority', 'low') == 'low'    ? 'selected' : '' }}>Bassa — entro 7 giorni</option>
+                            <option value="medium" {{ old('priority')        == 'medium' ? 'selected' : '' }}>Media — entro 48 ore</option>
+                            <option value="high"   {{ old('priority')        == 'high'   ? 'selected' : '' }}>Alta — entro 24 ore</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
                         <label for="quick_description" class="form-label">Descrizione</label>
                         <textarea class="form-control" id="quick_description" name="description"
                                   rows="3" placeholder="Descrivi brevemente il ticket...">{{ old('description') }}</textarea>
