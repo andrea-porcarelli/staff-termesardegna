@@ -114,6 +114,7 @@
                             class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
                         <option value="">Seleziona priorità</option>
                         <option value="high">Alta</option>
+                        <option value="medium">Media</option>
                         <option value="low">Bassa</option>
                         <option value="fixed_date">Data fissa</option>
                     </select>

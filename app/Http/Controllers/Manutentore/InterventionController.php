@@ -691,7 +691,7 @@ class InterventionController extends Controller
         $isManutentoreCreator = $user->role === 'manutentore';
 
         $rules = [
-            'priority' => 'required|in:high,low,fixed_date',
+            'priority' => 'required|in:high,medium,low,fixed_date',
             'scheduled_date' => 'nullable|date|after_or_equal:today|required_if:priority,fixed_date',
             'scheduled_start_time' => 'nullable|date_format:H:i',
             'area_id' => ['nullable', \Illuminate\Validation\Rule::in($userAreaIds)],
@@ -811,7 +811,7 @@ class InterventionController extends Controller
         $isManutentoreCreator = $user->role === 'manutentore';
 
         $rules = [
-            'priority' => 'required|in:high,low,fixed_date',
+            'priority' => 'required|in:high,medium,low,fixed_date',
             'scheduled_date' => 'nullable|date|after_or_equal:today|required_if:priority,fixed_date',
             'scheduled_start_time' => 'nullable|date_format:H:i',
             'area_id' => [$isManutentoreCreator ? 'nullable' : 'required', \Illuminate\Validation\Rule::in($userAreaIds)],
