@@ -422,7 +422,8 @@ class InterventionController extends Controller
                 'destroy' => route('m.tickets.destroy', $intervention),
             ],
             'actions' => [
-                'can_take_charge' => ($unassigned || $mine)
+                'can_take_charge' => $me->role === 'manutentore'
+                                        && ($unassigned || $mine)
                                         && $intervention->preso_in_carico_at === null
                                         && ! in_array($intervention->status, ['completed', 'cancelled']),
                 'can_create_report' => ($mine || $iAmAcceptedCollaborator)

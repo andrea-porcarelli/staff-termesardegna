@@ -13,10 +13,12 @@
         </a>
     </div>
 
-    {{-- Filtro per tipo --}}
+    {{-- Filtri --}}
+    @php($isAdmin = auth()->user()->role === 'admin')
+    @php($hasActiveFilters = request()->hasAny($isAdmin ? ['tipo', 'title', 'id', 'operator_id', 'manutentore_id'] : ['tipo']))
     <div class="card-body border-bottom pb-3">
-        <form method="GET" action="{{ route('interventions.index') }}" class="d-flex align-items-end gap-3">
-            <div>
+        <form method="GET" action="{{ route('interventions.index') }}" class="row g-2 align-items-end">
+            <div class="col-auto">
                 <label for="filter_tipo" class="form-label form-label-sm mb-1">Tipo</label>
                 <select id="filter_tipo" name="tipo" class="form-select form-select-sm" style="min-width: 180px;">
                     <option value="">Tutti i tipi</option>
@@ -24,14 +26,55 @@
                     <option value="ordinario" {{ request('tipo') === 'ordinario' ? 'selected' : '' }}>Ticket Ordinario</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-sm btn-secondary">
-                <i class="bi bi-funnel me-1"></i>Filtra
-            </button>
-            @if(request('tipo'))
-                <a href="{{ route('interventions.index') }}" class="btn btn-sm btn-outline-secondary">
-                    <i class="bi bi-x me-1"></i>Reset
-                </a>
+
+            @if($isAdmin)
+                <div class="col-auto">
+                    <label for="filter_title" class="form-label form-label-sm mb-1">Titolo</label>
+                    <input type="text" id="filter_title" name="title" value="{{ request('title') }}"
+                           class="form-control form-control-sm" placeholder="Cerca per titolo" style="min-width: 200px;">
+                </div>
+
+                <div class="col-auto">
+                    <label for="filter_id" class="form-label form-label-sm mb-1">ID</label>
+                    <input type="number" min="1" id="filter_id" name="id" value="{{ request('id') }}"
+                           class="form-control form-control-sm" placeholder="#" style="width: 110px;">
+                </div>
+
+                <div class="col-auto">
+                    <label for="filter_operator" class="form-label form-label-sm mb-1">Operatore</label>
+                    <select id="filter_operator" name="operator_id" class="form-select form-select-sm" style="min-width: 180px;">
+                        <option value="">Tutti</option>
+                        @foreach($operators as $op)
+                            <option value="{{ $op->id }}" {{ (string) request('operator_id') === (string) $op->id ? 'selected' : '' }}>
+                                {{ $op->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-auto">
+                    <label for="filter_manutentore" class="form-label form-label-sm mb-1">Manutentore</label>
+                    <select id="filter_manutentore" name="manutentore_id" class="form-select form-select-sm" style="min-width: 180px;">
+                        <option value="">Tutti</option>
+                        @foreach($manutentori as $m)
+                            <option value="{{ $m->id }}" {{ (string) request('manutentore_id') === (string) $m->id ? 'selected' : '' }}>
+                                {{ $m->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
             @endif
+
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-secondary">
+                    <i class="bi bi-funnel me-1"></i>Filtra
+                </button>
+                @if($hasActiveFilters)
+                    <a href="{{ route('interventions.index') }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-x me-1"></i>Reset
+                    </a>
+                @endif
+            </div>
         </form>
     </div>
 

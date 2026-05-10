@@ -53,9 +53,40 @@ class InterventionController extends Controller
             $query->where('tipo', $request->tipo);
         }
 
+        if ($user->role === 'admin') {
+            if ($request->filled('title')) {
+                $query->where('title', 'like', '%'.$request->input('title').'%');
+            }
+
+            if ($request->filled('id')) {
+                $query->where('id', (int) $request->input('id'));
+            }
+
+            if ($request->filled('operator_id')) {
+                $query->where('created_by', $request->input('operator_id'));
+            }
+
+            if ($request->filled('manutentore_id')) {
+                $query->where('assigned_user_id', $request->input('manutentore_id'));
+            }
+        }
+
         $interventions = $query->get();
 
-        return view('interventions.index', compact('interventions'));
+        $operators = collect();
+        $manutentori = collect();
+        if ($user->role === 'admin') {
+            $operators = User::where('role', 'operator')
+                ->where('active', true)
+                ->orderBy('name')
+                ->get(['id', 'name']);
+            $manutentori = User::where('role', 'manutentore')
+                ->where('active', true)
+                ->orderBy('name')
+                ->get(['id', 'name']);
+        }
+
+        return view('interventions.index', compact('interventions', 'operators', 'manutentori'));
     }
 
     public function create(): View
