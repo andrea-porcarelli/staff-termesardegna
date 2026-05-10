@@ -14,8 +14,11 @@
     </div>
 
     {{-- Filtri --}}
-    @php($isAdmin = auth()->user()->role === 'admin')
-    @php($hasActiveFilters = request()->hasAny($isAdmin ? ['tipo', 'title', 'id', 'operator_id', 'manutentore_id'] : ['tipo']))
+    @php
+        $isAdmin = auth()->user()->role === 'admin';
+        $filterKeys = $isAdmin ? ['tipo', 'title', 'id', 'operator_id', 'manutentore_id'] : ['tipo'];
+        $hasActiveFilters = request()->hasAny($filterKeys);
+    @endphp
     <div class="card-body border-bottom pb-3">
         <form method="GET" action="{{ route('interventions.index') }}" class="row g-2 align-items-end">
             <div class="col-auto">
