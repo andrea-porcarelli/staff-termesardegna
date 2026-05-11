@@ -156,6 +156,13 @@
                                     @endif
                                 </td>
                             </tr>
+                            <tr>
+                                <th>Creato il:</th>
+                                <td>
+                                    <strong>{{ $intervention->created_at->format('d/m/Y H:i') }}</strong>
+                                    <small class="text-muted">({{ $intervention->created_at->diffForHumans() }})</small>
+                                </td>
+                            </tr>
                             @if($intervention->tipo === 'pianificazione')
                             <tr>
                                 <th>Ora Inizio:</th>
