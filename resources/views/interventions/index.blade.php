@@ -92,6 +92,7 @@
                         <th>Operatore</th>
                         <th>Aperto da</th>
                         <th>Data</th>
+                        <th>Creato il</th>
                         <th>Stato</th>
                         <th>Priorità</th>
                         <th class="text-center">Azioni</th>
@@ -143,6 +144,10 @@
                                 @else
                                     <span class="text-muted">-</span>
                                 @endif
+                            </td>
+                            <td>
+                                {{ $intervention->created_at->format('d/m/Y') }}
+                                <br><small class="text-muted">{{ $intervention->created_at->format('H:i') }}</small>
                             </td>
                             <td>
                                 @php
@@ -209,7 +214,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center py-4">
+                            <td colspan="10" class="text-center py-4">
                                 <i class="bi bi-inbox" style="font-size: 48px; color: #ccc;"></i>
                                 <p class="text-muted mt-2">Nessun ticket trovato</p>
                             </td>
