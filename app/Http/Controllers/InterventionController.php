@@ -63,31 +63,54 @@ class InterventionController extends Controller
                 $query->where('id', (int) $request->input('id'));
             }
 
-            if ($request->filled('operator_id')) {
-                $query->where('created_by', $request->input('operator_id'));
+            if ($request->filled('created_by_id')) {
+                $query->where('created_by', $request->input('created_by_id'));
             }
 
-            if ($request->filled('manutentore_id')) {
-                $query->where('assigned_user_id', $request->input('manutentore_id'));
+            if ($request->filled('assigned_to_id')) {
+                $query->where('assigned_user_id', $request->input('assigned_to_id'));
+            }
+
+            if ($request->filled('area_id')) {
+                $areaId = (int) $request->input('area_id');
+                $query->where(function ($q) use ($areaId) {
+                    $q->where('area_id', $areaId)
+                        ->orWhereHas('equipment.department', fn ($d) => $d->where('area_id', $areaId));
+                });
+            }
+
+            if ($request->filled('department_id')) {
+                $deptId = (int) $request->input('department_id');
+                $query->where(function ($q) use ($deptId) {
+                    $q->where('department_id', $deptId)
+                        ->orWhereHas('equipment', fn ($e) => $e->where('department_id', $deptId));
+                });
             }
         }
 
         $interventions = $query->get();
 
-        $operators = collect();
-        $manutentori = collect();
+        $openableUsers = collect();
+        $assignableUsers = collect();
+        $areas = collect();
+        $departments = collect();
         if ($user->role === 'admin') {
-            $operators = User::where('role', 'operator')
+            $openableUsers = User::whereIn('role', ['admin', 'operator', 'manutentore'])
+                ->where('active', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'role'])
+                ->groupBy('role');
+            $assignableUsers = User::where('role', 'manutentore')
                 ->where('active', true)
                 ->orderBy('name')
                 ->get(['id', 'name']);
-            $manutentori = User::where('role', 'manutentore')
-                ->where('active', true)
+            $areas = Area::where('active', true)->orderBy('name')->get(['id', 'name']);
+            $departments = Department::where('active', true)
                 ->orderBy('name')
-                ->get(['id', 'name']);
+                ->get(['id', 'name', 'area_id']);
         }
 
-        return view('interventions.index', compact('interventions', 'operators', 'manutentori'));
+        return view('interventions.index', compact('interventions', 'openableUsers', 'assignableUsers', 'areas', 'departments'));
     }
 
     public function create(): View

@@ -16,8 +16,15 @@
     {{-- Filtri --}}
     @php
         $isAdmin = auth()->user()->role === 'admin';
-        $filterKeys = $isAdmin ? ['tipo', 'title', 'id', 'operator_id', 'manutentore_id'] : ['tipo'];
+        $filterKeys = $isAdmin
+            ? ['tipo', 'title', 'id', 'created_by_id', 'assigned_to_id', 'area_id', 'department_id']
+            : ['tipo'];
         $hasActiveFilters = request()->hasAny($filterKeys);
+        $roleLabels = [
+            'admin' => 'Amministratori',
+            'operator' => 'Operatori',
+            'manutentore' => 'Manutentori',
+        ];
     @endphp
     <div class="card-body border-bottom pb-3">
         <form method="GET" action="{{ route('interventions.index') }}" class="row g-2 align-items-end">
@@ -44,24 +51,56 @@
                 </div>
 
                 <div class="col-auto">
-                    <label for="filter_operator" class="form-label form-label-sm mb-1">Operatore</label>
-                    <select id="filter_operator" name="operator_id" class="form-select form-select-sm" style="min-width: 180px;">
+                    <label for="filter_created_by" class="form-label form-label-sm mb-1">Aperto da</label>
+                    <select id="filter_created_by" name="created_by_id" class="form-select form-select-sm" style="min-width: 200px;">
                         <option value="">Tutti</option>
-                        @foreach($operators as $op)
-                            <option value="{{ $op->id }}" {{ (string) request('operator_id') === (string) $op->id ? 'selected' : '' }}>
-                                {{ $op->name }}
+                        @foreach(['admin', 'operator', 'manutentore'] as $role)
+                            @if(($openableUsers[$role] ?? collect())->isNotEmpty())
+                                <optgroup label="{{ $roleLabels[$role] ?? ucfirst($role) }}">
+                                    @foreach($openableUsers[$role] as $u)
+                                        <option value="{{ $u->id }}" {{ (string) request('created_by_id') === (string) $u->id ? 'selected' : '' }}>
+                                            {{ $u->name }}
+                                        </option>
+                                    @endforeach
+                                </optgroup>
+                            @endif
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-auto">
+                    <label for="filter_assigned_to" class="form-label form-label-sm mb-1">Assegnato a</label>
+                    <select id="filter_assigned_to" name="assigned_to_id" class="form-select form-select-sm" style="min-width: 180px;">
+                        <option value="">Tutti</option>
+                        @foreach($assignableUsers as $m)
+                            <option value="{{ $m->id }}" {{ (string) request('assigned_to_id') === (string) $m->id ? 'selected' : '' }}>
+                                {{ $m->name }}
                             </option>
                         @endforeach
                     </select>
                 </div>
 
                 <div class="col-auto">
-                    <label for="filter_manutentore" class="form-label form-label-sm mb-1">Manutentore</label>
-                    <select id="filter_manutentore" name="manutentore_id" class="form-select form-select-sm" style="min-width: 180px;">
-                        <option value="">Tutti</option>
-                        @foreach($manutentori as $m)
-                            <option value="{{ $m->id }}" {{ (string) request('manutentore_id') === (string) $m->id ? 'selected' : '' }}>
-                                {{ $m->name }}
+                    <label for="filter_area" class="form-label form-label-sm mb-1">Area</label>
+                    <select id="filter_area" name="area_id" class="form-select form-select-sm" style="min-width: 180px;">
+                        <option value="">Tutte</option>
+                        @foreach($areas as $area)
+                            <option value="{{ $area->id }}" {{ (string) request('area_id') === (string) $area->id ? 'selected' : '' }}>
+                                {{ $area->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-auto">
+                    <label for="filter_department" class="form-label form-label-sm mb-1">Zona</label>
+                    <select id="filter_department" name="department_id" class="form-select form-select-sm" style="min-width: 180px;">
+                        <option value="">Tutte</option>
+                        @foreach($departments as $dept)
+                            <option value="{{ $dept->id }}"
+                                    data-area="{{ $dept->area_id }}"
+                                    {{ (string) request('department_id') === (string) $dept->id ? 'selected' : '' }}>
+                                {{ $dept->name }}
                             </option>
                         @endforeach
                     </select>
@@ -86,6 +125,7 @@
             <table class="table table-hover">
                 <thead>
                     <tr>
+                        <th style="width: 70px;">#</th>
                         <th>Titolo</th>
                         <th>Tipo</th>
                         <th>Destinazione</th>
@@ -101,6 +141,7 @@
                 <tbody>
                     @forelse($interventions as $intervention)
                         <tr>
+                            <td><span class="badge bg-light text-dark border">#{{ $intervention->id }}</span></td>
                             <td><strong>{{ $intervention->title }}</strong></td>
                             <td>
                                 @if($intervention->tipo === 'pianificazione')
@@ -214,7 +255,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="text-center py-4">
+                            <td colspan="11" class="text-center py-4">
                                 <i class="bi bi-inbox" style="font-size: 48px; color: #ccc;"></i>
                                 <p class="text-muted mt-2">Nessun ticket trovato</p>
                             </td>
