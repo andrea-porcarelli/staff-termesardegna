@@ -347,6 +347,13 @@
                 @enderror
             </div>
 
+            <div class="mb-3">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-paperclip me-1"></i>Allegati (foto e documenti)
+                </label>
+                @livewire('media-manager', ['mediableType' => 'TempMedia', 'mediableId' => $tempMediaId])
+            </div>
+
             @if(in_array($userRole, ['operator', 'manutentore']))
                 <input type="hidden" name="status" value="open">
             @else

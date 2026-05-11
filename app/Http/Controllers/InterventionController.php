@@ -9,6 +9,7 @@ use App\Models\Equipment;
 use App\Models\EquipmentComponent;
 use App\Models\Intervention;
 use App\Models\MaintenanceRole;
+use App\Models\Media;
 use App\Models\User;
 use App\Observers\InterventionObserver;
 use App\Services\InterventionActivityLogger;
@@ -103,9 +104,12 @@ class InterventionController extends Controller
         $userDepartmentIds = $user->departments->pluck('id')->toArray();
         $userAreaId = $user->departments->first()?->area_id;
 
+        $tempMediaId = 'temp_'.uniqid().'_'.Auth::id();
+        session(['intervention_temp_media_id' => $tempMediaId]);
+
         return view('interventions.create', compact(
             'equipments', 'operators', 'areas', 'departments', 'maintenanceRoles', 'components',
-            'userRole', 'userDepartmentIds', 'userAreaId'
+            'userRole', 'userDepartmentIds', 'userAreaId', 'tempMediaId'
         ));
     }
 
@@ -160,7 +164,18 @@ class InterventionController extends Controller
             'notes' => $request->notes,
         ];
 
-        Intervention::create($data);
+        $intervention = Intervention::create($data);
+
+        $tempMediaId = session('intervention_temp_media_id');
+        if ($tempMediaId) {
+            Media::where('mediable_type', 'TempMedia')
+                ->where('mediable_id', $tempMediaId)
+                ->update([
+                    'mediable_type' => 'App\\Models\\Intervention',
+                    'mediable_id' => $intervention->id,
+                ]);
+            session()->forget('intervention_temp_media_id');
+        }
 
         $result = InterventionObserver::$lastAssignmentResult;
         $redirect = redirect()->route('interventions.index');
