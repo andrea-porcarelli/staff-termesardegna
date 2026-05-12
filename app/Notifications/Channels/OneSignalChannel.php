@@ -43,8 +43,13 @@ class OneSignalChannel
         if ($message->url) {
             $payload['url'] = $message->url;
         }
-        if (! empty($message->data)) {
-            $payload['data'] = $message->data;
+
+        $data = $message->data;
+        if (method_exists($notifiable, 'unreadNotifications')) {
+            $data['unread_count'] = $notifiable->unreadNotifications()->count();
+        }
+        if (! empty($data)) {
+            $payload['data'] = $data;
         }
         if ($message->icon) {
             $payload['chrome_web_icon'] = $message->icon;

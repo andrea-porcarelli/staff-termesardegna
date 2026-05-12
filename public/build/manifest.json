@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-Jx-0Xtx4.css",
+    "file": "assets/app-kHvnYobv.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -9,7 +9,7 @@
     ]
   },
   "resources/css/manutentore.css": {
-    "file": "assets/manutentore-DBHN8jEF.css",
+    "file": "assets/manutentore-C-tYicmc.css",
     "src": "resources/css/manutentore.css",
     "isEntry": true,
     "name": "manutentore",
@@ -24,7 +24,7 @@
     "isEntry": true
   },
   "resources/js/manutentore.js": {
-    "file": "assets/manutentore-COJoMMKR.js",
+    "file": "assets/manutentore-RdE0kH1n.js",
     "name": "manutentore",
     "src": "resources/js/manutentore.js",
     "isEntry": true

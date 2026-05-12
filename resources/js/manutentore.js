@@ -84,9 +84,21 @@ Alpine.store('notifications', {
     _lastKnownUnread: 0,
     _silentBootstrap: true,
 
+    _syncBadge() {
+        if (typeof navigator === 'undefined' || !('setAppBadge' in navigator)) return
+        try {
+            if (this.unreadCount > 0) {
+                navigator.setAppBadge(this.unreadCount).catch(() => {})
+            } else {
+                navigator.clearAppBadge().catch(() => {})
+            }
+        } catch (_) {}
+    },
+
     setInitialCount(n) {
         this.unreadCount = n | 0
         this._lastKnownUnread = this.unreadCount
+        this._syncBadge()
     },
 
     async show() {
@@ -116,6 +128,7 @@ Alpine.store('notifications', {
                 this.unreadCount = newCount
                 this._lastKnownUnread = newCount
                 this._silentBootstrap = false
+                this._syncBadge()
             }
         } catch (_) {
             // silent
@@ -151,6 +164,7 @@ Alpine.store('notifications', {
                 this.unreadCount = payload.unread_count ?? this.unreadCount
                 const item = this.items.find((i) => i.id === id)
                 if (item && !item.read_at) item.read_at = new Date().toISOString()
+                this._syncBadge()
             }
         } catch (_) {}
     },
@@ -166,6 +180,7 @@ Alpine.store('notifications', {
             const now = new Date().toISOString()
             this.items.forEach((i) => { if (!i.read_at) i.read_at = now })
             this.unreadCount = 0
+            this._syncBadge()
         } catch (_) {}
     },
 })
