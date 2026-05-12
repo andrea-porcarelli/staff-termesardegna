@@ -68,10 +68,9 @@ class UserController extends Controller
             $user->teams()->sync($request->teams ?? []);
         }
 
-        // Aree: solo per operator
-        $user->areas()->sync($request->role === 'operator' ? ($request->areas ?? []) : []);
-        // Zone: per operator e manutentore
-        if (in_array($request->role, ['operator', 'manutentore'])) {
+        // Aree e Zone: per operator e manutentore
+        if (in_array($request->role, ['operator', 'manutentore'], true)) {
+            $user->areas()->sync($request->areas ?? []);
             $user->departments()->sync($request->departments ?? []);
         }
 
@@ -114,12 +113,12 @@ class UserController extends Controller
 
         $user->update($data);
 
-        // Aree: solo per operator
-        $user->areas()->sync($request->role === 'operator' ? ($request->areas ?? []) : []);
-        // Zone: per operator e manutentore
-        if (in_array($request->role, ['operator', 'manutentore'])) {
+        // Aree e Zone: per operator e manutentore
+        if (in_array($request->role, ['operator', 'manutentore'], true)) {
+            $user->areas()->sync($request->areas ?? []);
             $user->departments()->sync($request->departments ?? []);
         } else {
+            $user->areas()->detach();
             $user->departments()->detach();
         }
 

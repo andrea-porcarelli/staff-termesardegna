@@ -32,6 +32,10 @@ class UserRequest extends FormRequest
             'maintenance_roles.*' => 'exists:maintenance_roles,id',
             'teams' => 'nullable|array',
             'teams.*' => 'exists:teams,id',
+            'areas' => 'nullable|array',
+            'areas.*' => 'exists:areas,id',
+            'departments' => 'nullable|array',
+            'departments.*' => 'exists:departments,id',
             'maintenance_role_levels' => 'nullable|array',
             'maintenance_role_levels.*' => 'integer|between:1,5',
         ];

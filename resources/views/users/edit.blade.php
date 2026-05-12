@@ -378,43 +378,56 @@
                                         <div class="accordion accordion-flush mb-4" id="areasAccordion">
                                             @forelse($areas as $area)
                                                 <div class="accordion-item">
-                                                    <h2 class="accordion-header d-flex align-items-center">
-                                                        <div class="form-check me-2 mb-0" onclick="event.stopPropagation()">
-                                                            <input class="form-check-input area-checkbox"
-                                                                   type="checkbox"
-                                                                   id="area_check_{{ $area->id }}"
-                                                                   data-area-id="{{ $area->id }}"
-                                                                   onchange="toggleAreaDepartments({{ $area->id }})">
-                                                        </div>
-                                                        <button class="accordion-button collapsed flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#area_{{ $area->id }}" aria-expanded="false" style="padding-left: 0;">
-                                                            <i class="bi bi-geo-alt-fill me-2"></i>{{ $area->name }}
-                                                            @if($area->departments->count() > 0)
+                                                    @if($area->departments->count() > 0)
+                                                        <h2 class="accordion-header d-flex align-items-center">
+                                                            <div class="form-check me-2 mb-0" onclick="event.stopPropagation()">
+                                                                <input class="form-check-input area-checkbox"
+                                                                       type="checkbox"
+                                                                       id="area_check_{{ $area->id }}"
+                                                                       data-area-id="{{ $area->id }}"
+                                                                       onchange="toggleAreaDepartments({{ $area->id }})">
+                                                            </div>
+                                                            <button class="accordion-button collapsed flex-grow-1" type="button" data-bs-toggle="collapse" data-bs-target="#area_{{ $area->id }}" aria-expanded="false" style="padding-left: 0;">
+                                                                <i class="bi bi-geo-alt-fill me-2"></i>{{ $area->name }}
                                                                 <span class="badge bg-secondary ms-2">{{ $area->departments->count() }}</span>
                                                                 <span class="badge bg-success ms-2" id="area_assigned_{{ $area->id }}"></span>
-                                                            @endif
-                                                        </button>
-                                                    </h2>
-                                                    <div id="area_{{ $area->id }}" class="accordion-collapse collapse" data-bs-parent="#areasAccordion">
-                                                        <div class="accordion-body py-3">
-                                                            @forelse($area->departments as $department)
-                                                                <div class="form-check mb-2">
-                                                                    <input class="form-check-input dept-checkbox"
-                                                                           type="checkbox"
-                                                                           name="departments[]"
-                                                                           value="{{ $department->id }}"
-                                                                           id="dept_{{ $department->id }}"
-                                                                           data-area-id="{{ $area->id }}"
-                                                                           onchange="updateAreaCheckbox({{ $area->id }})"
-                                                                           {{ in_array($department->id, $userDepartmentIds) ? 'checked' : '' }}>
-                                                                    <label class="form-check-label" for="dept_{{ $department->id }}">
-                                                                        {{ $department->name }}
-                                                                    </label>
-                                                                </div>
-                                                            @empty
-                                                                <p class="text-muted mb-0 small">Nessuna zona disponibile</p>
-                                                            @endforelse
+                                                            </button>
+                                                        </h2>
+                                                        <div id="area_{{ $area->id }}" class="accordion-collapse collapse" data-bs-parent="#areasAccordion">
+                                                            <div class="accordion-body py-3">
+                                                                @foreach($area->departments as $department)
+                                                                    <div class="form-check mb-2">
+                                                                        <input class="form-check-input dept-checkbox"
+                                                                               type="checkbox"
+                                                                               name="departments[]"
+                                                                               value="{{ $department->id }}"
+                                                                               id="dept_{{ $department->id }}"
+                                                                               data-area-id="{{ $area->id }}"
+                                                                               onchange="updateAreaCheckbox({{ $area->id }})"
+                                                                               {{ in_array($department->id, $userDepartmentIds) ? 'checked' : '' }}>
+                                                                        <label class="form-check-label" for="dept_{{ $department->id }}">
+                                                                            {{ $department->name }}
+                                                                        </label>
+                                                                    </div>
+                                                                @endforeach
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    @else
+                                                        <h2 class="accordion-header">
+                                                            <div class="form-check ms-3 my-2 mb-0">
+                                                                <input class="form-check-input"
+                                                                       type="checkbox"
+                                                                       name="areas[]"
+                                                                       value="{{ $area->id }}"
+                                                                       id="area_only_{{ $area->id }}"
+                                                                       {{ in_array($area->id, $userAreaIds) ? 'checked' : '' }}>
+                                                                <label class="form-check-label" for="area_only_{{ $area->id }}">
+                                                                    <i class="bi bi-geo-alt-fill me-2"></i>{{ $area->name }}
+                                                                    <span class="text-muted small ms-1">(nessuna zona)</span>
+                                                                </label>
+                                                            </div>
+                                                        </h2>
+                                                    @endif
                                                 </div>
                                             @empty
                                                 <p class="text-muted mb-0">Nessuna area configurata</p>

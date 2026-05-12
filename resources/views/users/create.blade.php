@@ -182,24 +182,37 @@
                                 <p class="text-muted mb-3">Seleziona le zone assegnate a questo utente:</p>
                                 @forelse($areas as $area)
                                     <div class="mb-3">
-                                        <h6 class="fw-bold text-primary">
-                                            <i class="bi bi-geo-alt-fill me-1"></i>{{ $area->name }}
-                                        </h6>
-                                        @forelse($area->departments as $department)
-                                            <div class="form-check ms-4">
+                                        @if($area->departments->count() > 0)
+                                            <h6 class="fw-bold text-primary">
+                                                <i class="bi bi-geo-alt-fill me-1"></i>{{ $area->name }}
+                                            </h6>
+                                            @foreach($area->departments as $department)
+                                                <div class="form-check ms-4">
+                                                    <input class="form-check-input"
+                                                           type="checkbox"
+                                                           name="departments[]"
+                                                           value="{{ $department->id }}"
+                                                           id="dept_{{ $department->id }}"
+                                                           {{ in_array($department->id, old('departments', [])) ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="dept_{{ $department->id }}">
+                                                        {{ $department->name }}
+                                                    </label>
+                                                </div>
+                                            @endforeach
+                                        @else
+                                            <div class="form-check">
                                                 <input class="form-check-input"
                                                        type="checkbox"
-                                                       name="departments[]"
-                                                       value="{{ $department->id }}"
-                                                       id="dept_{{ $department->id }}"
-                                                       {{ in_array($department->id, old('departments', [])) ? 'checked' : '' }}>
-                                                <label class="form-check-label" for="dept_{{ $department->id }}">
-                                                    {{ $department->name }}
+                                                       name="areas[]"
+                                                       value="{{ $area->id }}"
+                                                       id="area_only_{{ $area->id }}"
+                                                       {{ in_array($area->id, old('areas', [])) ? 'checked' : '' }}>
+                                                <label class="form-check-label fw-bold text-primary" for="area_only_{{ $area->id }}">
+                                                    <i class="bi bi-geo-alt-fill me-1"></i>{{ $area->name }}
+                                                    <span class="text-muted small ms-1 fw-normal">(nessuna zona)</span>
                                                 </label>
                                             </div>
-                                        @empty
-                                            <p class="text-muted ms-4 mb-0">Nessuna zona disponibile</p>
-                                        @endforelse
+                                        @endif
                                     </div>
                                 @empty
                                     <p class="text-muted mb-0">Nessuna area configurata</p>
