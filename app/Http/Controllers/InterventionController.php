@@ -414,7 +414,6 @@ class InterventionController extends Controller
                 'description' => $request->description,
             ]),
             'description' => $request->description,
-            'scheduled_date' => today(),
             'status' => 'open',
             'priority' => $request->priority,
         ]);

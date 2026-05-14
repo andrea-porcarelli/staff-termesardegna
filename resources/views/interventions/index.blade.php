@@ -131,8 +131,7 @@
                         <th>Destinazione</th>
                         <th>Operatore</th>
                         <th>Aperto da</th>
-                        <th>Data</th>
-                        <th>Creato il</th>
+                        <th>Date</th>
                         <th>Stato</th>
                         <th>Priorità</th>
                         <th class="text-center">Azioni</th>
@@ -176,19 +175,29 @@
                                     <span class="text-muted">-</span>
                                 @endif
                             </td>
-                            <td>
+                            <td class="small text-nowrap">
+                                <div>
+                                    <i class="bi bi-plus-circle me-1 text-muted"></i><span class="text-muted">Creato:</span>
+                                    {{ $intervention->created_at->format('d/m/Y H:i') }}
+                                </div>
                                 @if($intervention->scheduled_date)
-                                    {{ $intervention->scheduled_date->format('d/m/Y') }}
-                                    @if($intervention->scheduled_start_time)
-                                        <br><small class="text-muted">{{ substr($intervention->scheduled_start_time, 0, 5) }}</small>
-                                    @endif
-                                @else
-                                    <span class="text-muted">-</span>
+                                    <div>
+                                        <i class="bi bi-calendar3 me-1 text-muted"></i><span class="text-muted">Pianificato:</span>
+                                        {{ $intervention->scheduled_date->format('d/m/Y') }}@if($intervention->scheduled_start_time) {{ substr($intervention->scheduled_start_time, 0, 5) }}@endif
+                                    </div>
                                 @endif
-                            </td>
-                            <td>
-                                {{ $intervention->created_at->format('d/m/Y') }}
-                                <br><small class="text-muted">{{ $intervention->created_at->format('H:i') }}</small>
+                                @if($intervention->preso_in_carico_at)
+                                    <div>
+                                        <i class="bi bi-person-check me-1 text-muted"></i><span class="text-muted">Preso in carico:</span>
+                                        {{ $intervention->preso_in_carico_at->format('d/m/Y H:i') }}
+                                    </div>
+                                @endif
+                                @if($intervention->completed_at)
+                                    <div>
+                                        <i class="bi bi-check2-circle me-1 text-muted"></i><span class="text-muted">Chiuso:</span>
+                                        {{ $intervention->completed_at->format('d/m/Y H:i') }}
+                                    </div>
+                                @endif
                             </td>
                             <td>
                                 @php
@@ -255,7 +264,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="11" class="text-center py-4">
+                            <td colspan="10" class="text-center py-4">
                                 <i class="bi bi-inbox" style="font-size: 48px; color: #ccc;"></i>
                                 <p class="text-muted mt-2">Nessun ticket trovato</p>
                             </td>
