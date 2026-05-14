@@ -88,7 +88,7 @@ class InterventionController extends Controller
             }
         }
 
-        $interventions = $query->get();
+        $interventions = $query->orderBy('id', 'DESC')->get();
 
         $openableUsers = collect();
         $assignableUsers = collect();
