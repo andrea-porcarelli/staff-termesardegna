@@ -27,8 +27,7 @@ class InterventionController extends Controller
         $user = Auth::user();
         abort_if($user->role === 'manutentore', 403);
 
-        $query = Intervention::with(['equipment.department.area', 'area', 'department', 'assignedUser', 'creator:id,name'])
-            ->orderBy('scheduled_date', 'desc');
+        $query = Intervention::with(['equipment.department.area', 'area', 'department', 'assignedUser', 'creator:id,name']);
 
         // Operatore: vede solo i ticket che ricadono nelle sue aree/zone (e quelli che ha aperto lui).
         if ($user->role === 'operator') {

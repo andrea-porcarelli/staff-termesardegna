@@ -67,11 +67,22 @@
                     <button type="submit" class="btn btn-light w-100">
                         <i class="bi bi-search me-1"></i>Filtra
                     </button>
-                    @if(request()->hasAny(['status','user_id','date_from','date_to','q']))
+                    @if(request()->hasAny(['status','user_id','date_from','date_to','q','free_only']))
                         <a href="{{ route('reports.index') }}" class="btn btn-secondary">
                             <i class="bi bi-x"></i>
                         </a>
                     @endif
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input type="hidden" name="free_only" value="0">
+                        <input type="checkbox" class="form-check-input" id="free_only"
+                               name="free_only" value="1"
+                               {{ request()->boolean('free_only') ? 'checked' : '' }}>
+                        <label class="form-check-label" for="free_only">
+                            <i class="bi bi-journal me-1"></i>Solo rapportini liberi (senza ticket)
+                        </label>
+                    </div>
                 </div>
             </div>
         </form>
@@ -94,6 +105,7 @@
                         <th>Destinazione</th>
                         <th>Operatore</th>
                         <th>Orario</th>
+                        <th>Durata</th>
                         <th>Stato</th>
                         <th class="text-center">Azioni</th>
                     </tr>
@@ -106,6 +118,7 @@
                             </td>
                             <td>
                                 @if($report->intervention)
+                                    <div class="text-muted small">#{{ $report->intervention->id }}</div>
                                     <strong>{{ $report->intervention->title }}</strong>
                                 @else
                                     <span class="badge bg-info text-dark">
@@ -134,6 +147,19 @@
                                     <span class="text-muted">—</span>
                                 @endif
                             </td>
+                            <td class="text-nowrap">
+                                @php
+                                    $minutes = $report->duration_minutes;
+                                    if (! $minutes && $report->start_time && $report->end_time) {
+                                        $minutes = (int) ((strtotime($report->end_time) - strtotime($report->start_time)) / 60);
+                                    }
+                                @endphp
+                                @if($minutes && $minutes > 0)
+                                    <i class="bi bi-clock-history me-1"></i>{{ intdiv($minutes, 60) }}h {{ str_pad($minutes % 60, 2, '0', STR_PAD_LEFT) }}m
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
+                            </td>
                             <td>
                                 <span class="badge {{ $statusColors[$report->status] ?? 'bg-secondary' }}">
                                     {{ $statusLabels[$report->status] ?? $report->status }}
@@ -148,7 +174,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center py-5">
+                            <td colspan="8" class="text-center py-5">
                                 <i class="bi bi-inbox" style="font-size:48px;color:#ccc"></i>
                                 <p class="text-muted mt-2">Nessun rapportino trovato</p>
                             </td>

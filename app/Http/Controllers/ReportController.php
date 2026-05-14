@@ -37,6 +37,9 @@ class ReportController extends Controller
         if ($request->filled('date_to')) {
             $query->where('report_date', '<=', $request->date_to);
         }
+        if ($request->boolean('free_only')) {
+            $query->whereNull('intervention_id');
+        }
         if ($request->filled('q')) {
             $like = '%'.$request->q.'%';
             $query->where(function ($qq) use ($like) {
