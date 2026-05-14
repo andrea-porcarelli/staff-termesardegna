@@ -188,7 +188,7 @@
                                 @endif
                                 @if($intervention->preso_in_carico_at)
                                     <div>
-                                        <i class="bi bi-person-check me-1 text-muted"></i><span class="text-muted">Preso in carico:</span>
+                                        <i class="bi bi-person-check me-1 text-muted"></i><span class="text-muted">In carico:</span>
                                         {{ $intervention->preso_in_carico_at->format('d/m/Y H:i') }}
                                     </div>
                                 @endif
