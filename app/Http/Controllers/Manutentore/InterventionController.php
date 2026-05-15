@@ -452,7 +452,9 @@ class InterventionController extends Controller
             return response()->json(['items' => []]);
         }
 
-        $like = '%'.$q.'%';
+        // Ricerca per singole parole: "cam 214" → tutte le parole devono comparire
+        // nel titolo (AND su LIKE %parola%).
+        $terms = preg_split('/\s+/', $q, -1, PREG_SPLIT_NO_EMPTY) ?: [];
 
         $items = Intervention::with([
             'area:id,name',
@@ -463,7 +465,11 @@ class InterventionController extends Controller
             'assignedUser:id,name',
         ])
             ->whereNotIn('status', ['completed', 'cancelled'])
-            ->where('title', 'like', $like)
+            ->where(function ($w) use ($terms) {
+                foreach ($terms as $term) {
+                    $w->where('title', 'like', '%'.$term.'%');
+                }
+            })
             ->where(function ($w) use ($deptIds) {
                 $w->whereIn('department_id', $deptIds)
                     ->orWhereHas('equipment', fn ($eq) => $eq->whereIn('department_id', $deptIds));
