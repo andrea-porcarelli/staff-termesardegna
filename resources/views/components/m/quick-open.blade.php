@@ -11,7 +11,7 @@
     $isManutentoreCreator = $creatorRole === 'manutentore';
 @endphp
 
-<div x-data="quickOpenForm({{ $departments->toJson() }}, {{ $equipments->toJson() }})" x-cloak>
+<div x-data="quickOpenForm({{ $departments->toJson() }}, {{ $equipments->toJson() }}, {{ Js::from(route('m.interventions.similar-open')) }})" x-cloak>
     <div x-show="$store.quickOpen.isOpen"
          x-transition:enter="transition ease-out duration-200"
          x-transition:enter-start="opacity-0"
@@ -57,9 +57,51 @@
                         @unless ($isManutentoreCreator) <span class="text-red-500">*</span> @endunless
                     </label>
                     <input type="text" name="title" maxlength="255"
+                           x-model="title"
+                           @input.debounce.350ms="searchSimilar()"
                            placeholder="{{ $isManutentoreCreator ? 'Titolo breve (facoltativo)' : 'Titolo breve' }}"
                            @unless ($isManutentoreCreator) required @endunless
                            class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
+
+                    {{-- Preview ticket aperti/in lavorazione simili nelle zone dell'utente. --}}
+                    <template x-if="similarLoading">
+                        <div class="mt-2 text-[12px] text-gray-400">Ricerca ticket simili…</div>
+                    </template>
+                    <template x-if="!similarLoading && similar.length > 0">
+                        <div class="mt-2 rounded-xl border border-amber-200 bg-amber-50">
+                            <div class="px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-amber-800">
+                                Ticket simili già aperti
+                            </div>
+                            <ul class="divide-y divide-amber-100">
+                                <template x-for="t in similar" :key="t.id">
+                                    <li>
+                                        <button type="button" @click="openSimilar(t.id)"
+                                                class="w-full text-left px-3 py-2 active:bg-amber-100 flex items-start gap-2">
+                                            <span class="text-[11px] font-bold text-amber-700 shrink-0 mt-0.5" x-text="t.code"></span>
+                                            <span class="min-w-0 flex-1">
+                                                <span class="block text-sm text-gray-900 truncate" x-text="t.title"></span>
+                                                <span class="block text-[11px] text-gray-500 truncate">
+                                                    <span x-text="t.status_label"></span>
+                                                    <template x-if="t.department">
+                                                        <span> · <span x-text="t.department"></span></span>
+                                                    </template>
+                                                    <template x-if="t.equipment">
+                                                        <span> · <span x-text="t.equipment"></span></span>
+                                                    </template>
+                                                    <template x-if="t.assigned_user">
+                                                        <span> · <span x-text="t.assigned_user"></span></span>
+                                                    </template>
+                                                </span>
+                                            </span>
+                                        </button>
+                                    </li>
+                                </template>
+                            </ul>
+                            <div class="px-3 py-2 text-[11px] text-amber-700">
+                                Tocca un ticket per aprirlo, oppure continua a compilare per crearne uno nuovo.
+                            </div>
+                        </div>
+                    </template>
                 </div>
 
                 @if ($isManutentoreCreator)
@@ -293,7 +335,7 @@
 @once
     @push('scripts')
     <script>
-        function quickOpenForm(allDepartments, allEquipments) {
+        function quickOpenForm(allDepartments, allEquipments, similarUrl) {
             return {
                 maintenanceRoleId: '',
                 priority: '',
@@ -308,9 +350,46 @@
                 equipments: allEquipments,
                 todayStr: new Date().toISOString().slice(0, 10),
                 files: [],
+                title: '',
+                similar: [],
+                similarLoading: false,
+                similarUrl: similarUrl,
+                similarReqId: 0,
 
                 init() {
                     this.autoSelectZone();
+                },
+
+                async searchSimilar() {
+                    const q = (this.title || '').trim();
+                    if (q.length < 3) {
+                        this.similar = [];
+                        this.similarLoading = false;
+                        return;
+                    }
+                    const reqId = ++this.similarReqId;
+                    this.similarLoading = true;
+                    try {
+                        const url = `${this.similarUrl}?q=${encodeURIComponent(q)}`;
+                        const res = await fetch(url, {
+                            headers: { 'Accept': 'application/json' },
+                            credentials: 'same-origin',
+                        });
+                        if (!res.ok) throw new Error('HTTP ' + res.status);
+                        const data = await res.json();
+                        if (reqId !== this.similarReqId) return; // risposta vecchia, scarta
+                        this.similar = Array.isArray(data.items) ? data.items : [];
+                    } catch (_) {
+                        if (reqId === this.similarReqId) this.similar = [];
+                    } finally {
+                        if (reqId === this.similarReqId) this.similarLoading = false;
+                    }
+                },
+
+                openSimilar(id) {
+                    // Chiudi il modal di apertura ticket e apri il modal dettagli del ticket esistente.
+                    if (window.Alpine && Alpine.store('quickOpen')) Alpine.store('quickOpen').hide();
+                    window.dispatchEvent(new CustomEvent('open-ticket', { detail: { id } }));
                 },
 
                 onFiles(event) {

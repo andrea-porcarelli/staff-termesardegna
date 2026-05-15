@@ -63,25 +63,26 @@ class InterventionController extends Controller
         ])
             ->withCount('transfers')
             ->where(function ($q) use ($user, $deptIds) {
+                // I manutentori vedono SOLO i ticket a loro assegnati o in cui
+                // sono collaboratori accettati. Gli operatori (e altri ruoli)
+                // vedono anche tutti i ticket dei dipartimenti a loro assegnati
+                // e quelli da loro creati.
                 $q->where('assigned_user_id', $user->id);
-
-                // Chi ha aperto il ticket lo vede sempre.
-                $q->orWhere('created_by', $user->id);
 
                 $q->orWhereHas('collaborations', fn ($c) => $c
                     ->where('user_id', $user->id)
                     ->where('status', InterventionCollaboration::STATUS_ACCEPTED));
 
-                if ($deptIds->isNotEmpty()) {
-                    // Disponibili in zona: solo ticket non ancora assegnati,
-                    // così non si vedono i lavori di altri manutentori.
-                    $q->orWhere(function ($q2) use ($deptIds) {
-                        $q2->whereNull('assigned_user_id')
-                            ->where(function ($q3) use ($deptIds) {
-                                $q3->whereIn('department_id', $deptIds)
-                                    ->orWhereHas('equipment', fn ($eq) => $eq->whereIn('department_id', $deptIds));
-                            });
-                    });
+                if ($user->role !== 'manutentore') {
+                    // Chi ha aperto il ticket lo vede sempre.
+                    $q->orWhere('created_by', $user->id);
+
+                    if ($deptIds->isNotEmpty()) {
+                        $q->orWhere(function ($q2) use ($deptIds) {
+                            $q2->whereIn('department_id', $deptIds)
+                                ->orWhereHas('equipment', fn ($eq) => $eq->whereIn('department_id', $deptIds));
+                        });
+                    }
                 }
             });
 
@@ -435,6 +436,60 @@ class InterventionController extends Controller
                 'can_delete' => $intervention->canBeDeletedBy($me),
             ],
         ]);
+    }
+
+    public function similarOpenJson(Request $request): JsonResponse
+    {
+        $user = Auth::user();
+        $q = trim((string) $request->get('q', ''));
+
+        if (mb_strlen($q) < 3) {
+            return response()->json(['items' => []]);
+        }
+
+        $deptIds = $user->departments()->pluck('departments.id');
+        if ($deptIds->isEmpty()) {
+            return response()->json(['items' => []]);
+        }
+
+        $like = '%'.$q.'%';
+
+        $items = Intervention::with([
+            'area:id,name',
+            'department:id,name',
+            'equipment:id,name,department_id',
+            'equipment.department:id,name,area_id',
+            'equipment.department.area:id,name',
+            'assignedUser:id,name',
+        ])
+            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->where('title', 'like', $like)
+            ->where(function ($w) use ($deptIds) {
+                $w->whereIn('department_id', $deptIds)
+                    ->orWhereHas('equipment', fn ($eq) => $eq->whereIn('department_id', $deptIds));
+            })
+            ->orderByDesc('created_at')
+            ->limit(8)
+            ->get()
+            ->map(fn ($i) => [
+                'id' => $i->id,
+                'code' => '#'.$i->id,
+                'title' => $i->title,
+                'status' => $i->status,
+                'status_label' => [
+                    'open' => 'Aperto',
+                    'planned' => 'Pianificato',
+                    'in_progress' => 'In carico',
+                ][$i->status] ?? $i->status,
+                'priority' => $i->priority,
+                'area' => $i->area?->name ?? $i->equipment?->department?->area?->name,
+                'department' => $i->department?->name ?? $i->equipment?->department?->name,
+                'equipment' => $i->equipment?->name,
+                'assigned_user' => $i->assignedUser?->name,
+                'created_at' => $i->created_at?->isoFormat('D MMM YYYY'),
+            ]);
+
+        return response()->json(['items' => $items]);
     }
 
     public function candidatesJson(Request $request, Intervention $intervention): JsonResponse

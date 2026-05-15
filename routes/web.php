@@ -99,6 +99,9 @@ Route::prefix('m')->middleware(['auth', 'mobile'])->name('m.')->group(function (
     Route::post('/interventions/quick-open', [MInterventionController::class, 'quickStore'])
         ->name('interventions.quick-open');
 
+    Route::get('/interventions/similar-open', [MInterventionController::class, 'similarOpenJson'])
+        ->name('interventions.similar-open');
+
     // Rapportino inline (mobile)
     Route::get('/rapportini', [MReportController::class, 'index'])->name('reports.index');
     Route::post('/interventions/{intervention}/reports', [MReportController::class, 'store'])
