@@ -10,6 +10,15 @@
     $equipmentLabel = $currentEquipment
         ? $currentEquipment->name . ($currentEquipment->code ? ' (' . $currentEquipment->code . ')' : '')
         : '';
+    $initial = [
+        'priority' => $iv->priority,
+        'scheduledDate' => optional($iv->scheduled_date)->format('Y-m-d'),
+        'scheduledTime' => $iv->scheduled_start_time ? substr($iv->scheduled_start_time, 0, 5) : '',
+        'areaId' => (string) ($iv->area_id ?? ''),
+        'deptId' => (string) ($iv->department_id ?? ''),
+        'equipmentId' => (string) ($iv->equipment_id ?? ''),
+        'equipmentLabel' => $equipmentLabel,
+    ];
 @endphp
 
 @section('content')
@@ -17,15 +26,7 @@
          x-data="ticketEditForm(
             {{ $quickDepartments->toJson() }},
             {{ $quickEquipments->toJson() }},
-            @json([
-                'priority' => $iv->priority,
-                'scheduledDate' => optional($iv->scheduled_date)->format('Y-m-d'),
-                'scheduledTime' => $iv->scheduled_start_time ? substr($iv->scheduled_start_time, 0, 5) : '',
-                'areaId' => (string) ($iv->area_id ?? ''),
-                'deptId' => (string) ($iv->department_id ?? ''),
-                'equipmentId' => (string) ($iv->equipment_id ?? ''),
-                'equipmentLabel' => $equipmentLabel,
-            ])
+            @json($initial)
          )">
 
         <div class="flex items-center gap-2 mb-3">
