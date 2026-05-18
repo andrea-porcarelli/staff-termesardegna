@@ -315,10 +315,13 @@
         </form>
     </div>
 
-    @push('scripts')
+    {{-- Definizione INLINE (non push'd) della factory: deve esistere come
+         globale prima che Alpine scansioni il DOM. Mettere lo script in
+         @push('scripts') o registrarlo via alpine:init si è rivelato
+         inaffidabile (Alpine valuta l'x-data prima di leggere lo stack). --}}
     <script>
-        function ticketEditForm(allDepartments, allEquipments, initial) {
-            return {
+        window.ticketEditForm = function (allDepartments, allEquipments, initial) {
+            return ({
                 priority: initial.priority || '',
                 scheduledDate: initial.scheduledDate || '',
                 scheduledTime: initial.scheduledTime || '',
@@ -472,8 +475,7 @@
                     this.equipmentId = '';
                     this.equipmentQuery = '';
                 },
-            };
-        }
+            });
+        };
     </script>
-    @endpush
 @endsection
