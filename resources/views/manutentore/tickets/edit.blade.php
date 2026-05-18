@@ -51,6 +51,7 @@
         @endif
 
         <form method="POST" action="{{ route('m.tickets.update', $iv) }}"
+              enctype="multipart/form-data"
               class="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
             @csrf
             @method('PUT')
@@ -87,6 +88,18 @@
                             <option value="{{ $mr->id }}" @selected(old('maintenance_role_id', $iv->maintenance_role_id) == $mr->id)>{{ $mr->name }}</option>
                         @endforeach
                     </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Manutentore (opzionale)</label>
+                    <select name="assigned_user_id"
+                            class="w-full h-11 px-3 border border-gray-300 rounded-xl bg-white text-base">
+                        <option value="">— Non modificare —</option>
+                        @foreach ($quickManutentori as $m)
+                            <option value="{{ $m->id }}" @selected(old('assigned_user_id', $iv->assigned_user_id) == $m->id)>{{ $m->name }}</option>
+                        @endforeach
+                    </select>
+                    <div class="text-[11px] text-gray-400 mt-1">Lascia invariato per mantenere l'assegnazione attuale.</div>
                 </div>
             @endif
 
@@ -187,6 +200,92 @@
                           placeholder="Cosa devi fare...">{{ old('description', $iv->description) }}</textarea>
             </div>
 
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">Allegati</label>
+
+                @php($existingMedia = $iv->media)
+                @if ($existingMedia->count() > 0)
+                    <ul class="space-y-1.5 mb-3">
+                        @foreach ($existingMedia as $m)
+                            @php($isImage = str_contains((string) $m->file_type, 'image'))
+                            <li class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200"
+                                x-show="!removedMediaIds.includes({{ $m->id }})">
+                                @if ($isImage)
+                                    <img src="{{ \Illuminate\Support\Facades\Storage::url($m->file_path) }}"
+                                         alt="" class="w-10 h-10 rounded object-cover shrink-0">
+                                @else
+                                    <span class="w-10 h-10 rounded bg-gray-200 text-gray-500 flex items-center justify-center text-[10px] font-bold shrink-0">
+                                        {{ strtoupper(pathinfo($m->file_name, PATHINFO_EXTENSION) ?: 'FILE') }}
+                                    </span>
+                                @endif
+                                <div class="flex-1 min-w-0">
+                                    <a href="{{ \Illuminate\Support\Facades\Storage::url($m->file_path) }}"
+                                       target="_blank" rel="noopener"
+                                       class="text-sm text-gray-800 truncate block hover:underline">{{ $m->file_name }}</a>
+                                </div>
+                                <button type="button" @click="removeExistingMedia({{ $m->id }})"
+                                        class="w-7 h-7 rounded-full text-red-500 active:bg-red-50" aria-label="Elimina">
+                                    <svg class="w-4 h-4 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>
+                                    </svg>
+                                </button>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+
+                <template x-for="id in removedMediaIds" :key="id">
+                    <input type="hidden" name="delete_media_ids[]" :value="id">
+                </template>
+
+                <input type="file" name="files[]" multiple x-ref="fileInput" class="hidden">
+
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="h-24 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-500 active:bg-gray-100 cursor-pointer">
+                        <input type="file" class="sr-only" accept="image/*" capture="environment" @change="onFiles($event)">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M15 9h-6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-2M9 9l2-3h2l2 3M12 14a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/>
+                        </svg>
+                        <span class="text-xs mt-1">Foto</span>
+                    </label>
+                    <label class="h-24 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-500 active:bg-gray-100 cursor-pointer">
+                        <input type="file" class="sr-only" multiple accept="image/*,application/pdf,.zip" @change="onFiles($event)">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m4-6 5-5 5 5m-5-5v12"/>
+                        </svg>
+                        <span class="text-xs mt-1">Carica file</span>
+                    </label>
+                </div>
+
+                <template x-if="files.length > 0">
+                    <ul class="mt-3 space-y-1.5">
+                        <template x-for="(f, idx) in files" :key="idx">
+                            <li class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200">
+                                <template x-if="f.preview">
+                                    <img :src="f.preview" alt="" class="w-8 h-8 rounded object-cover shrink-0">
+                                </template>
+                                <template x-if="!f.preview">
+                                    <span class="w-8 h-8 rounded bg-gray-200 text-gray-500 flex items-center justify-center text-[10px] font-bold shrink-0" x-text="f.ext"></span>
+                                </template>
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-sm text-gray-800 truncate" x-text="f.name"></div>
+                                    <div class="text-[11px] text-gray-500" x-text="f.sizeLabel"></div>
+                                </div>
+                                <button type="button" @click="removeFile(idx)" class="w-7 h-7 rounded-full text-gray-500 active:bg-gray-200" aria-label="Rimuovi">
+                                    <svg class="w-4 h-4 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>
+                                    </svg>
+                                </button>
+                            </li>
+                        </template>
+                    </ul>
+                </template>
+
+                <div class="text-[11px] text-gray-400 mt-2">Max 10 file, fino a 10&nbsp;MB ciascuno.</div>
+            </div>
+
             <div class="pt-2 grid grid-cols-2 gap-2">
                 <a href="{{ route('m.tickets.index') }}"
                    class="h-12 rounded-xl bg-gray-100 text-gray-800 font-semibold text-base flex items-center justify-center active:bg-gray-200">
@@ -229,6 +328,53 @@
                 depts: allDepartments,
                 equipments: allEquipments,
                 todayStr: new Date().toISOString().slice(0, 10),
+                files: [],
+                removedMediaIds: [],
+
+                onFiles(event) {
+                    const list = Array.from(event.target.files || []);
+                    list.forEach((file) => {
+                        const isImage = file.type.startsWith('image/');
+                        this.files.push({
+                            file,
+                            name: file.name,
+                            ext: (file.name.split('.').pop() || '').toUpperCase().slice(0, 4),
+                            sizeLabel: this.formatSize(file.size),
+                            preview: isImage ? URL.createObjectURL(file) : null,
+                        });
+                    });
+                    event.target.value = '';
+                    this.syncFileInput();
+                },
+
+                removeFile(idx) {
+                    const f = this.files[idx];
+                    if (f?.preview) URL.revokeObjectURL(f.preview);
+                    this.files.splice(idx, 1);
+                    this.syncFileInput();
+                },
+
+                syncFileInput() {
+                    const dt = new DataTransfer();
+                    this.files.forEach((f) => dt.items.add(f.file));
+                    if (this.$refs.fileInput) {
+                        this.$refs.fileInput.files = dt.files;
+                    }
+                },
+
+                removeExistingMedia(id) {
+                    if (!confirm('Eliminare questo allegato?')) return;
+                    if (!this.removedMediaIds.includes(id)) {
+                        this.removedMediaIds.push(id);
+                    }
+                },
+
+                formatSize(bytes) {
+                    const units = ['B', 'KB', 'MB', 'GB'];
+                    let i = 0;
+                    while (bytes > 1024 && i < units.length - 1) { bytes /= 1024; i++; }
+                    return `${bytes.toFixed(bytes >= 10 || i === 0 ? 0 : 1)} ${units[i]}`;
+                },
 
                 get filteredDepts() {
                     if (!this.areaId) return this.depts;

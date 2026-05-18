@@ -19,6 +19,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class InterventionController extends Controller
@@ -766,6 +767,10 @@ class InterventionController extends Controller
             ],
             'title' => 'nullable|string|max:255',
             'description' => 'nullable|string|max:2000',
+            'files' => 'nullable|array|max:10',
+            'files.*' => 'file|mimes:pdf,jpg,jpeg,png,gif,zip|max:10240',
+            'delete_media_ids' => 'nullable|array',
+            'delete_media_ids.*' => 'integer',
         ];
 
         if ($isManutentoreCreator) {
@@ -777,6 +782,12 @@ class InterventionController extends Controller
             ];
         } else {
             $rules['maintenance_role_id'] = 'required|exists:maintenance_roles,id';
+            $rules['assigned_user_id'] = [
+                'nullable',
+                \Illuminate\Validation\Rule::exists('users', 'id')
+                    ->where('role', 'manutentore')
+                    ->where('active', true),
+            ];
         }
 
         $request->validate($rules, [
@@ -790,6 +801,9 @@ class InterventionController extends Controller
             'area_id.in' => 'Area non disponibile.',
             'department_id.in' => 'Zona non disponibile.',
             'equipment_id.exists' => 'Impianto non disponibile.',
+            'files.max' => 'Puoi allegare al massimo 10 file.',
+            'files.*.mimes' => 'Sono accettati solo PDF, immagini (JPG/PNG/GIF) e ZIP.',
+            'files.*.max' => 'Ogni file deve essere al massimo di 10 MB.',
         ]);
 
         $equipmentId = $request->equipment_id ?: null;
@@ -819,12 +833,25 @@ class InterventionController extends Controller
 
         $isFixedDate = $request->priority === 'fixed_date';
 
+        // Calcolo dell'assegnatario:
+        // - manutentore-creator: campo obbligatorio, valore preso dal request.
+        // - operator/altro: campo opzionale; se valorizzato sovrascrive l'assegnatario
+        //   corrente, altrimenti mantiene quello attuale (no auto-assignment in update).
+        if ($isManutentoreCreator) {
+            $newAssignedUserId = $request->assigned_user_id;
+        } else {
+            $newAssignedUserId = $request->filled('assigned_user_id')
+                ? (int) $request->assigned_user_id
+                : $intervention->assigned_user_id;
+        }
+        $previousAssignedUserId = $intervention->assigned_user_id;
+
         $intervention->update([
             'area_id' => $areaId,
             'department_id' => $deptId,
             'equipment_id' => $equipmentId,
             'maintenance_role_id' => $isManutentoreCreator ? null : $request->maintenance_role_id,
-            'assigned_user_id' => $isManutentoreCreator ? $request->assigned_user_id : null,
+            'assigned_user_id' => $newAssignedUserId,
             'title' => $title,
             'description' => $request->description,
             'scheduled_date' => $isFixedDate ? $request->scheduled_date : today(),
@@ -832,9 +859,49 @@ class InterventionController extends Controller
             'priority' => $request->priority,
         ]);
 
+        // Allegati: prima rimuovi quelli marcati per eliminazione, poi carica i nuovi.
+        $deleteMediaIds = (array) $request->input('delete_media_ids', []);
+        if (! empty($deleteMediaIds)) {
+            $toDelete = Media::where('mediable_type', Intervention::class)
+                ->where('mediable_id', $intervention->id)
+                ->whereIn('id', $deleteMediaIds)
+                ->get();
+            foreach ($toDelete as $m) {
+                Storage::disk('public')->delete($m->file_path);
+                $m->delete();
+            }
+        }
+
+        if ($request->hasFile('files')) {
+            foreach ($request->file('files') as $file) {
+                $path = $file->store('media', 'public');
+                Media::create([
+                    'mediable_type' => Intervention::class,
+                    'mediable_id' => $intervention->id,
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_path' => $path,
+                    'file_type' => $file->getMimeType(),
+                    'file_size' => $file->getSize(),
+                ]);
+            }
+        }
+
         InterventionActivityLogger::log($intervention, InterventionLogActions::UPDATED, [
             'edited_by_creator' => true,
         ]);
+
+        // Log dell'assegnazione manuale se l'operatore l'ha cambiata.
+        if (! $isManutentoreCreator
+            && $newAssignedUserId
+            && $newAssignedUserId !== $previousAssignedUserId) {
+            $picked = User::find($newAssignedUserId);
+            InterventionActivityLogger::log($intervention, InterventionLogActions::MANUALLY_ASSIGNED, [
+                'reason' => "L'operatore «{$user->name}» ha cambiato l'assegnatario in «{$picked?->name}» dalla modifica del ticket.",
+                'from_user_id' => $previousAssignedUserId,
+                'to_user_id' => $newAssignedUserId,
+                'to_user_name' => $picked?->name,
+            ]);
+        }
 
         return redirect()
             ->route('m.tickets.index')
