@@ -52,6 +52,8 @@
 
         <form method="POST" action="{{ route('m.tickets.update', $iv) }}"
               enctype="multipart/form-data"
+              x-ref="mainForm"
+              @submit.prevent="onSubmit($event)"
               class="bg-white rounded-2xl border border-gray-200 p-4 space-y-3">
             @csrf
             @method('PUT')
@@ -238,8 +240,6 @@
                     <input type="hidden" name="delete_media_ids[]" :value="id">
                 </template>
 
-                <input type="file" name="files[]" multiple x-ref="fileInput" class="hidden">
-
                 <div class="grid grid-cols-2 gap-2">
                     <label class="h-24 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center text-gray-500 active:bg-gray-100 cursor-pointer">
                         <input type="file" class="sr-only" accept="image/*" capture="environment" @change="onFiles($event)">
@@ -292,8 +292,10 @@
                     Annulla
                 </a>
                 <button type="submit"
-                        class="h-12 rounded-xl bg-brand-600 text-white font-semibold text-base active:bg-brand-700">
-                    Salva
+                        :disabled="submitting"
+                        class="h-12 rounded-xl bg-brand-600 text-white font-semibold text-base active:bg-brand-700 disabled:opacity-60">
+                    <span x-show="!submitting">Salva</span>
+                    <span x-show="submitting" x-cloak>Salvataggio…</span>
                 </button>
             </div>
         </form>
@@ -330,6 +332,7 @@
                 todayStr: new Date().toISOString().slice(0, 10),
                 files: [],
                 removedMediaIds: [],
+                submitting: false,
 
                 onFiles(event) {
                     const list = Array.from(event.target.files || []);
@@ -344,28 +347,54 @@
                         });
                     });
                     event.target.value = '';
-                    this.syncFileInput();
                 },
 
                 removeFile(idx) {
                     const f = this.files[idx];
                     if (f?.preview) URL.revokeObjectURL(f.preview);
                     this.files.splice(idx, 1);
-                    this.syncFileInput();
-                },
-
-                syncFileInput() {
-                    const dt = new DataTransfer();
-                    this.files.forEach((f) => dt.items.add(f.file));
-                    if (this.$refs.fileInput) {
-                        this.$refs.fileInput.files = dt.files;
-                    }
                 },
 
                 removeExistingMedia(id) {
                     if (!confirm('Eliminare questo allegato?')) return;
                     if (!this.removedMediaIds.includes(id)) {
                         this.removedMediaIds.push(id);
+                    }
+                },
+
+                async onSubmit(event) {
+                    if (this.submitting) return;
+                    this.submitting = true;
+                    const form = this.$refs.mainForm;
+                    const fd = new FormData(form);
+                    // I file dell'array Alpine vengono allegati manualmente: in alcuni
+                    // browser mobile DataTransfer non popola in modo affidabile un
+                    // input[type=file] nascosto, quindi bypassiamo il problema.
+                    this.files.forEach((f) => fd.append('files[]', f.file, f.name));
+                    try {
+                        const res = await fetch(form.action, {
+                            method: 'POST',
+                            body: fd,
+                            headers: { 'Accept': 'text/html,application/xhtml+xml' },
+                            credentials: 'same-origin',
+                        });
+                        // Laravel risponde 302 sul successo: fetch segue il redirect e
+                        // imposta res.redirected/res.url alla destinazione finale.
+                        if (res.redirected && res.url) {
+                            window.location.href = res.url;
+                            return;
+                        }
+                        if (res.ok) {
+                            window.location.href = '{{ route('m.tickets.index') }}';
+                            return;
+                        }
+                        // 422 (validation) o altri errori: ricarico la pagina edit per
+                        // mostrare i messaggi flash. I file selezionati vanno persi:
+                        // limitazione di HTTP, non possiamo evitarlo.
+                        window.location.reload();
+                    } catch (err) {
+                        this.submitting = false;
+                        alert('Errore di rete. Riprova.');
                     }
                 },
 
