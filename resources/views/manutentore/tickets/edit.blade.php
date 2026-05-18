@@ -315,13 +315,11 @@
         </form>
     </div>
 
-    {{-- Definizione INLINE (non push'd) della factory: deve esistere come
-         globale prima che Alpine scansioni il DOM. Mettere lo script in
-         @push('scripts') o registrarlo via alpine:init si è rivelato
-         inaffidabile (Alpine valuta l'x-data prima di leggere lo stack). --}}
     <script>
-        window.ticketEditForm = function (allDepartments, allEquipments, initial) {
-            return ({
+        console.log('[edit.blade] inline script eseguito — definisco ticketEditForm');
+        function ticketEditForm(allDepartments, allEquipments, initial) {
+            console.log('[ticketEditForm] CHIAMATA', { allDepartments, allEquipments, initial });
+            return {
                 priority: initial.priority || '',
                 scheduledDate: initial.scheduledDate || '',
                 scheduledTime: initial.scheduledTime || '',
@@ -475,7 +473,9 @@
                     this.equipmentId = '';
                     this.equipmentQuery = '';
                 },
-            });
-        };
+            };
+        }
+        window.ticketEditForm = ticketEditForm;
+        console.log('[edit.blade] window.ticketEditForm =', typeof window.ticketEditForm);
     </script>
 @endsection
