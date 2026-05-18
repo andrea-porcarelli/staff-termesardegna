@@ -44,8 +44,10 @@ class Intervention extends Model
     }
 
     /**
-     * Regole di modifica: admin sempre, chi ha creato il ticket finché non è
-     * stato preso in carico (qualunque sia il suo ruolo).
+     * Regole di modifica:
+     * - admin: sempre;
+     * - creatore (qualunque ruolo): finché il ticket non è stato preso in carico;
+     * - operator: tutti i ticket che ricadono in una sua area o zona assegnata.
      */
     public function canBeEditedBy(?User $user): bool
     {
@@ -55,17 +57,37 @@ class Intervention extends Model
         if ($user->role === 'admin') {
             return true;
         }
+        if ($this->created_by === $user->id && $this->preso_in_carico_at === null) {
+            return true;
+        }
+        if ($user->role === 'operator') {
+            $userDeptIds = $user->departments()->pluck('departments.id')->all();
+            $userAreaIds = $user->assignedAreaIds()->all();
+            if ($this->department_id && in_array($this->department_id, $userDeptIds, true)) {
+                return true;
+            }
+            if ($this->area_id && in_array($this->area_id, $userAreaIds, true)) {
+                return true;
+            }
+        }
 
-        return $this->created_by === $user->id && $this->preso_in_carico_at === null;
+        return false;
     }
 
     /**
-     * Regole di cancellazione: stesse della modifica — admin sempre, creatore
-     * fino a quando il ticket non è preso in carico.
+     * Regole di cancellazione (più restrittive della modifica): admin sempre,
+     * oppure creatore finché il ticket non è stato preso in carico.
      */
     public function canBeDeletedBy(?User $user): bool
     {
-        return $this->canBeEditedBy($user);
+        if (! $user) {
+            return false;
+        }
+        if ($user->role === 'admin') {
+            return true;
+        }
+
+        return $this->created_by === $user->id && $this->preso_in_carico_at === null;
     }
 
     /**
