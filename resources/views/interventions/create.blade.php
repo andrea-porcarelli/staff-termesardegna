@@ -30,6 +30,7 @@
                     components: @json($components),
                     departments: @json($departments->map(fn($d) => ['id' => $d->id, 'name' => $d->name, 'area_id' => $d->area_id])),
                     userDepartmentIds: userDepartmentIds,
+                    submitting: false,
 
                     init() {
                         this.$watch('assignmentType', (val) => {
@@ -85,7 +86,8 @@
                 };
             }
         </script>
-        <form action="{{ route('interventions.store') }}" method="POST" x-data="interventionForm()">
+        <form action="{{ route('interventions.store') }}" method="POST" x-data="interventionForm()"
+              @submit="if (submitting) { $event.preventDefault(); return; } submitting = true">
             @csrf
 
             {{-- Tipo intervento --}}
@@ -376,8 +378,13 @@
             @endif
 
             <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-light">
-                    <i class="bi bi-check-circle me-2"></i>Salva Ticket
+                <button type="submit" class="btn btn-light" :disabled="submitting">
+                    <template x-if="!submitting">
+                        <span><i class="bi bi-check-circle me-2"></i>Salva Ticket</span>
+                    </template>
+                    <template x-if="submitting">
+                        <span><i class="bi bi-hourglass-split me-2"></i>Salvataggio…</span>
+                    </template>
                 </button>
                 <a href="{{ route('interventions.index') }}" class="btn btn-secondary">
                     <i class="bi bi-x-circle me-2"></i>Annulla

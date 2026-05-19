@@ -186,6 +186,34 @@ class InterventionController extends Controller
             'notes' => $request->notes,
         ];
 
+        // Idempotency guard: se nello stesso istante (10s) lo stesso utente ha
+        // appena creato un intervento con gli stessi campi-chiave, lo riusiamo
+        // invece di crearne un duplicato. Protezione contro doppio click,
+        // retry di rete, e ri-submit del form.
+        $existing = Intervention::query()
+            ->where('created_by', $data['created_by'])
+            ->where('tipo', $data['tipo'])
+            ->where('title', $data['title'])
+            ->where(function ($q) use ($data) {
+                if ($data['description'] === null) {
+                    $q->whereNull('description');
+                } else {
+                    $q->where('description', $data['description']);
+                }
+            })
+            ->where('area_id', $data['area_id'])
+            ->where('department_id', $data['department_id'])
+            ->where('equipment_id', $data['equipment_id'])
+            ->where('created_at', '>=', now()->subSeconds(10))
+            ->latest('id')
+            ->first();
+
+        if ($existing) {
+            return redirect()
+                ->route('interventions.index')
+                ->with('info', "Ticket #{$existing->id} già appena creato — invio duplicato ignorato.");
+        }
+
         $intervention = Intervention::create($data);
 
         $tempMediaId = session('intervention_temp_media_id');
