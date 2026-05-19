@@ -22,11 +22,15 @@
 @endphp
 
 @section('content')
+    {{-- NB: usare `{{ json_encode(...) }}` (che applica htmlspecialchars) e
+         NON `@json(...)`: la direttiva @json non escapa le quote che
+         delimitano i token JSON, quindi il primo `"` chiude l'attributo
+         x-data e Alpine riceve l'espressione troncata. --}}
     <div class="pt-3 pb-6 px-3"
          x-data="ticketEditForm(
             {{ $quickDepartments->toJson() }},
             {{ $quickEquipments->toJson() }},
-            @json($initial)
+            {{ json_encode($initial) }}
          )">
 
         <div class="flex items-center gap-2 mb-3">
@@ -316,9 +320,7 @@
     </div>
 
     <script>
-        console.log('[edit.blade] inline script eseguito — definisco ticketEditForm');
         function ticketEditForm(allDepartments, allEquipments, initial) {
-            console.log('[ticketEditForm] CHIAMATA', { allDepartments, allEquipments, initial });
             return {
                 priority: initial.priority || '',
                 scheduledDate: initial.scheduledDate || '',
@@ -475,7 +477,5 @@
                 },
             };
         }
-        window.ticketEditForm = ticketEditForm;
-        console.log('[edit.blade] window.ticketEditForm =', typeof window.ticketEditForm);
     </script>
 @endsection
