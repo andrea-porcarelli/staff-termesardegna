@@ -4,7 +4,7 @@
 
         {{-- Upload Area --}}
         <div class="mb-2">
-            <input type="file" wire:model="files" class="form-control @error('files.*') is-invalid @enderror" multiple accept="image/*" capture="environment">
+            <input type="file" wire:model="files" class="form-control @error('files.*') is-invalid @enderror" multiple accept="image/*">
             @error('files.*')
                 <div class="invalid-feedback d-block">{{ $message }}</div>
             @enderror
