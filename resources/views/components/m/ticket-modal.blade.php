@@ -197,6 +197,30 @@
                             <p class="text-sm text-gray-800 whitespace-pre-line" x-text="ticket.notes"></p>
                         </div>
                     </template>
+
+                    <template x-if="ticket?.media && ticket.media.length">
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Allegati</div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <template x-for="m in ticket.media" :key="m.url">
+                                    <a :href="m.url" target="_blank" rel="noopener"
+                                       class="block rounded-lg border border-gray-200 overflow-hidden bg-white">
+                                        <template x-if="m.is_image">
+                                            <img :src="m.url" alt="" class="w-full h-24 object-cover">
+                                        </template>
+                                        <template x-if="!m.is_image">
+                                            <div class="h-24 flex items-center justify-center text-gray-400">
+                                                <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM14 2v6h6"/>
+                                                </svg>
+                                            </div>
+                                        </template>
+                                        <div class="px-2 py-1 text-[11px] text-gray-600 truncate" x-text="m.name"></div>
+                                    </a>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
                 </div>
 
                 {{-- Rapportini del ticket (conteggio per utente + flag finale) --}}

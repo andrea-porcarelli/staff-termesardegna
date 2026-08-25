@@ -232,6 +232,7 @@ class InterventionController extends Controller
             'collaborations.requestedBy',
             'reports.user',
             'reports.media',
+            'media',
             'activeReschedules.user:id,name',
         ]);
 
@@ -402,6 +403,12 @@ class InterventionController extends Controller
             'deadline_at' => $deadline?->isoFormat('D MMM · HH:mm'),
             'notes' => $intervention->notes,
             'collaborators' => $collaborators,
+            'media' => $intervention->media->map(fn ($m) => [
+                'name' => $m->file_name,
+                'type' => $m->file_type,
+                'is_image' => str_contains((string) $m->file_type, 'image'),
+                'url' => \Illuminate\Support\Facades\Storage::disk('public')->url($m->file_path),
+            ])->values(),
             'report_statuses' => $reportStatuses,
             'my_reports_count' => $myReports->count(),
             'history' => $history,
