@@ -168,7 +168,7 @@
                                             <h6 class="mb-1">{{ $intervention->title }}</h6>
                                             <small class="text-muted">
                                                 <i class="bi bi-gear me-1"></i>{{ $intervention->equipment?->name ?? ($intervention->area?->name . ' / ' . $intervention->department?->name) }}
-                                                <i class="bi bi-person ms-2 me-1"></i>{{ $intervention->assignedUser->name }}
+                                                <i class="bi bi-person ms-2 me-1"></i>{{ $intervention->assignedUser?->name ?? 'Non assegnato' }}
                                             </small>
                                         </div>
                                         <div class="text-end">
@@ -387,7 +387,7 @@
                                             <h6 class="mb-1">{{ $intervention->title }}</h6>
                                             <small class="text-muted">
                                                 <i class="bi bi-gear me-1"></i>{{ $intervention->equipment?->name ?? ($intervention->area?->name . ' / ' . $intervention->department?->name) }}
-                                                <i class="bi bi-person ms-2 me-1"></i>{{ $intervention->assignedUser->name }}
+                                                <i class="bi bi-person ms-2 me-1"></i>{{ $intervention->assignedUser?->name ?? 'Non assegnato' }}
                                             </small>
                                         </div>
                                         <div class="text-end">
