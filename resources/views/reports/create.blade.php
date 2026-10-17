@@ -86,8 +86,8 @@
             <div class="col-md-4">
                 <div class="p-3 rounded bg-light h-100">
                     <div class="text-muted small mb-1"><i class="bi bi-person me-1"></i>Assegnato a</div>
-                    <div class="fw-semibold">{{ $intervention->assignedUser->name }}</div>
-                    <div class="text-muted small">{{ $intervention->assignedUser->email }}</div>
+                    <div class="fw-semibold">{{ $intervention->assignedUser?->name ?? 'Non assegnato' }}</div>
+                    <div class="text-muted small">{{ $intervention->assignedUser?->email ?? '-' }}</div>
                 </div>
             </div>
 

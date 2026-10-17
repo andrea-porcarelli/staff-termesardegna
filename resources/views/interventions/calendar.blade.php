@@ -85,7 +85,7 @@
 
                                             @if(auth()->user()->role !== 'operator')
                                                 <small class="text-muted">
-                                                    <i class="bi bi-person me-1"></i>{{ $intervention->assignedUser->name }}
+                                                    <i class="bi bi-person me-1"></i>{{ $intervention->assignedUser?->name ?? 'Non assegnato' }}
                                                 </small>
                                             @endif
                                         </div>
