@@ -557,7 +557,7 @@ class InterventionController extends Controller
                     'equipment' => $intervention->equipment
                         ? $intervention->equipment->name
                         : (($intervention->area->name ?? '').' / '.($intervention->department->name ?? '')),
-                    'operator' => $intervention->assignedUser->name,
+                    'operator' => $intervention->assignedUser?->name ?? 'Non assegnato',
                     'status' => $intervention->status,
                     'priority' => $intervention->priority,
                     'description' => $intervention->description,
