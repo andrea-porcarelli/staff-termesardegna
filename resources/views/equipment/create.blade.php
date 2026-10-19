@@ -236,7 +236,7 @@
                  3. COMPONENTI DELL'IMPIANTO
                  ═══════════════════════════════════════════════════════════════ --}}
             <hr class="my-4">
-            <div x-data="componentsManager({{ json_encode(old('components', [])) }}, @json($maintenanceRoles), @json($manutentori))">
+            <div x-data="componentsManager({{ json_encode(old('components', [])) }}, {{ json_encode($maintenanceRoles) }}, {{ json_encode($manutentori) }})">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h5 class="mb-0"><i class="bi bi-list-task me-2"></i>Componenti dell'Impianto</h5>
                     <button type="button" class="btn btn-outline-primary btn-sm" @click="addComponent">
