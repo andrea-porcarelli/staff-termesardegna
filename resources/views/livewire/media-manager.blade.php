@@ -4,22 +4,16 @@
 
         {{-- Upload Area --}}
         <div class="mb-2">
-            <input type="file" wire:model="files" class="form-control @error('files.*') is-invalid @enderror" multiple accept="image/*">
+            <input type="file" wire:model="files" class="form-control @error('files.*') is-invalid @enderror" multiple accept="image/*"
+                   x-on:livewire-upload-start="window.dispatchEvent(new CustomEvent('media-busy-start'))"
+                   x-on:livewire-upload-cancel="window.dispatchEvent(new CustomEvent('media-busy-end'))"
+                   x-on:livewire-upload-error="window.dispatchEvent(new CustomEvent('media-busy-end'))">
             @error('files.*')
                 <div class="invalid-feedback d-block">{{ $message }}</div>
             @enderror
         </div>
 
-        @if(count($files) > 0)
-            <div class="d-flex align-items-center gap-2 mb-2">
-                <span class="badge bg-secondary">{{ count($files) }} foto selezionate</span>
-                <button type="button" wire:click="uploadFiles" class="btn btn-light btn-sm">
-                    <i class="bi bi-upload me-1"></i>Carica
-                </button>
-            </div>
-        @endif
-
-        <div wire:loading wire:target="uploadFiles">
+        <div wire:loading wire:target="files, uploadFiles">
             <div class="alert alert-info py-2 mb-2">
                 <i class="bi bi-hourglass-split me-1"></i>Caricamento...
             </div>

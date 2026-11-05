@@ -31,6 +31,7 @@
                     departments: @json($departments->map(fn($d) => ['id' => $d->id, 'name' => $d->name, 'area_id' => $d->area_id])),
                     userDepartmentIds: userDepartmentIds,
                     submitting: false,
+                    mediaBusy: 0,
 
                     init() {
                         this.$watch('assignmentType', (val) => {
@@ -87,7 +88,9 @@
             }
         </script>
         <form action="{{ route('interventions.store') }}" method="POST" x-data="interventionForm()"
-              @submit="if (submitting) { $event.preventDefault(); return; } submitting = true">
+              @media-busy-start.window="mediaBusy++"
+              @media-busy-end.window="mediaBusy = Math.max(0, mediaBusy - 1)"
+              @submit="if (submitting || mediaBusy > 0) { $event.preventDefault(); return; } submitting = true">
             @csrf
 
             {{-- Tipo intervento --}}
@@ -378,9 +381,12 @@
             @endif
 
             <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-light" :disabled="submitting">
-                    <template x-if="!submitting">
+                <button type="submit" class="btn btn-light" :disabled="submitting || mediaBusy > 0">
+                    <template x-if="!submitting && mediaBusy === 0">
                         <span><i class="bi bi-check-circle me-2"></i>Salva Ticket</span>
+                    </template>
+                    <template x-if="!submitting && mediaBusy > 0">
+                        <span><i class="bi bi-hourglass-split me-2"></i>Attendi caricamento foto…</span>
                     </template>
                     <template x-if="submitting">
                         <span><i class="bi bi-hourglass-split me-2"></i>Salvataggio…</span>

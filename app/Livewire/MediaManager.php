@@ -32,14 +32,22 @@ class MediaManager extends Component
 
     public function updatedFiles()
     {
-        $this->validate([
-            'files.*' => 'required|file|mimes:pdf,jpg,jpeg,png,gif,zip|max:10240',
-        ], [
-            'files.*.required' => 'Seleziona almeno un file',
-            'files.*.file' => 'Il file non è valido',
-            'files.*.mimes' => 'Sono accettati solo file PDF, immagini (JPG, PNG, GIF) e ZIP',
-            'files.*.max' => 'Il file non può superare i 10MB',
-        ]);
+        // Auto-upload: se l'utente seleziona file e poi clicca "Salva" del form
+        // padre senza passare da un bottone intermedio, i file vanno comunque
+        // persistiti subito come Media. Altrimenti il controller @store non
+        // trova nulla da ri-parentizzare e la foto viene silenziosamente persa.
+        if (empty($this->files)) {
+            return;
+        }
+
+        try {
+            $this->uploadFiles();
+        } finally {
+            // Sblocca il submit del form padre sia su successo che su errore
+            // di validazione (il dispatch viene emesso prima che Livewire
+            // ripropaghi l'eventuale ValidationException).
+            $this->dispatch('media-busy-end');
+        }
     }
 
     public function uploadFiles()

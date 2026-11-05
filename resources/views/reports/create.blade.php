@@ -148,7 +148,11 @@
         <h5 class="mb-0"><i class="bi bi-file-text me-2"></i>Compila Rapportino</h5>
     </div>
     <div class="card-body">
-        <form action="{{ route('interventions.reports.store', $intervention) }}" method="POST">
+        <form action="{{ route('interventions.reports.store', $intervention) }}" method="POST"
+              x-data="{ submitting: false, mediaBusy: 0 }"
+              @media-busy-start.window="mediaBusy++"
+              @media-busy-end.window="mediaBusy = Math.max(0, mediaBusy - 1)"
+              @submit="if (submitting || mediaBusy > 0) { $event.preventDefault(); return; } submitting = true">
             @csrf
 
             <div class="row">
@@ -205,8 +209,16 @@
             </div>
 
             <div class="d-grid gap-2 mt-4">
-                <button type="submit" class="btn btn-primary btn-lg">
-                    <i class="bi bi-check-circle me-2"></i>Salva Rapportino
+                <button type="submit" class="btn btn-primary btn-lg" :disabled="submitting || mediaBusy > 0">
+                    <template x-if="!submitting && mediaBusy === 0">
+                        <span><i class="bi bi-check-circle me-2"></i>Salva Rapportino</span>
+                    </template>
+                    <template x-if="!submitting && mediaBusy > 0">
+                        <span><i class="bi bi-hourglass-split me-2"></i>Attendi caricamento foto…</span>
+                    </template>
+                    <template x-if="submitting">
+                        <span><i class="bi bi-hourglass-split me-2"></i>Salvataggio…</span>
+                    </template>
                 </button>
                 <a href="{{ route('interventions.calendar') }}" class="btn btn-secondary">
                     <i class="bi bi-x-circle me-2"></i>Annulla
