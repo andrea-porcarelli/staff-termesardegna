@@ -24,7 +24,10 @@ class MediaManager extends Component
     public function mount($mediableType, $mediableId)
     {
         $this->mediableType = $mediableType;
-        $this->mediableId = (int) $mediableId;
+        // mediable_id è VARCHAR nel DB per supportare i token TempMedia (es.
+        // "temp_abc_1"): non castare a int, altrimenti i token stringa
+        // diventano 0 e i Media caricati prima del save restano orfani.
+        $this->mediableId = (string) $mediableId;
     }
 
     public function updatedFiles()
