@@ -123,7 +123,7 @@
                                 <small class="text-muted d-block mb-2">Prossima Manutenzione</small>
                                 @if($equipment->next_maintenance_date)
                                     @php
-                                        $days = now()->diffInDays($equipment->next_maintenance_date, false);
+                                        $days = (int) now()->startOfDay()->diffInDays($equipment->next_maintenance_date->startOfDay(), false);
                                         $isOverdue = $days < 0;
                                         $isNear = $days >= 0 && $days <= 7;
                                     @endphp
@@ -131,8 +131,6 @@
                                     <span class="badge {{ $isOverdue ? 'bg-danger' : ($isNear ? 'bg-warning' : 'bg-success') }}">
                                         @if($isOverdue)
                                             Scaduta da {{ abs($days) }} giorni
-                                        @elseif($isNear)
-                                            Tra {{ $days }} giorni
                                         @else
                                             Tra {{ $days }} giorni
                                         @endif
@@ -147,47 +145,75 @@
             </div>
         </div>
 
-        {{-- Componenti --}}
-        @if($equipment->components->count() > 0)
         <hr class="my-4">
-        <div class="row">
-            <div class="col-12">
-                <h5 class="mb-3"><i class="bi bi-list-task me-2"></i>Componenti ({{ $equipment->components->count() }})</h5>
 
-                @foreach($equipment->components as $component)
-                    <div class="card mb-3 border-secondary">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <strong><i class="bi bi-puzzle me-1"></i>{{ $component->name }}</strong>
-                            @if($component->maintenance_type === 'frequency')
-                                <span class="badge bg-primary">Frequenza · {{ $component->frequency_days ?? 'N/A' }} giorni</span>
-                            @else
-                                <span class="badge bg-info">Data fissa · {{ $component->next_maintenance_date?->format('d/m/Y') ?? 'N/A' }}</span>
-                            @endif
+        {{-- ═══════════════════════════════════════════════════════════
+             ALLEGATI DELL'IMPIANTO (sezione dedicata, ben separata)
+             ═══════════════════════════════════════════════════════════ --}}
+        <div class="card border-primary shadow-sm mb-4">
+            <div class="card-header bg-primary bg-opacity-10 border-primary">
+                <h5 class="mb-0 text-primary">
+                    <i class="bi bi-gear me-2"></i>Allegati dell'impianto
+                </h5>
+                <small class="text-muted">Foto, manuali e schede tecniche dell'impianto nel suo complesso.</small>
+            </div>
+            <div class="card-body">
+                @livewire('media-manager', [
+                    'mediableType' => 'App\\Models\\Equipment',
+                    'mediableId' => $equipment->id,
+                    'label' => '',
+                ])
+            </div>
+        </div>
+
+        {{-- ═══════════════════════════════════════════════════════════
+             COMPONENTI + ALLEGATI PER CIASCUN COMPONENTE
+             ═══════════════════════════════════════════════════════════ --}}
+        @if($equipment->components->count() > 0)
+            <div class="d-flex align-items-center mb-3 mt-4">
+                <h5 class="mb-0"><i class="bi bi-diagram-3 me-2"></i>Componenti dell'impianto</h5>
+                <span class="badge bg-secondary ms-2">{{ $equipment->components->count() }}</span>
+            </div>
+            <p class="text-muted small mb-3">
+                Ogni componente ha i suoi allegati, indipendenti da quelli dell'impianto principale.
+            </p>
+
+            @foreach($equipment->components as $component)
+                <div class="card mb-3 border-info shadow-sm">
+                    <div class="card-header bg-info bg-opacity-10 border-info d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <i class="bi bi-puzzle me-1 text-info"></i>
+                            <strong>Componente:</strong>
+                            <span class="ms-1">{{ $component->name }}</span>
                         </div>
-                        <div class="card-body">
-                            @if($component->description)
-                                <p class="mb-2 small text-muted">{{ $component->description }}</p>
-                            @endif
-                            <h6 class="mt-3 mb-2"><i class="bi bi-paperclip me-1"></i>Allegati del componente</h6>
+                        @if($component->maintenance_type === 'frequency')
+                            <span class="badge bg-primary">
+                                <i class="bi bi-arrow-repeat me-1"></i>Ogni {{ $component->frequency_days ?? 'N/A' }} giorni
+                            </span>
+                        @else
+                            <span class="badge bg-info">
+                                <i class="bi bi-calendar-event me-1"></i>{{ $component->next_maintenance_date?->format('d/m/Y') ?? 'N/A' }}
+                            </span>
+                        @endif
+                    </div>
+                    <div class="card-body">
+                        @if($component->description)
+                            <p class="mb-3 text-muted">{{ $component->description }}</p>
+                        @endif
+                        <div class="border-start border-info border-3 ps-3">
+                            <h6 class="mb-2 text-info">
+                                <i class="bi bi-paperclip me-1"></i>Allegati del componente «{{ $component->name }}»
+                            </h6>
                             @livewire('media-manager', [
                                 'mediableType' => 'App\\Models\\EquipmentComponent',
                                 'mediableId' => $component->id,
+                                'label' => '',
                             ], key('comp-media-'.$component->id))
                         </div>
                     </div>
-                @endforeach
-            </div>
-        </div>
+                </div>
+            @endforeach
         @endif
-
-        <hr class="my-4">
-
-        <div class="row">
-            <div class="col-12">
-                <h5 class="mb-3"><i class="bi bi-paperclip me-2"></i>Documenti Allegati</h5>
-                @livewire('media-manager', ['mediableType' => 'App\\Models\\Equipment', 'mediableId' => $equipment->id])
-            </div>
-        </div>
 
         <hr class="my-4">
 

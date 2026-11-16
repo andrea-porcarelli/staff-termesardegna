@@ -1,6 +1,8 @@
 <div x-data="{ preview: null, previewName: '' }">
     <div class="mb-3">
-        <label class="form-label"><i class="bi bi-camera me-1"></i>Foto</label>
+        @if($label !== '')
+            <label class="form-label"><i class="bi bi-camera me-1"></i>{{ $label }}</label>
+        @endif
 
         {{-- Upload Area --}}
         <div class="mb-2">

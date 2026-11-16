@@ -19,15 +19,20 @@ class MediaManager extends Component
 
     public $description = '';
 
+    // Etichetta mostrata sopra l'input file. Passa stringa vuota per
+    // nasconderla quando c'è già un'intestazione esterna.
+    public $label = 'Foto';
+
     protected $listeners = ['refreshMedia' => '$refresh'];
 
-    public function mount($mediableType, $mediableId)
+    public function mount($mediableType, $mediableId, $label = 'Foto')
     {
         $this->mediableType = $mediableType;
         // mediable_id è VARCHAR nel DB per supportare i token TempMedia (es.
         // "temp_abc_1"): non castare a int, altrimenti i token stringa
         // diventano 0 e i Media caricati prima del save restano orfani.
         $this->mediableId = (string) $mediableId;
+        $this->label = $label;
     }
 
     public function updatedFiles()
