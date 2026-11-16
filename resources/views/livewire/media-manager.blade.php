@@ -4,7 +4,7 @@
 
         {{-- Upload Area --}}
         <div class="mb-2">
-            <input type="file" wire:model="files" class="form-control @error('files.*') is-invalid @enderror" multiple accept="image/*"
+            <input type="file" wire:model="files" class="form-control @error('files.*') is-invalid @enderror" multiple accept="image/*,application/pdf,.pdf,application/zip,.zip"
                    x-on:livewire-upload-start="window.dispatchEvent(new CustomEvent('media-busy-start'))"
                    x-on:livewire-upload-cancel="window.dispatchEvent(new CustomEvent('media-busy-end'))"
                    x-on:livewire-upload-error="window.dispatchEvent(new CustomEvent('media-busy-end'))">

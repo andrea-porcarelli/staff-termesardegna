@@ -8,6 +8,7 @@ use App\Http\Controllers\EquipmentController;
 use App\Http\Controllers\InterventionController;
 use App\Http\Controllers\InterventionLogController;
 use App\Http\Controllers\MaintenanceRoleController;
+use App\Http\Controllers\MediaController;
 use App\Http\Controllers\PasswordSetController;
 use App\Http\Controllers\Manutentore\AuthController as MAuthController;
 use App\Http\Controllers\Manutentore\CalendarController as MCalendarController;
@@ -137,6 +138,10 @@ Route::middleware('auth')->group(function () {
 
     // API endpoint per dati pianificazione impianto (per form intervento)
     Route::get('/api/equipments/{equipment}/planning', [InterventionController::class, 'equipmentPlanning'])->name('api.equipments.planning');
+
+    // Upload/eliminazione media (usato dai widget allegati nei form impianto/componenti)
+    Route::post('/media', [MediaController::class, 'store'])->name('media.store');
+    Route::delete('/media/{media}', [MediaController::class, 'destroy'])->name('media.destroy');
 
     // Presa in carico intervento (manutentore)
     Route::post('/interventions/{intervention}/take-charge', [InterventionController::class, 'takeCharge'])->name('interventions.take-charge');

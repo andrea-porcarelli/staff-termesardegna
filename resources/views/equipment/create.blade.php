@@ -12,6 +12,7 @@
     <div class="card-body">
         <form action="{{ route('equipments.store') }}" method="POST">
             @csrf
+            <input type="hidden" name="temp_media_id" value="{{ $tempMediaId }}">
 
             {{-- ═══════════════════════════════════════════════════════════════
                  1. ANAGRAFICA
@@ -83,6 +84,16 @@
                     </div>
                 </div>
             </div>
+
+            {{-- ═══════════════════════════════════════════════════════════════
+                 1-BIS. FOTO & DOCUMENTI DELL'IMPIANTO
+                 ═══════════════════════════════════════════════════════════════ --}}
+            <hr class="my-4">
+            <h5 class="mb-3"><i class="bi bi-paperclip me-2"></i>Foto e documenti</h5>
+            @include('partials.attachments-field', [
+                'dataExpr' => "{ type: 'TempMedia', id: " . json_encode($tempMediaId) . ", initial: " . json_encode($equipmentInitialMedia) . " }",
+                'label' => 'Foto, manuali e schede tecniche (PDF)',
+            ])
 
             {{-- ═══════════════════════════════════════════════════════════════
                  2. PIANIFICAZIONE MANUTENZIONE (impianto principale)
@@ -254,6 +265,9 @@
                 <template x-for="(comp, index) in components" :key="index">
                     <div class="card mb-3 border-secondary">
                         <div class="card-body">
+                            {{-- ID temporaneo per allegati del componente nuovo --}}
+                            <input type="hidden" :name="'components[' + index + '][temp_media_id]'" :value="comp.temp_media_id">
+
                             <div class="d-flex justify-content-between mb-2">
                                 <strong x-text="'Componente ' + (index + 1)"></strong>
                                 <button type="button" class="btn btn-outline-danger btn-sm" @click="removeComponent(index)">
@@ -391,6 +405,14 @@
                                     </template>
                                 </div>
                             </div>
+
+                            {{-- Allegati del componente --}}
+                            <div class="mt-3 pt-3 border-top">
+                                @include('partials.attachments-field', [
+                                    'dataExpr' => "{ type: 'TempMedia', id: comp.temp_media_id, initial: (window.compInitialMedia && window.compInitialMedia[comp.temp_media_id]) || [] }",
+                                    'label' => 'Foto e documenti del componente',
+                                ])
+                            </div>
                         </div>
                     </div>
                 </template>
@@ -410,6 +432,14 @@
 
 @push('scripts')
 <script>
+// Media già caricati come TempMedia per i componenti (dopo validation failure).
+window.compInitialMedia = @json($componentsInitialMedia);
+
+function makeTempId(prefix) {
+    const r = (crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
+    return prefix + '_' + r;
+}
+
 function planningSection(initial) {
     return {
         assignmentType: initial.assignmentType || 'specializzazione',
@@ -444,7 +474,14 @@ function planningSection(initial) {
 function componentsManager(initial, maintenanceRoles, manutentori) {
     return {
         components: (initial && initial.length > 0)
-            ? initial.map(c => ({ ...defaultComponent(), ...c, manual_override_enabled: !!c.next_maintenance_date }))
+            ? initial.map(c => ({
+                ...defaultComponent(),
+                ...c,
+                // Conserva il temp_media_id del tentativo precedente (se c'era)
+                // altrimenti ne genera uno nuovo stabile per questa riga.
+                temp_media_id: c.temp_media_id || makeTempId('tempc'),
+                manual_override_enabled: !!c.next_maintenance_date,
+            }))
             : [],
         maintenanceRoles: maintenanceRoles || [],
         manutentori: manutentori || [],
@@ -481,6 +518,7 @@ function defaultComponent() {
         next_maintenance_date: '',
         description: '',
         manual_override_enabled: false,
+        temp_media_id: makeTempId('tempc'),
     };
 }
 </script>

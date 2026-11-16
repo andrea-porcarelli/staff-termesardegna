@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class EquipmentComponent extends Model
 {
@@ -41,5 +42,10 @@ class EquipmentComponent extends Model
     public function assignedUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_user_id');
+    }
+
+    public function media(): MorphMany
+    {
+        return $this->morphMany(Media::class, 'mediable');
     }
 }

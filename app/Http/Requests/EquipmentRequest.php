@@ -47,8 +47,12 @@ class EquipmentRequest extends FormRequest
 
             'active' => 'nullable',
 
+            // ID temporaneo allegati impianto (per ri-parentizzazione post-save)
+            'temp_media_id' => 'nullable|string|max:255',
+
             // Componenti
             'components' => 'nullable|array',
+            'components.*.temp_media_id' => 'nullable|string|max:255',
             'components.*.name' => 'required_with:components.*|string|max:255',
             'components.*.frequency_days' => 'required_with:components.*|integer|min:1',
             'components.*.assignment_type' => 'required_with:components.*|in:specializzazione,diretto',

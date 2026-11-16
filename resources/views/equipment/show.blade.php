@@ -153,40 +153,29 @@
         <div class="row">
             <div class="col-12">
                 <h5 class="mb-3"><i class="bi bi-list-task me-2"></i>Componenti ({{ $equipment->components->count() }})</h5>
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Nome</th>
-                                <th>Tipo Manutenzione</th>
-                                <th>Frequenza / Data</th>
-                                <th>Descrizione</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($equipment->components as $component)
-                                <tr>
-                                    <td><strong>{{ $component->name }}</strong></td>
-                                    <td>
-                                        @if($component->maintenance_type === 'frequency')
-                                            <span class="badge bg-primary">Frequenza</span>
-                                        @else
-                                            <span class="badge bg-info">Data Fissa</span>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if($component->maintenance_type === 'frequency')
-                                            {{ $component->frequency_days ?? 'N/A' }} giorni
-                                        @else
-                                            {{ $component->next_maintenance_date?->format('d/m/Y') ?? 'N/A' }}
-                                        @endif
-                                    </td>
-                                    <td>{{ $component->description ?? 'N/A' }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+
+                @foreach($equipment->components as $component)
+                    <div class="card mb-3 border-secondary">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <strong><i class="bi bi-puzzle me-1"></i>{{ $component->name }}</strong>
+                            @if($component->maintenance_type === 'frequency')
+                                <span class="badge bg-primary">Frequenza · {{ $component->frequency_days ?? 'N/A' }} giorni</span>
+                            @else
+                                <span class="badge bg-info">Data fissa · {{ $component->next_maintenance_date?->format('d/m/Y') ?? 'N/A' }}</span>
+                            @endif
+                        </div>
+                        <div class="card-body">
+                            @if($component->description)
+                                <p class="mb-2 small text-muted">{{ $component->description }}</p>
+                            @endif
+                            <h6 class="mt-3 mb-2"><i class="bi bi-paperclip me-1"></i>Allegati del componente</h6>
+                            @livewire('media-manager', [
+                                'mediableType' => 'App\\Models\\EquipmentComponent',
+                                'mediableId' => $component->id,
+                            ], key('comp-media-'.$component->id))
+                        </div>
+                    </div>
+                @endforeach
             </div>
         </div>
         @endif
