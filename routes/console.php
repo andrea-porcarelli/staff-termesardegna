@@ -13,3 +13,10 @@ Schedule::command('db:backup')
     ->dailyAt('03:00')
     ->onOneServer()
     ->withoutOverlapping();
+
+// Riepilogo manutenzioni del giorno precedente, consegnato via email ogni mattina.
+Schedule::command('maintenance:daily-report --mail=direzione@termesardegna.it')
+    ->dailyAt('07:00')
+    ->timezone('Europe/Rome')
+    ->onOneServer()
+    ->withoutOverlapping();
