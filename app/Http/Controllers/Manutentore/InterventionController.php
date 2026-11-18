@@ -950,15 +950,15 @@ class InterventionController extends Controller
             'priority' => 'required|in:high,medium,low,fixed_date',
             'scheduled_date' => 'nullable|date|after_or_equal:today|required_if:priority,fixed_date',
             'scheduled_start_time' => 'nullable|date_format:H:i',
-            'area_id' => [$isManutentoreCreator ? 'nullable' : 'required', \Illuminate\Validation\Rule::in($userAreaIds)],
-            'department_id' => [$isManutentoreCreator ? 'nullable' : 'required', \Illuminate\Validation\Rule::in($userDeptIds)],
+            'area_id' => ['required', \Illuminate\Validation\Rule::in($userAreaIds)],
+            'department_id' => ['required', \Illuminate\Validation\Rule::in($userDeptIds)],
             'equipment_id' => [
                 'nullable',
                 \Illuminate\Validation\Rule::exists('equipments', 'id')
                     ->where('active', true)
                     ->whereIn('department_id', $userDeptIds ?: [-1]),
             ],
-            'title' => [$isManutentoreCreator ? 'nullable' : 'required', 'string', 'max:255'],
+            'title' => ['required', 'string', 'max:255'],
             'description' => 'nullable|string|max:2000',
             'files' => 'nullable|array|max:10',
             'files.*' => 'file|mimes:pdf,jpg,jpeg,png,gif,zip|max:10240',

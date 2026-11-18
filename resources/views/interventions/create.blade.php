@@ -272,11 +272,10 @@
                     @enderror
                 </div>
 
-                {{-- Operatore/manutentore diretto: pianificazione+diretto OPPURE admin+ordinario+diretto --}}
+                {{-- Manutentore diretto: pianificazione+diretto OPPURE admin+ordinario+diretto --}}
                 <div class="col-md-6 mb-3" x-show="showAssignedUser()" x-cloak>
                     <label for="assigned_user_id" class="form-label">
-                        <span x-show="tipo === 'pianificazione'">Operatore Assegnato</span>
-                        <span x-show="tipo === 'ordinario'" x-cloak>Manutentore Assegnato</span>
+                        Manutentore Assegnato
                         <span class="text-danger">*</span>
                     </label>
                     <select class="form-select @error('assigned_user_id') is-invalid @enderror"
@@ -286,10 +285,8 @@
                         <option value="">Seleziona...</option>
                         @foreach($operators as $operator)
                             <option value="{{ $operator->id }}"
-                                    data-role="{{ $operator->role }}"
-                                    x-show="tipo === 'pianificazione' || '{{ $operator->role }}' === 'manutentore'"
                                     {{ old('assigned_user_id') == $operator->id ? 'selected' : '' }}>
-                                {{ $operator->name }}{{ $operator->role === 'manutentore' ? '' : ' (operatore)' }}
+                                {{ $operator->name }}
                             </option>
                         @endforeach
                     </select>

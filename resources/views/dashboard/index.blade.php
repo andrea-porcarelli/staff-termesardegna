@@ -104,19 +104,25 @@
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
-                        <div class="col-4">
+                        <div class="col-3">
+                            <div class="p-3">
+                                <h2 class="mb-1 text-primary">{{ $interventionsOpen }}</h2>
+                                <small class="text-muted">Aperti</small>
+                            </div>
+                        </div>
+                        <div class="col-3 border-start">
                             <div class="p-3">
                                 <h2 class="mb-1 text-info">{{ $interventionsPlanned }}</h2>
                                 <small class="text-muted">Pianificati</small>
                             </div>
                         </div>
-                        <div class="col-4 border-start border-end">
+                        <div class="col-3 border-start border-end">
                             <div class="p-3">
                                 <h2 class="mb-1 text-warning">{{ $interventionsInProgress }}</h2>
                                 <small class="text-muted">In Corso</small>
                             </div>
                         </div>
-                        <div class="col-4">
+                        <div class="col-3">
                             <div class="p-3">
                                 <h2 class="mb-1 text-success">{{ $interventionsCompleted }}</h2>
                                 <small class="text-muted">Completati</small>
@@ -323,19 +329,25 @@
                 </div>
                 <div class="card-body">
                     <div class="row text-center">
-                        <div class="col-4">
+                        <div class="col-3">
+                            <div class="p-3">
+                                <h2 class="mb-1 text-primary">{{ $interventionsOpen }}</h2>
+                                <small class="text-muted">Aperti</small>
+                            </div>
+                        </div>
+                        <div class="col-3 border-start">
                             <div class="p-3">
                                 <h2 class="mb-1 text-info">{{ $interventionsPlanned }}</h2>
                                 <small class="text-muted">Pianificati</small>
                             </div>
                         </div>
-                        <div class="col-4 border-start border-end">
+                        <div class="col-3 border-start border-end">
                             <div class="p-3">
                                 <h2 class="mb-1 text-warning">{{ $interventionsInProgress }}</h2>
                                 <small class="text-muted">In Corso</small>
                             </div>
                         </div>
-                        <div class="col-4">
+                        <div class="col-3">
                             <div class="p-3">
                                 <h2 class="mb-1 text-success">{{ $interventionsCompleted }}</h2>
                                 <small class="text-muted">Completati</small>

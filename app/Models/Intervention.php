@@ -27,6 +27,7 @@ class Intervention extends Model
         'priority',
         'notes',
         'completed_at',
+        'closed_by_user_id',
         'suspended_until',
         'preso_in_carico_at',
     ];
@@ -111,13 +112,14 @@ class Intervention extends Model
     }
 
     /**
-     * Calcola la data di scadenza in base alla priorità.
-     * low = +7gg, high = +24h, fixed_date = scheduled_date
+     * Calcola la data di scadenza.
+     * - pianificazione / fixed_date: scheduled_date + scheduled_start_time
+     * - ordinario: created_at + finestra per priorità (low=+7gg, medium=+48h, high=+24h)
      */
     public function getDeadlineAttribute(): ?\Carbon\Carbon
     {
-        if ($this->priority === 'fixed_date') {
-            return $this->scheduled_date;
+        if ($this->tipo === 'pianificazione' || $this->priority === 'fixed_date') {
+            return $this->scheduled_at;
         }
 
         $base = $this->created_at;
@@ -201,6 +203,11 @@ class Intervention extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function closedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'closed_by_user_id');
     }
 
     public function media(): MorphMany

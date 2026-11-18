@@ -32,6 +32,7 @@ class DashboardController extends Controller
             $data['totalEquipment'] = Equipment::where('active', true)->count();
             $data['totalAreas'] = Area::count();
 
+            $data['interventionsOpen'] = Intervention::where('status', 'open')->count();
             $data['interventionsPlanned'] = Intervention::where('status', 'planned')->count();
             $data['interventionsInProgress'] = Intervention::where('status', 'in_progress')->count();
             $data['interventionsCompleted'] = Intervention::where('status', 'completed')->count();
@@ -66,6 +67,7 @@ class DashboardController extends Controller
                 $data['totalInterventions'] = 0;
                 $data['totalReports'] = 0;
                 $data['totalOperators'] = 0;
+                $data['interventionsOpen'] = 0;
                 $data['interventionsPlanned'] = 0;
                 $data['interventionsInProgress'] = 0;
                 $data['interventionsCompleted'] = 0;
@@ -90,6 +92,10 @@ class DashboardController extends Controller
                     })
                     ->distinct()
                     ->count();
+
+                $data['interventionsOpen'] = Intervention::whereHas('equipment', function ($query) use ($departmentIds) {
+                    $query->whereIn('department_id', $departmentIds);
+                })->where('status', 'open')->count();
 
                 $data['interventionsPlanned'] = Intervention::whereHas('equipment', function ($query) use ($departmentIds) {
                     $query->whereIn('department_id', $departmentIds);

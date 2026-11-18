@@ -116,7 +116,7 @@ class InterventionController extends Controller
     {
         $user = Auth::user();
         $equipments = Equipment::where('active', true)->orderBy('name')->get();
-        $operators = User::whereIn('role', ['operator', 'manutentore'])->where('active', true)->orderBy('name')->get();
+        $operators = User::where('role', 'manutentore')->where('active', true)->orderBy('name')->get();
         $areas = Area::where('active', true)->orderBy('name')->get();
         $departments = Department::where('active', true)->orderBy('name')->get();
         $maintenanceRoles = MaintenanceRole::orderBy('name')->get();
@@ -181,7 +181,9 @@ class InterventionController extends Controller
             'scheduled_date' => ($isPianificazione || $isFixedDate) ? ($request->scheduled_date ?: null) : null,
             'scheduled_start_time' => ($isPianificazione || $isFixedDate) ? ($request->scheduled_start_time ?: null) : null,
             'estimated_duration_minutes' => $isPianificazione ? ($request->estimated_duration_minutes ?: null) : null,
-            'status' => in_array(Auth::user()->role, ['operator', 'manutentore']) ? 'open' : ($request->status ?? 'planned'),
+            'status' => $isPianificazione
+                ? 'planned'
+                : (in_array(Auth::user()->role, ['operator', 'manutentore']) ? 'open' : ($request->status ?? 'planned')),
             'priority' => $priority,
             'notes' => $request->notes,
         ];
@@ -306,7 +308,7 @@ class InterventionController extends Controller
     {
         abort_unless($intervention->canBeEditedBy(Auth::user()), 403);
         $equipments = Equipment::where('active', true)->orderBy('name')->get();
-        $operators = User::whereIn('role', ['operator', 'manutentore'])->where('active', true)->orderBy('name')->get();
+        $operators = User::where('role', 'manutentore')->where('active', true)->orderBy('name')->get();
         $areas = Area::where('active', true)->orderBy('name')->get();
         $departments = Department::where('active', true)->orderBy('name')->get();
         $maintenanceRoles = MaintenanceRole::orderBy('name')->get();
@@ -326,6 +328,7 @@ class InterventionController extends Controller
         $isDirectAssign = $assignType === 'diretto';
 
         $previousAssignedUserId = $intervention->assigned_user_id;
+        $previousStatus = $intervention->status;
 
         $equipmentId = $isPianificazione ? $request->equipment_id : null;
         $areaId = ! $isPianificazione ? ($request->area_id ?: null) : null;
@@ -344,13 +347,6 @@ class InterventionController extends Controller
             ? $request->maintenance_role_id
             : null;
 
-        $assignedUserId = null;
-        if ($isPianificazione && $isDirectAssign) {
-            $assignedUserId = $request->assigned_user_id ?: null;
-        } elseif (! $isPianificazione && $isDirectAssign && Auth::user()->role === 'admin') {
-            $assignedUserId = $request->assigned_user_id ?: null;
-        }
-
         $data = [
             'tipo' => $request->tipo,
             'equipment_id' => $equipmentId,
@@ -358,16 +354,34 @@ class InterventionController extends Controller
             'maintenance_role_id' => $maintenanceRoleId,
             'area_id' => $areaId,
             'department_id' => $deptId,
-            'assigned_user_id' => $assignedUserId,
             'title' => $title,
             'description' => $request->description,
-            'scheduled_date' => ($isPianificazione || $isFixedDate) ? ($request->scheduled_date ?: null) : null,
-            'scheduled_start_time' => ($isPianificazione || $isFixedDate) ? ($request->scheduled_start_time ?: null) : null,
             'estimated_duration_minutes' => $isPianificazione ? ($request->estimated_duration_minutes ?: null) : null,
             'status' => $request->status ?? 'planned',
             'priority' => $priority,
             'notes' => $request->notes,
         ];
+
+        // Assegnatario: solo con "diretto" (e solo admin per ordinari) viene aggiornato
+        // dal form. In tutti gli altri casi lasciamo intatto l'assegnatario corrente,
+        // per non azzerare un ticket auto-assegnato quando si modifica solo altro.
+        if ($isDirectAssign && ($isPianificazione || Auth::user()->role === 'admin')) {
+            $data['assigned_user_id'] = $request->assigned_user_id ?: null;
+        }
+
+        // Date pianificate: toccate solo quando il form le espone (pianificazione
+        // o ordinario con priorità "data fissa"). Negli altri casi preserviamo i
+        // valori esistenti per non perdere la cronologia del ticket.
+        if ($isPianificazione || $isFixedDate) {
+            $data['scheduled_date'] = $request->scheduled_date ?: null;
+            $data['scheduled_start_time'] = $request->scheduled_start_time ?: null;
+        }
+
+        // Chiusura: registra data/ora e chi ha chiuso, solo alla transizione verso "completed".
+        if ($data['status'] === 'completed' && $previousStatus !== 'completed') {
+            $data['completed_at'] = now();
+            $data['closed_by_user_id'] = Auth::id();
+        }
 
         $intervention->fill($data);
         $changed = array_keys($intervention->getDirty());
