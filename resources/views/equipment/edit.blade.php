@@ -246,7 +246,7 @@
                         <template x-if="!manualOverrideEnabled">
                             <div>
                                 <input type="text" class="form-control"
-                                       :value="computedNextDate || '—'"
+                                       :value="computedNextDate ? formatDateIt(computedNextDate) : '—'"
                                        readonly
                                        style="background-color: #d4edda; color: #155724; font-weight: 600;">
                                 <a href="#" class="small mt-1 d-inline-block"
@@ -341,9 +341,9 @@
                                             :name="'components[' + index + '][maintenance_role_id]'"
                                             x-model="comp.maintenance_role_id">
                                         <option value="">— Seleziona —</option>
-                                        <template x-for="role in maintenanceRoles" :key="role.id">
-                                            <option :value="role.id" x-text="role.name"></option>
-                                        </template>
+                                        @foreach($maintenanceRoles as $role)
+                                            <option value="{{ $role->id }}">{{ $role->name }}</option>
+                                        @endforeach
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb-2" x-show="comp.assignment_type === 'diretto'">
@@ -352,9 +352,9 @@
                                             :name="'components[' + index + '][assigned_user_id]'"
                                             x-model="comp.assigned_user_id">
                                         <option value="">— Seleziona —</option>
-                                        <template x-for="u in manutentori" :key="u.id">
-                                            <option :value="u.id" x-text="u.name"></option>
-                                        </template>
+                                        @foreach($manutentori as $u)
+                                            <option value="{{ $u->id }}">{{ $u->name }}</option>
+                                        @endforeach
                                     </select>
                                 </div>
                             </div>
@@ -407,7 +407,7 @@
                                     <template x-if="!comp.manual_override_enabled">
                                         <div>
                                             <input type="text" class="form-control form-control-sm"
-                                                   :value="computeNextDate(comp) || '—'"
+                                                   :value="computeNextDate(comp) ? formatDateIt(computeNextDate(comp)) : '—'"
                                                    readonly
                                                    style="background-color: #d4edda; color: #155724; font-weight: 600;">
                                             <a href="#" class="small"
@@ -467,6 +467,14 @@ function makeTempId(prefix) {
     const r = (crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2));
     return prefix + '_' + r;
 }
+
+function formatDateIt(iso) {
+    if (!iso || typeof iso !== 'string') return '';
+    const parts = iso.split('-');
+    if (parts.length !== 3) return iso;
+    return parts[2] + '/' + parts[1] + '/' + parts[0];
+}
+window.formatDateIt = formatDateIt;
 
 function planningSection(initial) {
     return {
